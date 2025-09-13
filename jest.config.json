@@ -1,0 +1,22 @@
+{
+  "preset": "jest-expo",
+  "setupFiles": ["<rootDir>/tests/setupFiles.ts"],
+  "setupFilesAfterEnv": ["<rootDir>/tests/setup.ts"],
+  "testMatch": [
+    "<rootDir>/tests/**/*.test.{js,ts,tsx}"
+  ],
+  "collectCoverageFrom": [
+    "lib/**/*.{js,ts,tsx}",
+    "components/**/*.{js,ts,tsx}",
+    "!**/*.d.ts"
+  ],
+  "transformIgnorePatterns": [
+    "node_modules/(?!((jest-)?react-native|@react-native(-community)?)|expo(nent)?|@expo(nent)?/.*|@expo-google-fonts/.*|react-navigation|@react-navigation/.*|@unimodules/.*|unimodules|sentry-expo|native-base|react-native-svg)"
+  ],
+  "modulePathIgnorePatterns": ["<rootDir>/dist/"],
+  "moduleNameMapper": {
+    "^@/(.*)$": "<rootDir>/$1",
+    "^expo$": "<rootDir>/tests/mocks/expo-shim.ts",
+    "^expo/(.*)$": "<rootDir>/tests/mocks/expo-winter-shim.ts"
+  }
+}
