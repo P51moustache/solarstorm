@@ -2575,6 +2575,773 @@ git commit -m "feat: add satellite operations dashboard with risk alerts and ano
 
 ---
 
+## Task 8: TLE Import Service
+
+**Goal:** Parse TLE (Two-Line Element) data from Space-Track.org or CelesTrak to auto-populate satellite orbital parameters.
+
+**Files:**
+- Create: `services/tle-parser.ts`
+- Modify: `stores/satellite-store.ts`
+
+**Step 1: Create TLE parser service**
+
+```typescript
+// services/tle-parser.ts
+import { OrbitType } from '@/types/database';
+
+export interface TLEData {
+  name: string;
+  noradId: number;
+  inclination: number;      // degrees
+  eccentricity: number;
+  meanMotion: number;       // revs per day
+  bstar: number;            // drag term (proxy for ballistic coefficient)
+  epochYear: number;
+  epochDay: number;
+}
+
+export interface ParsedOrbitalParams {
+  noradId: number;
+  altitudeKm: number;
+  inclinationDeg: number;
+  ballisticCoefficient: number;
+  orbitType: OrbitType;
+}
+
+// Parse standard TLE format (two lines)
+export function parseTLE(line1: string, line2: string): TLEData | null {
+  try {
+    // Line 1: NORAD ID at columns 3-7, epoch at 19-32, BSTAR at 54-61
+    const noradId = parseInt(line1.substring(2, 7).trim(), 10);
+    const epochYear = parseInt(line1.substring(18, 20).trim(), 10);
+    const epochDay = parseFloat(line1.substring(20, 32).trim());
+
+    // BSTAR is in format: ±NNNNN±N (mantissa + exponent)
+    const bstarStr = line1.substring(53, 61).trim();
+    const bstarMantissa = parseFloat(bstarStr.substring(0, 6)) / 100000;
+    const bstarExp = parseInt(bstarStr.substring(6), 10);
+    const bstar = bstarMantissa * Math.pow(10, bstarExp);
+
+    // Line 2: inclination at 9-16, eccentricity at 27-33, mean motion at 53-63
+    const inclination = parseFloat(line2.substring(8, 16).trim());
+    const eccentricity = parseFloat('0.' + line2.substring(26, 33).trim());
+    const meanMotion = parseFloat(line2.substring(52, 63).trim());
+
+    return {
+      name: '',
+      noradId,
+      inclination,
+      eccentricity,
+      meanMotion,
+      bstar,
+      epochYear: epochYear > 57 ? 1900 + epochYear : 2000 + epochYear,
+      epochDay,
+    };
+  } catch {
+    return null;
+  }
+}
+
+// Calculate orbital parameters from TLE
+export function calculateOrbitalParams(tle: TLEData): ParsedOrbitalParams {
+  const GM = 398600.4418; // km³/s² - Earth gravitational parameter
+  const EARTH_RADIUS = 6371; // km
+
+  // Calculate semi-major axis from mean motion
+  const meanMotionRadSec = (tle.meanMotion * 2 * Math.PI) / 86400;
+  const semiMajorAxis = Math.pow(GM / (meanMotionRadSec * meanMotionRadSec), 1/3);
+
+  // Altitude at perigee (lowest point)
+  const perigee = semiMajorAxis * (1 - tle.eccentricity) - EARTH_RADIUS;
+  const apogee = semiMajorAxis * (1 + tle.eccentricity) - EARTH_RADIUS;
+  const avgAltitude = (perigee + apogee) / 2;
+
+  // Determine orbit type
+  let orbitType: OrbitType;
+  if (avgAltitude < 2000) {
+    orbitType = 'LEO';
+  } else if (avgAltitude < 20000) {
+    orbitType = 'MEO';
+  } else if (avgAltitude >= 35000 && avgAltitude <= 36000 && tle.inclination < 5) {
+    orbitType = 'GEO';
+  } else {
+    orbitType = 'HEO';
+  }
+
+  // Convert BSTAR to ballistic coefficient (simplified)
+  // BSTAR = Cd * A / (2 * m) * rho0, where rho0 ≈ 2.461e-5 kg/m²/Earth radius
+  const ballisticCoefficient = tle.bstar > 0 ? 1 / (tle.bstar * 12756.2) : 0;
+
+  return {
+    noradId: tle.noradId,
+    altitudeKm: Math.round(avgAltitude),
+    inclinationDeg: tle.inclination,
+    ballisticCoefficient: Math.round(ballisticCoefficient * 100) / 100,
+    orbitType,
+  };
+}
+
+// Fetch TLE from CelesTrak by NORAD ID
+export async function fetchTLEByNoradId(noradId: number): Promise<ParsedOrbitalParams | null> {
+  try {
+    const response = await fetch(
+      `https://celestrak.org/NORAD/elements/gp.php?CATNR=${noradId}&FORMAT=TLE`
+    );
+
+    if (!response.ok) return null;
+
+    const text = await response.text();
+    const lines = text.trim().split('\n');
+
+    if (lines.length < 3) return null;
+
+    // Format: Line 0 = name, Line 1 = TLE line 1, Line 2 = TLE line 2
+    const tle = parseTLE(lines[1], lines[2]);
+    if (!tle) return null;
+
+    tle.name = lines[0].trim();
+    return calculateOrbitalParams(tle);
+  } catch {
+    return null;
+  }
+}
+```
+
+**Step 2: Add TLE lookup to satellite store**
+
+```typescript
+// In stores/satellite-store.ts - add to SatelliteState interface:
+  lookupNoradId: (noradId: number) => Promise<ParsedOrbitalParams | null>;
+
+// Add implementation:
+  lookupNoradId: async (noradId: number) => {
+    const params = await fetchTLEByNoradId(noradId);
+    return params;
+  },
+```
+
+**Step 3: Test TLE parsing**
+
+```bash
+npm test -- --grep "TLE"
+```
+
+**Step 4: Commit**
+
+```bash
+git add services/tle-parser.ts stores/satellite-store.ts
+git commit -m "feat: add TLE import service for NORAD ID lookup"
+```
+
+---
+
+## Task 9: Maneuver Window Planner
+
+**Goal:** Identify optimal windows for satellite maneuvers based on space weather conditions.
+
+**Files:**
+- Create: `services/maneuver-planner.ts`
+- Create: `components/satellite/ManeuverPlanner.tsx`
+
+**Step 1: Create maneuver planning service**
+
+```typescript
+// services/maneuver-planner.ts
+import { OrbitType } from '@/types/database';
+
+export interface ManeuverWindow {
+  startTime: Date;
+  endTime: Date;
+  quality: 'optimal' | 'acceptable' | 'risky';
+  risks: string[];
+  kpForecast: number;
+  protonFluxForecast: number;
+}
+
+export interface ManeuverConstraints {
+  orbitType: OrbitType;
+  isOrbitRaising: boolean;
+  requiresLowDrag: boolean;      // For LEO orbit raising
+  requiresLowRadiation: boolean; // For MEO through Van Allen
+  maxKp: number;
+  maxProtonFlux: number;
+}
+
+const DEFAULT_CONSTRAINTS: Record<OrbitType, Partial<ManeuverConstraints>> = {
+  LEO: { maxKp: 5, maxProtonFlux: 100, requiresLowDrag: true },
+  MEO: { maxKp: 4, maxProtonFlux: 10, requiresLowRadiation: true },
+  GEO: { maxKp: 4, maxProtonFlux: 100 },
+  HEO: { maxKp: 3, maxProtonFlux: 10, requiresLowRadiation: true },
+};
+
+export function getDefaultConstraints(orbitType: OrbitType): ManeuverConstraints {
+  return {
+    orbitType,
+    isOrbitRaising: false,
+    requiresLowDrag: false,
+    requiresLowRadiation: false,
+    maxKp: 5,
+    maxProtonFlux: 100,
+    ...DEFAULT_CONSTRAINTS[orbitType],
+  };
+}
+
+export function evaluateManeuverWindow(
+  kp: number,
+  protonFlux: number,
+  electronFlux: number,
+  constraints: ManeuverConstraints
+): { quality: ManeuverWindow['quality']; risks: string[] } {
+  const risks: string[] = [];
+
+  if (kp > constraints.maxKp) {
+    risks.push(`Kp ${kp} exceeds limit ${constraints.maxKp}`);
+  }
+  if (protonFlux > constraints.maxProtonFlux) {
+    risks.push(`Proton flux ${protonFlux} exceeds limit ${constraints.maxProtonFlux}`);
+  }
+  if (constraints.requiresLowDrag && kp > 4) {
+    risks.push('High atmospheric drag from geomagnetic activity');
+  }
+  if (constraints.requiresLowRadiation && protonFlux > 10) {
+    risks.push('Elevated radiation in Van Allen belt region');
+  }
+  if (electronFlux > 1e4) {
+    risks.push('Surface charging risk from electron flux');
+  }
+
+  let quality: ManeuverWindow['quality'];
+  if (risks.length === 0 && kp <= 3 && protonFlux <= 10) {
+    quality = 'optimal';
+  } else if (risks.length === 0) {
+    quality = 'acceptable';
+  } else {
+    quality = 'risky';
+  }
+
+  return { quality, risks };
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add services/maneuver-planner.ts
+git commit -m "feat: add maneuver window planning service"
+```
+
+---
+
+## Task 10: MEO Radiation Belt Risk
+
+**Goal:** Assess Van Allen radiation belt risk for MEO satellites and orbit-raising maneuvers.
+
+**Files:**
+- Create: `services/radiation-belt.ts`
+- Create: `components/satellite/RadiationBeltRisk.tsx`
+
+**Step 1: Create radiation belt service**
+
+```typescript
+// services/radiation-belt.ts
+export interface RadiationBeltRisk {
+  level: 'low' | 'moderate' | 'high' | 'severe';
+  innerBeltFlux: number;  // Protons
+  outerBeltFlux: number;  // Electrons
+  slotRegionSafe: boolean;
+  recommendations: string[];
+}
+
+// Van Allen belt boundaries (approximate)
+const INNER_BELT_MIN = 1000;   // km
+const INNER_BELT_MAX = 6000;   // km
+const SLOT_REGION_MIN = 6000;  // km
+const SLOT_REGION_MAX = 13000; // km
+const OUTER_BELT_MIN = 13000;  // km
+const OUTER_BELT_MAX = 40000;  // km
+
+export function isInRadiationBelt(altitudeKm: number): {
+  inInnerBelt: boolean;
+  inSlotRegion: boolean;
+  inOuterBelt: boolean;
+} {
+  return {
+    inInnerBelt: altitudeKm >= INNER_BELT_MIN && altitudeKm <= INNER_BELT_MAX,
+    inSlotRegion: altitudeKm >= SLOT_REGION_MIN && altitudeKm <= SLOT_REGION_MAX,
+    inOuterBelt: altitudeKm >= OUTER_BELT_MIN && altitudeKm <= OUTER_BELT_MAX,
+  };
+}
+
+export function assessRadiationBeltRisk(
+  altitudeKm: number,
+  protonFlux: number,
+  electronFlux: number,
+  kp: number
+): RadiationBeltRisk {
+  const location = isInRadiationBelt(altitudeKm);
+  const recommendations: string[] = [];
+
+  // During storms, outer belt expands and slot region fills
+  const slotRegionSafe = kp < 5 && location.inSlotRegion;
+
+  let level: RadiationBeltRisk['level'] = 'low';
+
+  if (location.inInnerBelt) {
+    // Inner belt is relatively stable but high proton flux
+    if (protonFlux > 100) {
+      level = 'severe';
+      recommendations.push('Minimize time in inner belt during SPE');
+    } else if (protonFlux > 10) {
+      level = 'high';
+      recommendations.push('Monitor proton flux closely');
+    } else {
+      level = 'moderate';
+    }
+  } else if (location.inOuterBelt) {
+    // Outer belt varies dramatically with geomagnetic activity
+    if (kp >= 7 || electronFlux > 1e5) {
+      level = 'severe';
+      recommendations.push('Outer belt highly enhanced - delay transit if possible');
+    } else if (kp >= 5 || electronFlux > 1e4) {
+      level = 'high';
+      recommendations.push('Elevated electron flux in outer belt');
+    } else if (electronFlux > 1e3) {
+      level = 'moderate';
+    }
+  } else if (location.inSlotRegion) {
+    // Slot region normally safe but fills during storms
+    if (kp >= 6) {
+      level = 'high';
+      recommendations.push('Slot region filling with particles during storm');
+    } else if (kp >= 4) {
+      level = 'moderate';
+      recommendations.push('Monitor slot region conditions');
+    }
+  }
+
+  return {
+    level,
+    innerBeltFlux: protonFlux,
+    outerBeltFlux: electronFlux,
+    slotRegionSafe,
+    recommendations,
+  };
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add services/radiation-belt.ts
+git commit -m "feat: add Van Allen radiation belt risk assessment"
+```
+
+---
+
+## Task 11: Launch Window Assessment
+
+**Goal:** Evaluate space weather conditions for launch windows, especially for orbit-raising phases.
+
+**Files:**
+- Create: `services/launch-assessment.ts`
+
+**Step 1: Create launch assessment service**
+
+```typescript
+// services/launch-assessment.ts
+import { assessRadiationBeltRisk } from './radiation-belt';
+
+export interface LaunchWindowAssessment {
+  overall: 'go' | 'caution' | 'no-go';
+  factors: {
+    name: string;
+    status: 'green' | 'yellow' | 'red';
+    value: string;
+    threshold: string;
+  }[];
+  orbitRaisingRisk: string;
+  recommendations: string[];
+}
+
+export function assessLaunchWindow(
+  targetAltitude: number,
+  kp: number,
+  protonFlux: number,
+  electronFlux: number,
+  solarWindSpeed: number
+): LaunchWindowAssessment {
+  const factors: LaunchWindowAssessment['factors'] = [];
+  const recommendations: string[] = [];
+
+  // Kp index assessment
+  let kpStatus: 'green' | 'yellow' | 'red' = 'green';
+  if (kp >= 7) kpStatus = 'red';
+  else if (kp >= 5) kpStatus = 'yellow';
+  factors.push({
+    name: 'Geomagnetic Activity (Kp)',
+    status: kpStatus,
+    value: kp.toString(),
+    threshold: '< 5 green, < 7 yellow',
+  });
+
+  // Proton flux (SPE) assessment
+  let protonStatus: 'green' | 'yellow' | 'red' = 'green';
+  if (protonFlux >= 100) protonStatus = 'red';
+  else if (protonFlux >= 10) protonStatus = 'yellow';
+  factors.push({
+    name: 'Solar Proton Event',
+    status: protonStatus,
+    value: `${protonFlux} pfu`,
+    threshold: '< 10 green, < 100 yellow',
+  });
+
+  // Solar wind assessment
+  let windStatus: 'green' | 'yellow' | 'red' = 'green';
+  if (solarWindSpeed >= 700) windStatus = 'red';
+  else if (solarWindSpeed >= 500) windStatus = 'yellow';
+  factors.push({
+    name: 'Solar Wind Speed',
+    status: windStatus,
+    value: `${solarWindSpeed} km/s`,
+    threshold: '< 500 green, < 700 yellow',
+  });
+
+  // Orbit raising risk
+  let orbitRaisingRisk = 'Low';
+  if (targetAltitude > 1000) {
+    const radiationRisk = assessRadiationBeltRisk(
+      targetAltitude,
+      protonFlux,
+      electronFlux,
+      kp
+    );
+    if (radiationRisk.level === 'severe') {
+      orbitRaisingRisk = 'Severe - delay recommended';
+      recommendations.push('High radiation environment for orbit raising');
+    } else if (radiationRisk.level === 'high') {
+      orbitRaisingRisk = 'High - proceed with caution';
+    } else if (radiationRisk.level === 'moderate') {
+      orbitRaisingRisk = 'Moderate';
+    }
+  }
+
+  // LEO drag during orbit raising
+  if (targetAltitude < 600 && kp >= 5) {
+    recommendations.push('Elevated atmospheric drag - may affect orbit raising fuel budget');
+  }
+
+  // Overall assessment
+  const hasRed = factors.some(f => f.status === 'red');
+  const hasYellow = factors.some(f => f.status === 'yellow');
+
+  let overall: LaunchWindowAssessment['overall'];
+  if (hasRed) {
+    overall = 'no-go';
+  } else if (hasYellow) {
+    overall = 'caution';
+  } else {
+    overall = 'go';
+  }
+
+  return { overall, factors, orbitRaisingRisk, recommendations };
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add services/launch-assessment.ts
+git commit -m "feat: add launch window space weather assessment"
+```
+
+---
+
+## Task 12: Storm Replay & Correlation
+
+**Goal:** Replay historical storm data and correlate with logged anomalies to identify patterns.
+
+**Files:**
+- Create: `services/storm-correlation.ts`
+- Create: `components/satellite/StormReplay.tsx`
+
+**Step 1: Create storm correlation service**
+
+```typescript
+// services/storm-correlation.ts
+import { supabase } from '@/lib/supabase';
+import { SatelliteAnomaly } from '@/types/database';
+
+export interface StormEvent {
+  startTime: Date;
+  peakTime: Date;
+  endTime: Date;
+  peakKp: number;
+  peakProtonFlux: number;
+  classification: string; // G1-G5 or S1-S5
+}
+
+export interface CorrelationResult {
+  stormEvent: StormEvent;
+  anomalies: SatelliteAnomaly[];
+  correlationStrength: 'strong' | 'moderate' | 'weak' | 'none';
+  delayHours: number; // Average delay from storm peak to anomaly
+}
+
+export async function findAnomaliesInTimeRange(
+  userId: string,
+  startTime: Date,
+  endTime: Date
+): Promise<SatelliteAnomaly[]> {
+  const { data, error } = await supabase
+    .from('satellite_anomalies')
+    .select('*')
+    .eq('user_id', userId)
+    .gte('occurred_at', startTime.toISOString())
+    .lte('occurred_at', endTime.toISOString())
+    .order('occurred_at', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export function correlateAnomaliesWithStorm(
+  storm: StormEvent,
+  anomalies: SatelliteAnomaly[]
+): CorrelationResult {
+  // Look for anomalies within 48 hours of storm peak
+  const windowStart = new Date(storm.peakTime.getTime() - 6 * 60 * 60 * 1000);
+  const windowEnd = new Date(storm.peakTime.getTime() + 48 * 60 * 60 * 1000);
+
+  const correlatedAnomalies = anomalies.filter(a => {
+    const time = new Date(a.occurred_at);
+    return time >= windowStart && time <= windowEnd;
+  });
+
+  // Calculate average delay from storm peak
+  let totalDelay = 0;
+  for (const anomaly of correlatedAnomalies) {
+    const anomalyTime = new Date(anomaly.occurred_at).getTime();
+    const peakTime = storm.peakTime.getTime();
+    totalDelay += (anomalyTime - peakTime) / (1000 * 60 * 60);
+  }
+  const avgDelay = correlatedAnomalies.length > 0
+    ? totalDelay / correlatedAnomalies.length
+    : 0;
+
+  // Determine correlation strength
+  let strength: CorrelationResult['correlationStrength'];
+  const ratio = correlatedAnomalies.length / Math.max(anomalies.length, 1);
+
+  if (correlatedAnomalies.length >= 3 && ratio > 0.5) {
+    strength = 'strong';
+  } else if (correlatedAnomalies.length >= 2 && ratio > 0.3) {
+    strength = 'moderate';
+  } else if (correlatedAnomalies.length >= 1) {
+    strength = 'weak';
+  } else {
+    strength = 'none';
+  }
+
+  return {
+    stormEvent: storm,
+    anomalies: correlatedAnomalies,
+    correlationStrength: strength,
+    delayHours: Math.round(avgDelay * 10) / 10,
+  };
+}
+
+// Get historical Kp data to identify storm periods
+export async function fetchHistoricalStorms(
+  startDate: Date,
+  endDate: Date
+): Promise<StormEvent[]> {
+  // Query proton flux history for SPEs (S-scale storms)
+  const { data: protonData } = await supabase
+    .from('proton_flux_history')
+    .select('*')
+    .gte('recorded_at', startDate.toISOString())
+    .lte('recorded_at', endDate.toISOString())
+    .gte('flux_pfu', 10) // S1 threshold
+    .order('recorded_at', { ascending: true });
+
+  const storms: StormEvent[] = [];
+
+  // Group consecutive high-flux periods into storm events
+  if (protonData && protonData.length > 0) {
+    let currentStorm: Partial<StormEvent> | null = null;
+    let peakFlux = 0;
+
+    for (const reading of protonData) {
+      const time = new Date(reading.recorded_at);
+
+      if (!currentStorm) {
+        currentStorm = {
+          startTime: time,
+          peakTime: time,
+          peakProtonFlux: reading.flux_pfu,
+          peakKp: 0,
+        };
+        peakFlux = reading.flux_pfu;
+      } else {
+        // Check if this is part of same storm (within 6 hours)
+        const lastTime = currentStorm.peakTime!.getTime();
+        if (time.getTime() - lastTime < 6 * 60 * 60 * 1000) {
+          if (reading.flux_pfu > peakFlux) {
+            peakFlux = reading.flux_pfu;
+            currentStorm.peakTime = time;
+            currentStorm.peakProtonFlux = reading.flux_pfu;
+          }
+        } else {
+          // End current storm, start new one
+          currentStorm.endTime = new Date(lastTime + 60 * 60 * 1000);
+          currentStorm.classification = classifyProtonStorm(peakFlux);
+          storms.push(currentStorm as StormEvent);
+
+          currentStorm = {
+            startTime: time,
+            peakTime: time,
+            peakProtonFlux: reading.flux_pfu,
+            peakKp: 0,
+          };
+          peakFlux = reading.flux_pfu;
+        }
+      }
+    }
+
+    // Close final storm
+    if (currentStorm) {
+      currentStorm.endTime = currentStorm.peakTime;
+      currentStorm.classification = classifyProtonStorm(peakFlux);
+      storms.push(currentStorm as StormEvent);
+    }
+  }
+
+  return storms;
+}
+
+function classifyProtonStorm(flux: number): string {
+  if (flux >= 100000) return 'S5';
+  if (flux >= 10000) return 'S4';
+  if (flux >= 1000) return 'S3';
+  if (flux >= 100) return 'S2';
+  if (flux >= 10) return 'S1';
+  return 'S0';
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add services/storm-correlation.ts
+git commit -m "feat: add storm replay and anomaly correlation service"
+```
+
+---
+
+## Task 13: REST API & CSV Export
+
+**Goal:** Provide programmatic API access and data export for Pro tier users.
+
+**Files:**
+- Create: `supabase/functions/api-satellites/index.ts`
+- Create: `supabase/functions/api-gnss/index.ts`
+- Create: `services/data-export.ts`
+
+**Step 1: Create satellite API endpoint**
+
+```typescript
+// supabase/functions/api-satellites/index.ts
+import { createClient } from '@supabase/supabase-js';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-api-key, content-type',
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const apiKey = req.headers.get('x-api-key');
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({ error: 'API key required' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  );
+
+  // Validate API key and check Pro tier
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, subscription_tier')
+    .eq('api_key', apiKey)
+    .single();
+
+  if (!profile || profile.subscription_tier === 'free') {
+    return new Response(
+      JSON.stringify({ error: 'Valid Pro API key required' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const url = new URL(req.url);
+  const format = url.searchParams.get('format') || 'json';
+
+  // Get user's satellites with current risk assessment
+  const { data: satellites, error } = await supabase
+    .from('satellites')
+    .select('*')
+    .eq('user_id', profile.id);
+
+  if (error) {
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (format === 'csv') {
+    const csv = convertToCSV(satellites);
+    return new Response(csv, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/csv',
+        'Content-Disposition': 'attachment; filename="satellites.csv"',
+      },
+    });
+  }
+
+  return new Response(
+    JSON.stringify({ satellites, count: satellites.length }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+});
+
+function convertToCSV(data: any[]): string {
+  if (data.length === 0) return '';
+  const headers = Object.keys(data[0]);
+  const rows = data.map(row =>
+    headers.map(h => JSON.stringify(row[h] ?? '')).join(',')
+  );
+  return [headers.join(','), ...rows].join('\n');
+}
+```
+
+**Step 2: Commit**
+
+```bash
+git add supabase/functions/api-satellites/index.ts
+git commit -m "feat: add REST API endpoint for satellite data with CSV export"
+```
+
+---
+
 ## Summary
 
 Phase 2 delivers the core satellite operations features:
@@ -2586,7 +3353,12 @@ Phase 2 delivers the core satellite operations features:
 5. **Drag Risk Calculator** - LEO thermospheric density impact assessment
 6. **Orbit Raising Mode** - Special monitoring for newly-launched satellites
 7. **Anomaly Logger** - Record events with automatic space weather correlation
-8. **CSV Fleet Import** - Bulk satellite management
+8. **TLE Import** - NORAD ID lookup via CelesTrak for orbital parameters
+9. **Maneuver Window Planner** - Optimal windows based on space weather
+10. **MEO Radiation Belt Risk** - Van Allen belt assessment
+11. **Launch Window Assessment** - Space weather go/no-go evaluation
+12. **Storm Replay & Correlation** - Historical analysis of anomaly patterns
+13. **REST API & CSV Export** - Programmatic data access for Pro users
 
 **All features are Pro-tier gated** via the `satelliteRisk` feature flag.
 

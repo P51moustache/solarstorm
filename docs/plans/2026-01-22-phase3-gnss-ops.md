@@ -2294,6 +2294,299 @@ git commit -m "feat: add GNSS operations dashboard with TEC, scintillation, and 
 
 ---
 
+## Task 8: GNSS Correction Data Export
+
+**Goal:** Allow GNSS engineers to export TEC and scintillation data for use in their own processing pipelines.
+
+**Files:**
+- Create: `supabase/functions/api-gnss/index.ts`
+- Create: `services/gnss-export.ts`
+
+**Step 1: Create GNSS data export service**
+
+```typescript
+// services/gnss-export.ts
+import { supabase } from '@/lib/supabase';
+
+export interface GnssExportOptions {
+  startDate: Date;
+  endDate: Date;
+  dataTypes: ('tec' | 'scintillation' | 'constellation')[];
+  regionIds?: string[];
+  format: 'json' | 'csv' | 'rinex-like';
+}
+
+export interface TecExportRecord {
+  timestamp: string;
+  regionName: string;
+  latitude: number;
+  longitude: number;
+  tecValue: number;
+  tecUnit: string;
+  singleFreqErrorM: number;
+  dualFreqErrorM: number;
+}
+
+export interface ScintillationExportRecord {
+  timestamp: string;
+  regionName: string;
+  latitude: number;
+  longitude: number;
+  s4Index: number;
+  sigmaPhiRad: number;
+  riskLevel: string;
+  lossOfLockProbability: number;
+}
+
+export async function exportTecData(
+  userId: string,
+  options: GnssExportOptions
+): Promise<TecExportRecord[]> {
+  let query = supabase
+    .from('tec_history')
+    .select(`
+      *,
+      gnss_regions!inner (name, latitude, longitude)
+    `)
+    .gte('recorded_at', options.startDate.toISOString())
+    .lte('recorded_at', options.endDate.toISOString());
+
+  if (options.regionIds && options.regionIds.length > 0) {
+    query = query.in('region_id', options.regionIds);
+  }
+
+  // Join with user's regions
+  query = query.eq('gnss_regions.user_id', userId);
+
+  const { data, error } = await query.order('recorded_at', { ascending: true });
+
+  if (error) throw error;
+
+  return (data || []).map(row => ({
+    timestamp: row.recorded_at,
+    regionName: row.gnss_regions.name,
+    latitude: row.gnss_regions.latitude,
+    longitude: row.gnss_regions.longitude,
+    tecValue: row.tec_value,
+    tecUnit: 'TECU',
+    singleFreqErrorM: row.tec_value * 0.163, // L1 frequency
+    dualFreqErrorM: row.tec_value * 0.01,    // Dual-frequency corrected
+  }));
+}
+
+export async function exportScintillationData(
+  userId: string,
+  options: GnssExportOptions
+): Promise<ScintillationExportRecord[]> {
+  let query = supabase
+    .from('scintillation_history')
+    .select(`
+      *,
+      gnss_regions!inner (name, latitude, longitude)
+    `)
+    .gte('recorded_at', options.startDate.toISOString())
+    .lte('recorded_at', options.endDate.toISOString());
+
+  if (options.regionIds && options.regionIds.length > 0) {
+    query = query.in('region_id', options.regionIds);
+  }
+
+  query = query.eq('gnss_regions.user_id', userId);
+
+  const { data, error } = await query.order('recorded_at', { ascending: true });
+
+  if (error) throw error;
+
+  return (data || []).map(row => {
+    // Estimate loss of lock probability from S4 index
+    let lossProb = 0;
+    if (row.s4_index > 0.7) lossProb = 0.8;
+    else if (row.s4_index > 0.5) lossProb = 0.4;
+    else if (row.s4_index > 0.3) lossProb = 0.15;
+    else if (row.s4_index > 0.2) lossProb = 0.05;
+
+    return {
+      timestamp: row.recorded_at,
+      regionName: row.gnss_regions.name,
+      latitude: row.gnss_regions.latitude,
+      longitude: row.gnss_regions.longitude,
+      s4Index: row.s4_index,
+      sigmaPhiRad: row.sigma_phi,
+      riskLevel: row.risk_level,
+      lossOfLockProbability: lossProb,
+    };
+  });
+}
+
+export function formatAsCSV<T extends Record<string, any>>(data: T[]): string {
+  if (data.length === 0) return '';
+  const headers = Object.keys(data[0]);
+  const rows = data.map(row =>
+    headers.map(h => {
+      const val = row[h];
+      if (typeof val === 'string' && val.includes(',')) {
+        return `"${val}"`;
+      }
+      return String(val ?? '');
+    }).join(',')
+  );
+  return [headers.join(','), ...rows].join('\n');
+}
+
+// RINEX-like format for TEC data (simplified)
+export function formatAsRinexLike(data: TecExportRecord[]): string {
+  const lines: string[] = [
+    'GNSS TEC EXPORT FILE',
+    `GENERATED: ${new Date().toISOString()}`,
+    'FORMAT: RINEX-LIKE IONOSPHERE',
+    '',
+    'EPOCH               LAT      LON      TEC(TECU)  ERR_L1(m)  ERR_DF(m)',
+    '-'.repeat(72),
+  ];
+
+  for (const row of data) {
+    const epoch = row.timestamp.replace('T', ' ').substring(0, 19);
+    const lat = row.latitude.toFixed(4).padStart(8);
+    const lon = row.longitude.toFixed(4).padStart(9);
+    const tec = row.tecValue.toFixed(2).padStart(10);
+    const errL1 = row.singleFreqErrorM.toFixed(3).padStart(10);
+    const errDF = row.dualFreqErrorM.toFixed(3).padStart(10);
+    lines.push(`${epoch} ${lat} ${lon} ${tec} ${errL1} ${errDF}`);
+  }
+
+  return lines.join('\n');
+}
+```
+
+**Step 2: Create GNSS API endpoint**
+
+```typescript
+// supabase/functions/api-gnss/index.ts
+import { createClient } from '@supabase/supabase-js';
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-api-key, content-type',
+};
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  const apiKey = req.headers.get('x-api-key');
+  if (!apiKey) {
+    return new Response(
+      JSON.stringify({ error: 'API key required' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const supabase = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
+  );
+
+  // Validate API key and check Pro tier
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('id, subscription_tier')
+    .eq('api_key', apiKey)
+    .single();
+
+  if (!profile || profile.subscription_tier === 'free') {
+    return new Response(
+      JSON.stringify({ error: 'Valid Pro API key required' }),
+      { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const url = new URL(req.url);
+  const dataType = url.searchParams.get('type') || 'tec';
+  const format = url.searchParams.get('format') || 'json';
+  const startDate = url.searchParams.get('start') || new Date(Date.now() - 24*60*60*1000).toISOString();
+  const endDate = url.searchParams.get('end') || new Date().toISOString();
+
+  let data: any[];
+  let filename: string;
+
+  if (dataType === 'tec') {
+    const { data: tecData, error } = await supabase
+      .from('tec_history')
+      .select(`*, gnss_regions!inner (name, latitude, longitude, user_id)`)
+      .eq('gnss_regions.user_id', profile.id)
+      .gte('recorded_at', startDate)
+      .lte('recorded_at', endDate)
+      .order('recorded_at', { ascending: true });
+
+    if (error) {
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    data = tecData || [];
+    filename = 'tec_data';
+  } else if (dataType === 'scintillation') {
+    const { data: scintData, error } = await supabase
+      .from('scintillation_history')
+      .select(`*, gnss_regions!inner (name, latitude, longitude, user_id)`)
+      .eq('gnss_regions.user_id', profile.id)
+      .gte('recorded_at', startDate)
+      .lte('recorded_at', endDate)
+      .order('recorded_at', { ascending: true });
+
+    if (error) {
+      return new Response(
+        JSON.stringify({ error: error.message }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+    data = scintData || [];
+    filename = 'scintillation_data';
+  } else {
+    return new Response(
+      JSON.stringify({ error: 'Invalid data type. Use: tec, scintillation' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (format === 'csv') {
+    const csv = convertToCSV(data);
+    return new Response(csv, {
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'text/csv',
+        'Content-Disposition': `attachment; filename="${filename}.csv"`,
+      },
+    });
+  }
+
+  return new Response(
+    JSON.stringify({ data, count: data.length, dataType, startDate, endDate }),
+    { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+});
+
+function convertToCSV(data: any[]): string {
+  if (data.length === 0) return '';
+  const headers = Object.keys(data[0]).filter(k => k !== 'gnss_regions');
+  const rows = data.map(row =>
+    headers.map(h => JSON.stringify(row[h] ?? '')).join(',')
+  );
+  return [headers.join(','), ...rows].join('\n');
+}
+```
+
+**Step 3: Commit**
+
+```bash
+git add services/gnss-export.ts supabase/functions/api-gnss/index.ts
+git commit -m "feat: add GNSS correction data export API with CSV and JSON formats"
+```
+
+---
+
 ## Summary
 
 Phase 3 delivers the core GNSS operations features:
@@ -2305,7 +2598,7 @@ Phase 3 delivers the core GNSS operations features:
 5. **Loss of Lock Risk** - GNSS signal stability assessment
 6. **Multi-Constellation Status** - GPS/GLONASS/Galileo/BeiDou health tracking
 7. **RTK/PPP Advisories** - Precision positioning degradation alerts
-8. **GNSS Regions** - User-defined areas of interest for localized monitoring
+8. **GNSS Correction Data Export** - REST API with CSV/JSON for TEC and scintillation data
 
 **All features are Pro-tier gated** via the `apiAccess` feature flag.
 
