@@ -78,12 +78,13 @@ export const useSatelliteStore = create<SatelliteState>((set, get) => ({
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      const insertData = {
+        ...satellite,
+        user_id: user.id,
+      };
       const { data, error } = await supabase
         .from('satellites')
-        .insert({
-          ...satellite,
-          user_id: user.id,
-        })
+        .insert(insertData as unknown as never)
         .select()
         .single();
 
@@ -108,9 +109,10 @@ export const useSatelliteStore = create<SatelliteState>((set, get) => ({
   updateSatellite: async (id, updates) => {
     set({ isLoading: true, error: null });
     try {
+      const updateData = { ...updates, updated_at: new Date().toISOString() };
       const { error } = await supabase
         .from('satellites')
-        .update({ ...updates, updated_at: new Date().toISOString() })
+        .update(updateData as unknown as never)
         .eq('id', id);
 
       if (error) throw error;
@@ -186,15 +188,16 @@ export const useSatelliteStore = create<SatelliteState>((set, get) => ({
         .limit(1)
         .single();
 
+      const anomalyData = {
+        ...anomaly,
+        user_id: user.id,
+        kp_at_time: (kpData as { value: number } | null)?.value ?? null,
+        proton_flux_at_time: (protonData as { flux_10mev: number } | null)?.flux_10mev ?? null,
+        electron_flux_at_time: (electronData as { flux_2mev: number } | null)?.flux_2mev ?? null,
+      };
       const { data, error } = await supabase
         .from('satellite_anomalies')
-        .insert({
-          ...anomaly,
-          user_id: user.id,
-          kp_at_time: (kpData as { value: number } | null)?.value ?? null,
-          proton_flux_at_time: (protonData as { flux_10mev: number } | null)?.flux_10mev ?? null,
-          electron_flux_at_time: (electronData as { flux_2mev: number } | null)?.flux_2mev ?? null,
-        })
+        .insert(anomalyData as unknown as never)
         .select()
         .single();
 
@@ -257,7 +260,7 @@ export const useSatelliteStore = create<SatelliteState>((set, get) => ({
           org_id: null,
         };
 
-        const { error } = await supabase.from('satellites').insert(satellite);
+        const { error } = await supabase.from('satellites').insert(satellite as unknown as never);
         if (error) throw error;
         success++;
       } catch {
