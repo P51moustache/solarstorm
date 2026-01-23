@@ -30,8 +30,8 @@ SolarStorm pivots from a $1.99 consumer aurora app to a unified space weather in
 |----------|---------|------------|-------------|
 | 1 | Satellite Operations Manager | Lost 40 satellites in one storm ($5-10M each) | Pro/Enterprise |
 | 2 | Power Grid Reliability Engineer | Transformer damage, blackouts ($5-10M each) | Pro/Enterprise |
-| 3 | Airline Flight Ops Manager | $50-100K per polar reroute | Pro/Enterprise |
-| 4 | GNSS/Navigation Engineer | 10-30m positioning errors | Pro |
+| 3 | GNSS/Navigation Engineer | 10-30m positioning errors, loss of lock | Pro |
+| 4 | Airline Flight Ops Manager | $50-100K per polar reroute, crew radiation | Pro/Enterprise |
 | 5 | Amateur Radio Operator | HF blackouts, propagation planning | Plus |
 | 6 | Aurora Photographer/Enthusiast | Missed aurora events | Plus/Free |
 
@@ -86,37 +86,48 @@ Everything in Plus, plus:
 **Satellite Operations:**
 | Feature | Description |
 |---------|-------------|
-| **Satellite Fleet Manager** | Add satellites by name, altitude, inclination, **ballistic coefficient** |
-| **Drag Risk Index** | Real-time risk assessment per satellite |
+| **Satellite Fleet Manager** | Add satellites by name, altitude, inclination, **ballistic coefficient**, orbit type (LEO/MEO/GEO) |
+| **Drag Risk Index** | Real-time risk assessment per satellite (LEO focus) |
+| **Surface Charging Risk** | Electron flux monitoring for GEO satellite charging/arcing risk |
 | **Thermospheric Density Forecast** | Density increase predictions |
 | **Safe Mode Recommendation** | Automated safe mode timing suggestions |
 | **Maneuver Window Planner** | Low-risk windows for orbit adjustments |
+| **Orbit-Raising Mode** | Special monitoring for newly-launched satellites in vulnerable orbit-raising phase |
 | **SEP/Proton Event Alerts** | Solar energetic particle monitoring for electronics protection |
 | **Launch Window Assessment** | Delay recommendations based on storm forecasts |
 | **Storm Replay + Correlation** | Historical storm analysis vs. your assets |
+| **Anomaly Logging** | Record satellite anomalies to correlate with space weather events |
 
 **Power Grid:**
 | Feature | Description |
 |---------|-------------|
 | **GIC Risk Maps** | Geomagnetically induced current visualization |
+| **dB/dt Monitoring** | Rate of magnetic field change - the actual GIC driver |
 | **G-Scale Classification** | Map storms to NERC G1-G5 scale |
 | **Reference Event Benchmarking** | "This storm = 60% of 1989 Québec event" |
-| **Transformer Risk Assessment** | Load shedding / isolation recommendations |
+| **Transformer Risk Assessment** | Risk level per asset class |
+| **Action Recommendations** | Explicit "recommend load shedding" / "recommend transformer isolation" |
+| **Grid Topology Input** | Define your transformer locations and line lengths (basic) |
+| **Post-Event Reports** | Inspection scheduling, incident logging, damage assessment |
 
 **Aviation:**
 | Feature | Description |
 |---------|-------------|
-| **Polar Route HF Forecast** | Blackout probability by named route (NAT Tracks, etc.) |
-| **Radiation Dose Calculator** | Crew/passenger exposure estimates at altitude |
+| **Polar Route HF Forecast** | Blackout probability by named route (NAT Tracks, Pacific, etc.) |
+| **Radiation Dose Calculator** | Crew/passenger exposure at multiple flight levels (FL350, FL390, etc.) |
+| **Cumulative Dose Estimator** | Total dose over flight duration, not just instantaneous rate |
 | **Route-Specific Alerts** | "North Atlantic Track B at risk in 3 hours" |
-| **Compliance Report Export** | FAA/ICAO-ready reports |
+| **Alternative Route Suggestions** | "Consider Track D as lower-risk alternative" |
+| **Compliance Report Export** | FAA/ICAO advisory format reports |
 
 **GNSS/Navigation:**
 | Feature | Description |
 |---------|-------------|
-| **Ionospheric TEC Maps** | Total electron content visualization |
+| **Ionospheric TEC Maps** | Total electron content visualization (global + regional) |
+| **Scintillation Forecasts** | Rapid fluctuations that cause receiver loss of lock |
 | **GNSS Error Probability** | Positioning accuracy degradation forecast |
 | **RTK/PPP Degradation Alerts** | Notify when precision ops should pause |
+| **Regional Focus Mode** | Set your operating region for localized TEC/scintillation data |
 
 **General Pro:**
 | Feature | Description |
@@ -154,36 +165,46 @@ This matrix validates that each persona's critical needs are addressed:
 | Safe-mode triggers | Safe Mode Recommendation | Pro | 3 |
 | Historical storm correlation | Storm Replay + Correlation | Pro | 3 |
 | **SEP/High-energy particle events** | **SEP/Proton Event Alerts** | Pro | 3 |
+| **Surface charging (GEO)** | **Surface Charging Risk** | Pro | 3 |
 | **Launch delay recommendations** | **Launch Window Assessment** | Pro | 3 |
+| **Orbit-raising vulnerability** | **Orbit-Raising Mode** | Pro | 3 |
+| **Anomaly correlation** | **Anomaly Logging** | Pro | 3 |
 
 ### Persona 2: Power Grid Engineer (Pro/Enterprise)
 
 | Persona Requirement | Feature | Tier | Phase |
 |---------------------|---------|------|-------|
 | Regional GIC risk maps | GIC Risk Maps | Pro | 4 |
+| **dB/dt rate of change** | **dB/dt Monitoring** | Pro | 3 |
 | Lead time alerts (12-48h) | Alert system | All | 1 |
 | **NERC severity classification** | **G-Scale (G1-G5) mapping** | Pro | 3 |
 | **Historical benchmarking** | **Reference Event Benchmarking** | Pro | 3 |
-| **Grid topology input** | **Grid Topology Config** | Ent | 4 |
-| **Transformer recommendations** | **Transformer Risk Assessment** | Pro | 3 |
+| **Grid topology input** | **Grid Topology Config** | Pro/Ent | 3/4 |
+| **Load shedding recommendation** | **Action Recommendations** | Pro | 3 |
+| **Transformer isolation recommendation** | **Action Recommendations** | Pro | 3 |
+| **Post-event inspections** | **Post-Event Reports** | Pro | 3 |
 
-### Persona 3: Airline Ops Manager (Pro/Enterprise)
-
-| Persona Requirement | Feature | Tier | Phase |
-|---------------------|---------|------|-------|
-| **Radiation dose forecasts** | **Radiation Dose Calculator** | Pro | 3 |
-| HF blackout by latitude | Polar Route HF Forecast | Pro | 4 |
-| **Route-specific alerts** | **Named Route Alerts (NAT Tracks)** | Pro | 3 |
-| **Compliance reporting** | **FAA/ICAO Report Export** | Pro | 3 |
-
-### Persona 4: GNSS Engineer (Pro)
+### Persona 3: GNSS Engineer (Pro) - Priority 3
 
 | Persona Requirement | Feature | Tier | Phase |
 |---------------------|---------|------|-------|
-| Ionospheric TEC forecasts | TEC Maps | Pro | 4 |
+| Ionospheric TEC forecasts | TEC Maps (global + regional) | Pro | 3 |
+| **Scintillation / loss of lock** | **Scintillation Forecasts** | Pro | 3 |
 | **GNSS error probability** | **Error Probability Overlay** | Pro | 3 |
 | **RTK/PPP degradation alerts** | **Degradation Threshold Alerts** | Pro | 3 |
+| **Regional focus** | **Regional Focus Mode** | Pro | 3 |
 | API for autonomous systems | REST API | Pro | 3 |
+
+### Persona 4: Airline Ops Manager (Pro/Enterprise) - Priority 4
+
+| Persona Requirement | Feature | Tier | Phase |
+|---------------------|---------|------|-------|
+| **Radiation dose forecasts** | **Radiation Dose Calculator** (multi-altitude) | Pro | 3 |
+| **Cumulative dose over flight** | **Cumulative Dose Estimator** | Pro | 3 |
+| HF blackout by latitude | Polar Route HF Forecast | Pro | 3 |
+| **Route-specific alerts** | **Named Route Alerts (NAT Tracks)** | Pro | 3 |
+| **Alternative routing** | **Alternative Route Suggestions** | Pro | 3 |
+| **Compliance reporting** | **FAA/ICAO Report Export** | Pro | 3 |
 
 ### Persona 5: Amateur Radio Operator (Plus)
 
@@ -267,28 +288,41 @@ GET  /api/v1/aurora/probability  # Global probability grid
 GET  /api/v1/aurora/forecast     # Location-specific (?lat=&lng=)
 
 Satellite Risk (Pro+):
-GET  /api/v1/risk/satellite      # Risk for altitude (?altitude_km=&inclination=)
+GET  /api/v1/risk/satellite      # Risk for altitude (?altitude_km=&inclination=&orbit_type=)
+GET  /api/v1/risk/drag           # Drag risk (LEO)
+GET  /api/v1/risk/charging       # Surface charging risk (GEO) - electron flux
 GET  /api/v1/density/forecast    # Thermospheric density forecast
 POST /api/v1/satellites          # Add satellite to fleet
 GET  /api/v1/satellites/:id/risk # Risk for specific satellite
+GET  /api/v1/satellites/:id/orbit-raising  # Orbit-raising mode status
 GET  /api/v1/sep/current         # Solar energetic particle status
 GET  /api/v1/launch-window       # Launch window assessment
+POST /api/v1/anomalies           # Log satellite anomaly
+GET  /api/v1/anomalies/correlate # Correlate anomalies with space weather
 
 Power Grid (Pro+):
 GET  /api/v1/gic/risk            # GIC risk by region
+GET  /api/v1/gic/dbdt            # dB/dt rate of change (GIC driver)
 GET  /api/v1/g-scale/current     # Current G-scale classification
-GET  /api/v1/benchmark/:event    # Compare to reference events
+GET  /api/v1/benchmark/:event    # Compare to reference events (quebec-1989, etc.)
+GET  /api/v1/grid/recommendations # Action recommendations (load shed, isolate)
+POST /api/v1/grid/topology       # Define grid assets
+GET  /api/v1/reports/post-event  # Post-event inspection report
+
+GNSS (Pro+):
+GET  /api/v1/tec/current         # Ionospheric TEC (global)
+GET  /api/v1/tec/regional        # Regional TEC (?lat=&lng=&radius=)
+GET  /api/v1/scintillation       # Scintillation index (loss of lock risk)
+GET  /api/v1/gnss/error          # GNSS error probability
+GET  /api/v1/rtk/status          # RTK/PPP degradation status
 
 Aviation (Pro+):
 GET  /api/v1/radiation/dose      # Dose rate at altitude (?alt_ft=&lat=&lng=)
+GET  /api/v1/radiation/cumulative # Cumulative dose over route (?route=&duration_hrs=)
 GET  /api/v1/routes/risk         # Named route risk (NAT, Pacific)
+GET  /api/v1/routes/alternatives # Alternative route suggestions
 GET  /api/v1/hf-blackout/polar   # Polar HF blackout forecast
-GET  /api/v1/reports/compliance  # Generate FAA/ICAO report
-
-GNSS (Pro+):
-GET  /api/v1/tec/current         # Ionospheric TEC
-GET  /api/v1/gnss/error          # GNSS error probability
-GET  /api/v1/rtk/status          # RTK/PPP degradation status
+GET  /api/v1/reports/compliance  # Generate FAA/ICAO advisory format report
 
 Integrations (Enterprise):
 POST /api/v1/webhooks            # Configure webhook
@@ -400,14 +434,20 @@ Output:
 | CME Launched | SOHO/LASCO coronagraph detection | 1-3 days | All |
 | CME Arrival Imminent | DSCOVR L1 solar wind jump | 30-60 min | All |
 | Kp Threshold Exceeded | Real-time measurement | Immediate | All |
-| Drag Risk Elevated | Forecast model | 4-24 hours | Satellites |
-| Safe Mode Recommended | Rules engine | User-configurable | Satellites |
-| Maneuver Window Opening | Forecast clears | 6-24 hours | Satellites |
+| **Drag Risk Elevated** | Density forecast model | 4-24 hours | Satellites (LEO) |
+| **Surface Charging Risk** | Electron flux spike | 15-60 min | Satellites (GEO) |
+| **Safe Mode Recommended** | Rules engine | User-configurable | Satellites |
+| **Maneuver Window Opening** | Forecast clears | 6-24 hours | Satellites |
+| **Orbit-Raising Alert** | Storm during vulnerable phase | Immediate | Satellites |
 | **SEP Event Detected** | GOES proton flux spike | Minutes | Satellites, Airlines |
 | **G-Scale Storm Warning** | NOAA G1-G5 | 15-45 min | Power Grid |
+| **dB/dt Spike** | Magnetic field rate of change | Minutes | Power Grid |
+| **Load Shedding Recommended** | GIC threshold + grid config | 15-60 min | Power Grid |
+| **Scintillation Alert** | Scintillation index spike | 15 min | GNSS |
+| **RTK/PPP Degradation** | TEC/scintillation threshold | 15 min | GNSS |
 | **R-Scale Blackout** | X-ray flux spike | Minutes | Airlines, Ham Radio |
 | **Polar Route Risk** | HF blackout + radiation | 1-6 hours | Airlines |
-| **RTK/PPP Degradation** | TEC threshold | 15 min | GNSS |
+| **Radiation Dose Warning** | Proton flux at altitude | 30 min | Airlines |
 
 ---
 
@@ -427,7 +467,10 @@ Output:
 | **Solar Proton Events (EPAM)** | NOAA SWPC | 5 minutes | **Satellites, Airlines** |
 | **GOES X-ray Flux** | NOAA SWPC | 1 minute | **R-scale blackouts, Ham Radio** |
 | **GOES Proton Flux** | NOAA SWPC | 5 minutes | **Radiation dose (Airlines)** |
+| **GOES Electron Flux** | NOAA SWPC | 5 minutes | **Surface charging (GEO satellites)** |
 | **G-Scale (Geomagnetic)** | NOAA SWPC | As issued | **Power Grid (NERC)** |
+| **Magnetometer dB/dt** | NOAA SWPC / USGS | 1 minute | **GIC driver (Power Grid)** |
+| **Scintillation Index** | NOAA SWPC | 15 minutes | **GNSS loss of lock** |
 
 ---
 
@@ -469,29 +512,42 @@ Output:
 **Goal:** Enterprise value, justify $49/month
 
 **Satellite Operations:**
-- [ ] Satellite fleet manager (CRUD with ballistic coefficient)
-- [ ] Drag risk index calculator
+- [ ] Satellite fleet manager (CRUD with ballistic coefficient, orbit type)
+- [ ] Drag risk index calculator (LEO focus)
+- [ ] **Surface charging risk monitor (GEO focus - electron flux)**
 - [ ] Thermospheric density model integration
 - [ ] Safe mode recommendation engine
 - [ ] Maneuver window planner
+- [ ] **Orbit-raising mode (special monitoring for newly-launched satellites)**
 - [ ] **SEP/Solar proton event monitoring and alerts**
 - [ ] **Launch window assessment tool**
 - [ ] Storm replay with asset correlation
+- [ ] **Anomaly logging (correlate your events with space weather)**
 
 **Power Grid:**
+- [ ] **dB/dt monitoring (rate of magnetic field change - actual GIC driver)**
 - [ ] **G-scale (G1-G5) classification mapping**
 - [ ] **Reference event benchmarking (1989 Québec comparisons)**
-- [ ] **Transformer risk assessment recommendations**
+- [ ] **Transformer risk assessment**
+- [ ] **Action recommendations ("recommend load shedding", "recommend isolation")**
+- [ ] **Basic grid topology input (transformer locations, line lengths)**
+- [ ] **Post-event reports (inspection scheduling, incident logging)**
 
-**Aviation:**
-- [ ] **Radiation dose calculator (crew exposure by altitude/route)**
-- [ ] **Named route support (North Atlantic Tracks, Pacific routes)**
-- [ ] **Route-specific alerts ("Track B at risk in 3h")**
-- [ ] **Compliance report export (FAA/ICAO format)**
-
-**GNSS:**
+**GNSS (Priority 3):**
+- [ ] **Ionospheric TEC maps (global + regional)**
+- [ ] **Scintillation forecasts (loss of lock prediction)**
 - [ ] **GNSS error probability visualization**
 - [ ] **RTK/PPP degradation threshold alerts**
+- [ ] **Regional focus mode (set operating area for localized data)**
+
+**Aviation (Priority 4):**
+- [ ] **Radiation dose calculator (multi-altitude: FL350, FL390, etc.)**
+- [ ] **Cumulative dose estimator (total dose over flight duration)**
+- [ ] **Polar route HF forecast**
+- [ ] **Named route support (North Atlantic Tracks, Pacific routes)**
+- [ ] **Route-specific alerts ("Track B at risk in 3h")**
+- [ ] **Alternative route suggestions ("Consider Track D")**
+- [ ] **Compliance report export (FAA/ICAO advisory format)**
 
 **General Pro:**
 - [ ] REST API with authentication
