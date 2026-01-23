@@ -17,10 +17,14 @@ import {
 
 import { AlertBanner } from '@/components/AlertBanner';
 import { AuroraHeatmap } from '@/components/AuroraHeatmap';
+import { FeatureGate } from '@/components/FeatureGate';
+import { HfPropagationMap } from '@/components/hf/HfPropagationMap';
 import { KpMiniTrend } from '@/components/KpMiniTrend';
 import { KpTile } from '@/components/KpTile';
 import { KpTrendLine } from '@/components/KpTrendLine';
 import { KpiCard } from '@/components/KpiCard';
+import { PhotoPlanning } from '@/components/photo/PhotoPlanning';
+import { LocationPrediction } from '@/components/predictions/LocationPrediction';
 import { Section } from '@/components/Section';
 import { getKpHistory } from '@/lib/api/swpc';
 import { useAuthStore } from '@/lib/state/useAuthStore';
@@ -253,6 +257,33 @@ export default function HomeScreen() {
             />
           </Section>
 
+          {/* Plus Tier Features */}
+          <Section title="Your Aurora Forecast">
+            <LocationPrediction />
+          </Section>
+
+          <Section>
+            <HfPropagationMap />
+          </Section>
+
+          <Section>
+            <PhotoPlanning />
+          </Section>
+
+          {/* 3D Globe Navigation - Plus Feature */}
+          <FeatureGate feature="globe3d" showUpgrade>
+            <TouchableOpacity
+              style={styles.globeButton}
+              onPress={() => router.push('/globe')}
+              accessible
+              accessibilityRole="button"
+              accessibilityLabel="View 3D Aurora Globe"
+            >
+              <Ionicons name="globe-outline" size={24} color={COLORS.text} />
+              <Text style={styles.globeButtonText}>View 3D Globe</Text>
+            </TouchableOpacity>
+          </FeatureGate>
+
           {/* Bottom spacing */}
           <View style={{ height: SPACING.xl }} />
         </ScrollView>
@@ -352,5 +383,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#0B1020',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  globeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    backgroundColor: COLORS.card,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    marginTop: SPACING.md,
+  },
+  globeButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
   },
 });
