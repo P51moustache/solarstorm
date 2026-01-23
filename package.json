@@ -20,6 +20,7 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "@shopify/react-native-skia": "^2.2.13",
+    "@stripe/stripe-js": "^8.6.4",
     "@supabase/auth-helpers-react": "^0.15.0",
     "@supabase/supabase-js": "^2.91.0",
     "dayjs": "^1.11.18",
