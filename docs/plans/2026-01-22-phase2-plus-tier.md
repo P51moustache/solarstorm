@@ -86,10 +86,14 @@ export interface GlobeControls {
 Create `components/globe/GlobeScene.tsx`:
 ```typescript
 import { OrbitControls, Stars, useTexture } from '@react-three/drei';
-import { useFrame } from '@react-three/fiber';
+import { useFrame, useLoader } from '@react-three/fiber';
 import React, { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import type { AuroraCell } from './types';
+
+// NASA Blue Marble Earth texture URL (public domain)
+const EARTH_TEXTURE_URL = 'https://unpkg.com/three-globe@2.31.0/example/img/earth-blue-marble.jpg';
+const EARTH_NIGHT_URL = 'https://unpkg.com/three-globe@2.31.0/example/img/earth-night.jpg';
 
 interface GlobeSceneProps {
   auroraData?: AuroraCell[];
@@ -99,6 +103,9 @@ interface GlobeSceneProps {
 export function GlobeScene({ auroraData = [], autoRotate = true }: GlobeSceneProps) {
   const earthRef = useRef<THREE.Mesh>(null);
   const auroraRef = useRef<THREE.Mesh>(null);
+
+  // Load Earth textures
+  const [dayTexture, nightTexture] = useTexture([EARTH_TEXTURE_URL, EARTH_NIGHT_URL]);
 
   // Rotate earth slowly
   useFrame((_, delta) => {
@@ -158,11 +165,14 @@ export function GlobeScene({ auroraData = [], autoRotate = true }: GlobeScenePro
       {/* Stars background */}
       <Stars radius={100} depth={50} count={5000} factor={4} fade speed={1} />
 
-      {/* Earth sphere */}
+      {/* Earth sphere with photorealistic texture */}
       <mesh ref={earthRef}>
         <sphereGeometry args={[1, 64, 64]} />
         <meshStandardMaterial
-          color="#1a4a7a"
+          map={dayTexture}
+          emissiveMap={nightTexture}
+          emissive={new THREE.Color(0x112244)}
+          emissiveIntensity={0.5}
           roughness={0.8}
           metalness={0.1}
         />
@@ -1222,14 +1232,29 @@ export const useAlertStore = create<AlertState>()(
 Create `components/alerts/AlertConfig.tsx`:
 ```typescript
 import { Ionicons } from '@expo/vector-icons';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import React, { useEffect, useState } from 'react';
-import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import Slider from '@react-native-community/slider';
 import { FeatureGate } from '@/components/FeatureGate';
 import { useAlertStore } from '@/lib/state/useAlertStore';
 import { useTier } from '@/hooks/useAuth';
 import { TIER_FEATURES } from '@/lib/features/tiers';
 import { COLORS } from '@/lib/util/colors';
+
+// Helper to convert "HH:mm" string to Date
+function timeStringToDate(timeStr: string | null): Date {
+  const now = new Date();
+  if (!timeStr) return now;
+  const [hours, minutes] = timeStr.split(':').map(Number);
+  now.setHours(hours, minutes, 0, 0);
+  return now;
+}
+
+// Helper to format Date to "HH:mm" string
+function dateToTimeString(date: Date): string {
+  return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+}
 
 export function AlertConfig() {
   const tier = useTier();
@@ -1239,6 +1264,11 @@ export function AlertConfig() {
   const [bzThreshold, setBzThreshold] = useState(-5);
   const [emailEnabled, setEmailEnabled] = useState(true);
   const [pushEnabled, setPushEnabled] = useState(false);
+  const [quietHoursEnabled, setQuietHoursEnabled] = useState(false);
+  const [quietStart, setQuietStart] = useState(new Date());
+  const [quietEnd, setQuietEnd] = useState(new Date());
+  const [showStartPicker, setShowStartPicker] = useState(false);
+  const [showEndPicker, setShowEndPicker] = useState(false);
 
   const alertLimit = TIER_FEATURES[tier].alertsPerDay;
   const isUnlimited = alertLimit === Infinity;
@@ -1253,6 +1283,9 @@ export function AlertConfig() {
       setBzThreshold(config.bz_threshold ?? -5);
       setEmailEnabled(config.email_enabled);
       setPushEnabled(config.push_enabled);
+      setQuietHoursEnabled(!!config.quiet_start);
+      setQuietStart(timeStringToDate(config.quiet_start));
+      setQuietEnd(timeStringToDate(config.quiet_end));
     }
   }, [config]);
 
@@ -1361,6 +1394,90 @@ export function AlertConfig() {
         </View>
       </View>
 
+      {/* Quiet Hours - Plus feature */}
+      <FeatureGate feature="locationPredictions" showUpgrade={false}>
+        <View style={styles.setting}>
+          <View style={styles.settingRow}>
+            <View>
+              <Text style={styles.settingLabel}>Quiet Hours</Text>
+              <Text style={styles.settingHint}>Silence alerts during these times</Text>
+            </View>
+            <Switch
+              value={quietHoursEnabled}
+              onValueChange={(value) => {
+                setQuietHoursEnabled(value);
+                if (!value) {
+                  updateConfig({ quiet_start: null, quiet_end: null });
+                } else {
+                  updateConfig({
+                    quiet_start: dateToTimeString(quietStart),
+                    quiet_end: dateToTimeString(quietEnd),
+                  });
+                }
+              }}
+              trackColor={{ false: COLORS.border, true: COLORS.emerald + '40' }}
+              thumbColor={quietHoursEnabled ? COLORS.emerald : COLORS.muted}
+            />
+          </View>
+
+          {quietHoursEnabled && (
+            <View style={styles.quietTimeRow}>
+              <Pressable
+                style={styles.timeButton}
+                onPress={() => setShowStartPicker(true)}
+              >
+                <Ionicons name="moon-outline" size={16} color={COLORS.muted} />
+                <Text style={styles.timeButtonText}>
+                  Start: {dateToTimeString(quietStart)}
+                </Text>
+              </Pressable>
+
+              <Text style={styles.timeSeparator}>to</Text>
+
+              <Pressable
+                style={styles.timeButton}
+                onPress={() => setShowEndPicker(true)}
+              >
+                <Ionicons name="sunny-outline" size={16} color={COLORS.muted} />
+                <Text style={styles.timeButtonText}>
+                  End: {dateToTimeString(quietEnd)}
+                </Text>
+              </Pressable>
+            </View>
+          )}
+
+          {showStartPicker && (
+            <DateTimePicker
+              value={quietStart}
+              mode="time"
+              is24Hour={true}
+              onChange={(event, date) => {
+                setShowStartPicker(Platform.OS === 'ios');
+                if (date) {
+                  setQuietStart(date);
+                  updateConfig({ quiet_start: dateToTimeString(date) });
+                }
+              }}
+            />
+          )}
+
+          {showEndPicker && (
+            <DateTimePicker
+              value={quietEnd}
+              mode="time"
+              is24Hour={true}
+              onChange={(event, date) => {
+                setShowEndPicker(Platform.OS === 'ios');
+                if (date) {
+                  setQuietEnd(date);
+                  updateConfig({ quiet_end: dateToTimeString(date) });
+                }
+              }}
+            />
+          )}
+        </View>
+      </FeatureGate>
+
       {/* Test alert button */}
       <Pressable style={styles.testButton} onPress={testAlert}>
         <Ionicons name="notifications-outline" size={18} color={COLORS.text} />
@@ -1446,14 +1563,38 @@ const styles = StyleSheet.create({
     fontWeight: '500',
     color: COLORS.text,
   },
+  quietTimeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 12,
+    gap: 8,
+  },
+  timeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: COLORS.bg,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+  },
+  timeButtonText: {
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  timeSeparator: {
+    fontSize: 14,
+    color: COLORS.muted,
+  },
 });
 ```
 
-**Step 3: Install slider if needed**
+**Step 3: Install dependencies**
 
 Run:
 ```bash
-cd /Users/zach/Projects/active/solarstorm/.worktrees/b2b-phase1 && npm install @react-native-community/slider
+cd /Users/zach/Projects/active/solarstorm/.worktrees/b2b-phase1 && npm install @react-native-community/slider @react-native-community/datetimepicker
 ```
 
 **Step 4: Commit**
@@ -4116,5 +4257,6 @@ cd /Users/zach/Projects/active/solarstorm/.worktrees/b2b-phase1 && npm test
 ```
 
 **Key dependencies added:**
-- `three`, `@react-three/fiber`, `@react-three/drei` - 3D rendering
+- `three`, `@react-three/fiber`, `@react-three/drei` - 3D rendering with Earth textures
 - `@react-native-community/slider` - Alert threshold sliders
+- `@react-native-community/datetimepicker` - Quiet hours time picker
