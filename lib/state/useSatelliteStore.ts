@@ -20,8 +20,14 @@ interface SatelliteState {
   deleteSatellite: (id: string) => Promise<void>;
   selectSatellite: (satellite: Satellite | null) => void;
 
-  // Anomaly actions
-  addAnomaly: (anomaly: Omit<SatelliteAnomaly, 'id' | 'user_id' | 'created_at'>) => Promise<void>;
+  // Anomaly actions - space weather data is fetched automatically
+  addAnomaly: (anomaly: {
+    satellite_id: string;
+    anomaly_type: SatelliteAnomaly['anomaly_type'];
+    severity: SatelliteAnomaly['severity'];
+    description: string | null;
+    occurred_at: string;
+  }) => Promise<void>;
   deleteAnomaly: (id: string) => Promise<void>;
 
   // Bulk operations
