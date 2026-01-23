@@ -5,9 +5,11 @@ import React, { useEffect, useState } from 'react';
 import { Platform, Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 import { FeatureGate } from '@/components/FeatureGate';
 import { TIER_FEATURES } from '@/lib/features/tiers';
+import { sendTestNotification } from '@/lib/services/alertNotifications';
 import { useAlertStore } from '@/lib/state/useAlertStore';
 import { useAuthStore } from '@/lib/state/useAuthStore';
 import { COLORS } from '@/lib/util/colors';
+import { ensureNotificationPermission } from '@/lib/util/notifications';
 
 // Helper to convert "HH:mm" string to Date
 function timeStringToDate(timeStr: string | null): Date {
@@ -151,7 +153,13 @@ export function AlertConfig() {
           </View>
           <Switch
             value={pushEnabled}
-            onValueChange={(value) => {
+            onValueChange={async (value) => {
+              if (value) {
+                const hasPermission = await ensureNotificationPermission();
+                if (!hasPermission) {
+                  return; // Permission denied, don't enable
+                }
+              }
               setPushEnabled(value);
               updateConfig({ push_enabled: value });
             }}
@@ -246,7 +254,7 @@ export function AlertConfig() {
       </FeatureGate>
 
       {/* Test alert button */}
-      <Pressable style={styles.testButton} onPress={testAlert}>
+      <Pressable style={styles.testButton} onPress={sendTestNotification}>
         <Ionicons name="notifications-outline" size={18} color={COLORS.text} />
         <Text style={styles.testButtonText}>Send Test Alert</Text>
       </Pressable>
