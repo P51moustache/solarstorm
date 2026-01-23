@@ -71,6 +71,9 @@ Annual pricing: 2 months free (e.g., Plus = $99.99/year)
 | Unlimited Smart Alerts | Kp + Bz thresholds, no daily limit |
 | Multi-Location Monitoring | Track up to 5 favorite locations |
 | HF Propagation Map | Band-by-band visualization for ham operators |
+| **Solar Flux Index (SFI) Trends** | F10.7 chart for propagation planning |
+| **CME Countdown Widget** | Visual countdown to predicted storm arrival |
+| **R-Scale Radio Blackout Status** | Real-time HF blackout severity (R1-R5) |
 | Photo Planning Mode | Best times based on aurora + weather + darkness |
 | Cloud Cover Overlay | Weather integration for aurora viewing |
 | Historical Data (90 days) | Browse and analyze past activity |
@@ -80,17 +83,44 @@ Annual pricing: 2 months free (e.g., Plus = $99.99/year)
 
 Everything in Plus, plus:
 
+**Satellite Operations:**
 | Feature | Description |
 |---------|-------------|
-| **Satellite Fleet Manager** | Add satellites by name, altitude, inclination |
+| **Satellite Fleet Manager** | Add satellites by name, altitude, inclination, **ballistic coefficient** |
 | **Drag Risk Index** | Real-time risk assessment per satellite |
 | **Thermospheric Density Forecast** | Density increase predictions |
 | **Safe Mode Recommendation** | Automated safe mode timing suggestions |
 | **Maneuver Window Planner** | Low-risk windows for orbit adjustments |
+| **SEP/Proton Event Alerts** | Solar energetic particle monitoring for electronics protection |
+| **Launch Window Assessment** | Delay recommendations based on storm forecasts |
 | **Storm Replay + Correlation** | Historical storm analysis vs. your assets |
+
+**Power Grid:**
+| Feature | Description |
+|---------|-------------|
 | **GIC Risk Maps** | Geomagnetically induced current visualization |
-| **Polar Route HF Forecast** | Blackout probability by flight route |
-| **Ionospheric TEC Maps** | GPS error probability |
+| **G-Scale Classification** | Map storms to NERC G1-G5 scale |
+| **Reference Event Benchmarking** | "This storm = 60% of 1989 Québec event" |
+| **Transformer Risk Assessment** | Load shedding / isolation recommendations |
+
+**Aviation:**
+| Feature | Description |
+|---------|-------------|
+| **Polar Route HF Forecast** | Blackout probability by named route (NAT Tracks, etc.) |
+| **Radiation Dose Calculator** | Crew/passenger exposure estimates at altitude |
+| **Route-Specific Alerts** | "North Atlantic Track B at risk in 3 hours" |
+| **Compliance Report Export** | FAA/ICAO-ready reports |
+
+**GNSS/Navigation:**
+| Feature | Description |
+|---------|-------------|
+| **Ionospheric TEC Maps** | Total electron content visualization |
+| **GNSS Error Probability** | Positioning accuracy degradation forecast |
+| **RTK/PPP Degradation Alerts** | Notify when precision ops should pause |
+
+**General Pro:**
+| Feature | Description |
+|---------|-------------|
 | **API Access** | REST API, 1000 requests/day |
 | **Data Export (CSV)** | Download historical data |
 | **Historical Data (2 years)** | Extended analysis period |
@@ -108,6 +138,71 @@ Everything in Pro, plus:
 | SLA Guarantee | 99.9% uptime commitment |
 | Dedicated Support | Priority response, onboarding |
 | Custom Integrations | Tailored to your workflow |
+
+---
+
+## Persona Feature Coverage Matrix
+
+This matrix validates that each persona's critical needs are addressed:
+
+### Persona 1: Satellite Operations Manager (Pro/Enterprise)
+
+| Persona Requirement | Feature | Tier | Phase |
+|---------------------|---------|------|-------|
+| Forecasted Kp + storm arrival | 3-day Kp forecast, CME alerts | All | 1 |
+| Risk windows by altitude/ballistic coeff | Drag Risk Index, Maneuver Window | Pro | 3 |
+| Safe-mode triggers | Safe Mode Recommendation | Pro | 3 |
+| Historical storm correlation | Storm Replay + Correlation | Pro | 3 |
+| **SEP/High-energy particle events** | **SEP/Proton Event Alerts** | Pro | 3 |
+| **Launch delay recommendations** | **Launch Window Assessment** | Pro | 3 |
+
+### Persona 2: Power Grid Engineer (Pro/Enterprise)
+
+| Persona Requirement | Feature | Tier | Phase |
+|---------------------|---------|------|-------|
+| Regional GIC risk maps | GIC Risk Maps | Pro | 4 |
+| Lead time alerts (12-48h) | Alert system | All | 1 |
+| **NERC severity classification** | **G-Scale (G1-G5) mapping** | Pro | 3 |
+| **Historical benchmarking** | **Reference Event Benchmarking** | Pro | 3 |
+| **Grid topology input** | **Grid Topology Config** | Ent | 4 |
+| **Transformer recommendations** | **Transformer Risk Assessment** | Pro | 3 |
+
+### Persona 3: Airline Ops Manager (Pro/Enterprise)
+
+| Persona Requirement | Feature | Tier | Phase |
+|---------------------|---------|------|-------|
+| **Radiation dose forecasts** | **Radiation Dose Calculator** | Pro | 3 |
+| HF blackout by latitude | Polar Route HF Forecast | Pro | 4 |
+| **Route-specific alerts** | **Named Route Alerts (NAT Tracks)** | Pro | 3 |
+| **Compliance reporting** | **FAA/ICAO Report Export** | Pro | 3 |
+
+### Persona 4: GNSS Engineer (Pro)
+
+| Persona Requirement | Feature | Tier | Phase |
+|---------------------|---------|------|-------|
+| Ionospheric TEC forecasts | TEC Maps | Pro | 4 |
+| **GNSS error probability** | **Error Probability Overlay** | Pro | 3 |
+| **RTK/PPP degradation alerts** | **Degradation Threshold Alerts** | Pro | 3 |
+| API for autonomous systems | REST API | Pro | 3 |
+
+### Persona 5: Amateur Radio Operator (Plus)
+
+| Persona Requirement | Feature | Tier | Phase |
+|---------------------|---------|------|-------|
+| **Solar Flux Index trends** | **SFI/F10.7 Chart** | Plus | 2 |
+| HF band usability | HF Propagation Map | Plus | 2 |
+| **CME arrival countdown** | **CME Countdown Widget** | Plus | 2 |
+| Propagation maps by band | HF Propagation Map | Plus | 2 |
+| **R-scale blackout status** | **R1-R5 Indicator** | Plus | 2 |
+
+### Persona 6: Aurora Photographer (Plus/Free)
+
+| Persona Requirement | Feature | Tier | Phase |
+|---------------------|---------|------|-------|
+| Aurora probability | 2D/3D Maps | Free/Plus | 1/2 |
+| Location predictions | Location-Based Forecast | Plus | 2 |
+| Weather overlay | Cloud Cover | Plus | 2 |
+| Photo timing | Photo Planning Mode | Plus | 2 |
 
 ---
 
@@ -176,6 +271,24 @@ GET  /api/v1/risk/satellite      # Risk for altitude (?altitude_km=&inclination=
 GET  /api/v1/density/forecast    # Thermospheric density forecast
 POST /api/v1/satellites          # Add satellite to fleet
 GET  /api/v1/satellites/:id/risk # Risk for specific satellite
+GET  /api/v1/sep/current         # Solar energetic particle status
+GET  /api/v1/launch-window       # Launch window assessment
+
+Power Grid (Pro+):
+GET  /api/v1/gic/risk            # GIC risk by region
+GET  /api/v1/g-scale/current     # Current G-scale classification
+GET  /api/v1/benchmark/:event    # Compare to reference events
+
+Aviation (Pro+):
+GET  /api/v1/radiation/dose      # Dose rate at altitude (?alt_ft=&lat=&lng=)
+GET  /api/v1/routes/risk         # Named route risk (NAT, Pacific)
+GET  /api/v1/hf-blackout/polar   # Polar HF blackout forecast
+GET  /api/v1/reports/compliance  # Generate FAA/ICAO report
+
+GNSS (Pro+):
+GET  /api/v1/tec/current         # Ionospheric TEC
+GET  /api/v1/gnss/error          # GNSS error probability
+GET  /api/v1/rtk/status          # RTK/PPP degradation status
 
 Integrations (Enterprise):
 POST /api/v1/webhooks            # Configure webhook
@@ -282,30 +395,39 @@ Output:
 
 ### Alert Types
 
-| Alert | Trigger | Lead Time |
-|-------|---------|-----------|
-| CME Launched | SOHO/LASCO coronagraph detection | 1-3 days |
-| CME Arrival Imminent | DSCOVR L1 solar wind jump | 30-60 min |
-| Kp Threshold Exceeded | Real-time measurement | Immediate |
-| Drag Risk Elevated | Forecast model | 4-24 hours |
-| Safe Mode Recommended | Rules engine | User-configurable |
-| Maneuver Window Opening | Forecast clears | 6-24 hours |
+| Alert | Trigger | Lead Time | Personas |
+|-------|---------|-----------|----------|
+| CME Launched | SOHO/LASCO coronagraph detection | 1-3 days | All |
+| CME Arrival Imminent | DSCOVR L1 solar wind jump | 30-60 min | All |
+| Kp Threshold Exceeded | Real-time measurement | Immediate | All |
+| Drag Risk Elevated | Forecast model | 4-24 hours | Satellites |
+| Safe Mode Recommended | Rules engine | User-configurable | Satellites |
+| Maneuver Window Opening | Forecast clears | 6-24 hours | Satellites |
+| **SEP Event Detected** | GOES proton flux spike | Minutes | Satellites, Airlines |
+| **G-Scale Storm Warning** | NOAA G1-G5 | 15-45 min | Power Grid |
+| **R-Scale Blackout** | X-ray flux spike | Minutes | Airlines, Ham Radio |
+| **Polar Route Risk** | HF blackout + radiation | 1-6 hours | Airlines |
+| **RTK/PPP Degradation** | TEC threshold | 15 min | GNSS |
 
 ---
 
 ## Data Sources (All Free/Public)
 
-| Data | Source | Update Frequency |
-|------|--------|------------------|
-| Kp Index | NOAA SWPC | 1 minute |
-| Solar Wind (Bz, speed, density) | NOAA SWPC (DSCOVR) | 1 minute |
-| Aurora Probability (OVATION) | NOAA SWPC | 5 minutes |
-| NOAA Alerts | NOAA SWPC | As issued |
-| 3-Day Kp Forecast | NOAA SWPC | 3x daily |
-| F10.7 Solar Flux | NOAA SWPC | Daily |
-| CME Detection | DONKI API (NASA) | As detected |
-| Cloud Cover | OpenWeather API | Hourly |
-| Ionospheric TEC | NOAA SWPC | 15 minutes |
+| Data | Source | Update Frequency | Used By |
+|------|--------|------------------|---------|
+| Kp Index | NOAA SWPC | 1 minute | All |
+| Solar Wind (Bz, speed, density) | NOAA SWPC (DSCOVR) | 1 minute | All |
+| Aurora Probability (OVATION) | NOAA SWPC | 5 minutes | Hobbyists, Plus |
+| NOAA Alerts | NOAA SWPC | As issued | All |
+| 3-Day Kp Forecast | NOAA SWPC | 3x daily | All |
+| F10.7 Solar Flux | NOAA SWPC | Daily | Satellites, Ham Radio |
+| CME Detection | DONKI API (NASA) | As detected | All |
+| Cloud Cover | OpenWeather API | Hourly | Aurora photographers |
+| Ionospheric TEC | NOAA SWPC | 15 minutes | GNSS engineers |
+| **Solar Proton Events (EPAM)** | NOAA SWPC | 5 minutes | **Satellites, Airlines** |
+| **GOES X-ray Flux** | NOAA SWPC | 1 minute | **R-scale blackouts, Ham Radio** |
+| **GOES Proton Flux** | NOAA SWPC | 5 minutes | **Radiation dose (Airlines)** |
+| **G-Scale (Geomagnetic)** | NOAA SWPC | As issued | **Power Grid (NERC)** |
 
 ---
 
@@ -333,22 +455,45 @@ Output:
 - [ ] Unlimited smart alerts with custom thresholds
 - [ ] Multi-location monitoring (5 locations)
 - [ ] HF propagation map
+- [ ] **Solar Flux Index (SFI/F10.7) trends chart**
+- [ ] **CME countdown widget with predicted arrival time**
+- [ ] **R-scale (R1-R5) radio blackout status indicator**
 - [ ] Photo planning mode
 - [ ] Cloud cover integration (OpenWeather)
 - [ ] 90-day historical data explorer
 - [ ] Quiet hours for alerts
 - [ ] Browser push notifications
 
-### Phase 3: Pro Tier - Satellite Ops
+### Phase 3: Pro Tier - Satellite Ops + Professional Features
 
 **Goal:** Enterprise value, justify $49/month
 
-- [ ] Satellite fleet manager (CRUD)
+**Satellite Operations:**
+- [ ] Satellite fleet manager (CRUD with ballistic coefficient)
 - [ ] Drag risk index calculator
 - [ ] Thermospheric density model integration
 - [ ] Safe mode recommendation engine
 - [ ] Maneuver window planner
+- [ ] **SEP/Solar proton event monitoring and alerts**
+- [ ] **Launch window assessment tool**
 - [ ] Storm replay with asset correlation
+
+**Power Grid:**
+- [ ] **G-scale (G1-G5) classification mapping**
+- [ ] **Reference event benchmarking (1989 Québec comparisons)**
+- [ ] **Transformer risk assessment recommendations**
+
+**Aviation:**
+- [ ] **Radiation dose calculator (crew exposure by altitude/route)**
+- [ ] **Named route support (North Atlantic Tracks, Pacific routes)**
+- [ ] **Route-specific alerts ("Track B at risk in 3h")**
+- [ ] **Compliance report export (FAA/ICAO format)**
+
+**GNSS:**
+- [ ] **GNSS error probability visualization**
+- [ ] **RTK/PPP degradation threshold alerts**
+
+**General Pro:**
 - [ ] REST API with authentication
 - [ ] API documentation (interactive)
 - [ ] Rate limiting infrastructure
@@ -359,17 +504,28 @@ Output:
 
 **Goal:** Large customer value, justify $199+/month
 
+**Team & Access:**
 - [ ] Team/organization management
 - [ ] Role-based access control
 - [ ] SSO integration (SAML)
+
+**Integrations:**
 - [ ] Webhook system
 - [ ] Custom alert rules engine
+- [ ] **Grid topology input for power utilities**
+- [ ] **Fleet-wide satellite dashboards**
+
+**Infrastructure:**
 - [ ] GIC risk maps (power grid persona)
 - [ ] Polar route HF forecasts (airline persona)
 - [ ] Ionospheric TEC maps (GNSS persona)
+
+**Support & Compliance:**
 - [ ] SLA monitoring dashboard
 - [ ] Usage analytics
 - [ ] Dedicated support ticketing
+- [ ] **NERC compliance reporting for power grid**
+- [ ] **Audit logs for enterprise compliance**
 
 ### Phase 5: iOS App
 
