@@ -1,8 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import React from 'react';
 import {
+    ActivityIndicator,
     Alert,
     Dimensions,
     RefreshControl,
@@ -22,12 +23,15 @@ import { KpTrendLine } from '@/components/KpTrendLine';
 import { KpiCard } from '@/components/KpiCard';
 import { Section } from '@/components/Section';
 import { getKpHistory } from '@/lib/api/swpc';
+import { useAuthStore } from '@/lib/state/useAuthStore';
 import { useAuroraChance, useLatestUpdateTime, useSolarStormStore } from '@/lib/state/useStore';
 import { COLORS, RADIUS, SPACING, getAuroraChanceColor } from '@/lib/util/colors';
 
 const { width: screenWidth } = Dimensions.get('window');
 
 export default function HomeScreen() {
+  const { isAuthenticated, isLoading: authLoading } = useAuthStore();
+
   const {
     kp,
     kpUpdatedAt,
@@ -39,6 +43,20 @@ export default function HomeScreen() {
     error,
     refreshAll,
   } = useSolarStormStore();
+
+  // Auth guard - show loading while checking auth
+  if (authLoading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#00D084" />
+      </View>
+    );
+  }
+
+  // Redirect to login if not authenticated
+  if (!isAuthenticated) {
+    return <Redirect href="/login" />;
+  }
 
   const auroraChance = useAuroraChance();
   const latestUpdateTime = useLatestUpdateTime();
@@ -328,5 +346,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#0B1020',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
