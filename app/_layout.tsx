@@ -59,6 +59,15 @@ export default function RootLayout() {
             headerTintColor: '#E6ECFF',
           }}
         />
+        <Stack.Screen
+          name="globe"
+          options={{
+            headerShown: true,
+            headerTitle: 'Aurora Globe',
+            headerStyle: { backgroundColor: '#0B1020' },
+            headerTintColor: '#E6ECFF',
+          }}
+        />
       </Stack>
       <StatusBar style="light" backgroundColor="#0B1020" />
     </ThemeProvider>
