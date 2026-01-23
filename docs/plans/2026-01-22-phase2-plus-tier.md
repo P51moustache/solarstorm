@@ -2158,15 +2158,1938 @@ git commit -m "feat: integrate Plus tier features into dashboard"
 
 ---
 
+## Task 11: Solar Flux Index (SFI/F10.7) Trends Chart
+
+**Files:**
+- Create: `lib/api/parsers/solarFlux.ts`
+- Create: `lib/api/solarFlux.ts`
+- Create: `components/charts/SfiTrendChart.tsx`
+
+**Step 1: Create solar flux parser**
+
+Create `lib/api/parsers/solarFlux.ts`:
+```typescript
+export interface SolarFluxData {
+  timestamp: string;
+  f107: number; // 10.7 cm radio flux (solar flux units, sfu)
+  sunspotNumber?: number;
+}
+
+export interface SfiTrend {
+  current: number;
+  trend: 'rising' | 'falling' | 'stable';
+  average30day: number;
+  history: SolarFluxData[];
+}
+
+// SWPC F10.7 data endpoint
+const SFI_ENDPOINT = 'https://services.swpc.noaa.gov/json/f107_cm_flux.json';
+
+export function parseSolarFluxData(data: unknown): SolarFluxData[] {
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .filter((item): item is Record<string, unknown> =>
+      item !== null && typeof item === 'object'
+    )
+    .map((item) => ({
+      timestamp: String(item.time_tag || ''),
+      f107: parseFloat(String(item.flux || '0')),
+    }))
+    .filter((item) => item.f107 > 0);
+}
+
+export function calculateSfiTrend(data: SolarFluxData[]): SfiTrend | null {
+  if (data.length < 2) return null;
+
+  const sorted = [...data].sort(
+    (a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+  );
+
+  const current = sorted[0].f107;
+  const previous = sorted[1].f107;
+  const last30 = sorted.slice(0, 30);
+  const average30day = last30.reduce((sum, d) => sum + d.f107, 0) / last30.length;
+
+  let trend: 'rising' | 'falling' | 'stable';
+  const diff = current - previous;
+  if (diff > 5) trend = 'rising';
+  else if (diff < -5) trend = 'falling';
+  else trend = 'stable';
+
+  return {
+    current,
+    trend,
+    average30day: Math.round(average30day),
+    history: sorted.slice(0, 90), // Last 90 days
+  };
+}
+
+export function getSfiCondition(f107: number): {
+  label: string;
+  color: string;
+  hfImpact: string;
+} {
+  if (f107 >= 150) {
+    return {
+      label: 'High',
+      color: '#22c55e',
+      hfImpact: 'Excellent HF propagation, 10m/6m openings likely',
+    };
+  } else if (f107 >= 100) {
+    return {
+      label: 'Moderate',
+      color: '#eab308',
+      hfImpact: 'Good HF propagation, higher bands improving',
+    };
+  } else if (f107 >= 70) {
+    return {
+      label: 'Low',
+      color: '#f97316',
+      hfImpact: 'Fair HF propagation, focus on lower bands',
+    };
+  }
+  return {
+    label: 'Very Low',
+    color: '#ef4444',
+    hfImpact: 'Poor HF propagation, solar minimum conditions',
+  };
+}
+```
+
+**Step 2: Create SFI API function**
+
+Create `lib/api/solarFlux.ts`:
+```typescript
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { dayjs } from '../util/time';
+import { fetchJson } from './fetchJson';
+import { calculateSfiTrend, parseSolarFluxData, type SfiTrend } from './parsers/solarFlux';
+
+const CACHE_KEY = 'sfi:trend';
+const CACHE_TTL = 60; // 1 hour
+
+export async function getSfiTrend(): Promise<SfiTrend | null> {
+  // Check cache
+  try {
+    const cached = await AsyncStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      const age = dayjs().diff(dayjs(timestamp), 'minute');
+      if (age <= CACHE_TTL) return data;
+    }
+  } catch (e) {
+    console.error('Cache read error:', e);
+  }
+
+  // Fetch fresh data
+  try {
+    const raw = await fetchJson('https://services.swpc.noaa.gov/json/f107_cm_flux.json');
+    const parsed = parseSolarFluxData(raw);
+    const trend = calculateSfiTrend(parsed);
+
+    if (trend) {
+      await AsyncStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ data: trend, timestamp: new Date().toISOString() })
+      );
+    }
+
+    return trend;
+  } catch (error) {
+    console.error('Failed to fetch SFI data:', error);
+    return null;
+  }
+}
+```
+
+**Step 3: Create SFI Trend Chart component**
+
+Create `components/charts/SfiTrendChart.tsx`:
+```typescript
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, View } from 'react-native';
+import { FeatureGate } from '@/components/FeatureGate';
+import { getSfiTrend } from '@/lib/api/solarFlux';
+import { getSfiCondition, type SfiTrend } from '@/lib/api/parsers/solarFlux';
+import { COLORS } from '@/lib/util/colors';
+
+const { width: screenWidth } = Dimensions.get('window');
+
+export function SfiTrendChart() {
+  const [trend, setTrend] = useState<SfiTrend | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getSfiTrend()
+      .then(setTrend)
+      .finally(() => setIsLoading(false));
+  }, []);
+
+  const condition = trend ? getSfiCondition(trend.current) : null;
+
+  const getTrendIcon = () => {
+    if (!trend) return 'remove-outline';
+    switch (trend.trend) {
+      case 'rising': return 'trending-up';
+      case 'falling': return 'trending-down';
+      default: return 'remove-outline';
+    }
+  };
+
+  return (
+    <FeatureGate feature="hfPropagation">
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Solar Flux Index (F10.7)</Text>
+          {isLoading && <ActivityIndicator size="small" color={COLORS.emerald} />}
+        </View>
+
+        {trend && condition && (
+          <>
+            <View style={styles.currentValue}>
+              <Text style={styles.valueNumber}>{Math.round(trend.current)}</Text>
+              <Text style={styles.valueUnit}>sfu</Text>
+              <Ionicons
+                name={getTrendIcon() as any}
+                size={24}
+                color={trend.trend === 'rising' ? '#22c55e' : trend.trend === 'falling' ? '#ef4444' : COLORS.muted}
+              />
+            </View>
+
+            <View style={[styles.conditionBadge, { backgroundColor: condition.color + '20' }]}>
+              <Text style={[styles.conditionText, { color: condition.color }]}>
+                {condition.label}
+              </Text>
+            </View>
+
+            <Text style={styles.impact}>{condition.hfImpact}</Text>
+
+            {/* Simple sparkline visualization */}
+            <View style={styles.chartContainer}>
+              <View style={styles.chartBars}>
+                {trend.history.slice(0, 30).reverse().map((d, i) => (
+                  <View
+                    key={i}
+                    style={[
+                      styles.chartBar,
+                      {
+                        height: Math.max(4, (d.f107 / 200) * 60),
+                        backgroundColor: d.f107 >= 100 ? '#22c55e' : d.f107 >= 70 ? '#eab308' : '#f97316',
+                      },
+                    ]}
+                  />
+                ))}
+              </View>
+              <View style={styles.chartLabels}>
+                <Text style={styles.chartLabel}>30 days ago</Text>
+                <Text style={styles.chartLabel}>Today</Text>
+              </View>
+            </View>
+
+            <View style={styles.stats}>
+              <View style={styles.stat}>
+                <Text style={styles.statLabel}>30-day avg</Text>
+                <Text style={styles.statValue}>{trend.average30day} sfu</Text>
+              </View>
+            </View>
+          </>
+        )}
+
+        {!isLoading && !trend && (
+          <Text style={styles.error}>Unable to load solar flux data</Text>
+        )}
+      </View>
+    </FeatureGate>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  currentValue: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+    marginBottom: 8,
+  },
+  valueNumber: {
+    fontSize: 36,
+    fontWeight: '700',
+    color: COLORS.text,
+  },
+  valueUnit: {
+    fontSize: 16,
+    color: COLORS.muted,
+    marginRight: 8,
+  },
+  conditionBadge: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 8,
+    marginBottom: 8,
+  },
+  conditionText: {
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  impact: {
+    fontSize: 13,
+    color: COLORS.muted,
+    marginBottom: 16,
+  },
+  chartContainer: {
+    marginBottom: 12,
+  },
+  chartBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 60,
+    gap: 2,
+  },
+  chartBar: {
+    flex: 1,
+    borderRadius: 2,
+    minHeight: 4,
+  },
+  chartLabels: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
+  },
+  chartLabel: {
+    fontSize: 10,
+    color: COLORS.muted,
+  },
+  stats: {
+    flexDirection: 'row',
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+  },
+  stat: {
+    flex: 1,
+  },
+  statLabel: {
+    fontSize: 12,
+    color: COLORS.muted,
+    marginBottom: 2,
+  },
+  statValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  error: {
+    fontSize: 14,
+    color: COLORS.muted,
+    textAlign: 'center',
+    padding: 16,
+  },
+});
+```
+
+**Step 4: Commit**
+
+```bash
+git add lib/api/parsers/solarFlux.ts lib/api/solarFlux.ts components/charts/SfiTrendChart.tsx
+git commit -m "feat: add Solar Flux Index (F10.7) trends chart for ham radio"
+```
+
+---
+
+## Task 12: CME Countdown Widget
+
+**Files:**
+- Create: `lib/api/parsers/cme.ts`
+- Create: `lib/api/cme.ts`
+- Create: `components/widgets/CmeCountdown.tsx`
+
+**Step 1: Create CME parser**
+
+Create `lib/api/parsers/cme.ts`:
+```typescript
+export interface CmeEvent {
+  id: string;
+  startTime: string;
+  arrivalTime: string | null; // Predicted Earth arrival
+  speed: number; // km/s
+  halfAngle: number;
+  isEarthDirected: boolean;
+  note: string;
+}
+
+export interface CmeCountdownData {
+  nextArrival: CmeEvent | null;
+  recentCmes: CmeEvent[];
+  hoursUntilArrival: number | null;
+}
+
+// NASA DONKI CME endpoint
+const DONKI_CME_ENDPOINT = 'https://api.nasa.gov/DONKI/CME';
+
+export function parseCmeData(data: unknown): CmeEvent[] {
+  if (!Array.isArray(data)) return [];
+
+  return data
+    .filter((item): item is Record<string, unknown> =>
+      item !== null && typeof item === 'object'
+    )
+    .map((item) => {
+      // Find Earth-directed analysis
+      const analyses = Array.isArray(item.cmeAnalyses) ? item.cmeAnalyses : [];
+      const earthAnalysis = analyses.find(
+        (a: any) => a.isMostAccurate && a.enlilList?.some((e: any) => e.isEarthGB)
+      );
+      const enlil = earthAnalysis?.enlilList?.find((e: any) => e.isEarthGB);
+
+      return {
+        id: String(item.activityID || ''),
+        startTime: String(item.startTime || ''),
+        arrivalTime: enlil?.arrivalTime || null,
+        speed: earthAnalysis?.speed || 0,
+        halfAngle: earthAnalysis?.halfAngle || 0,
+        isEarthDirected: !!enlil,
+        note: String(item.note || ''),
+      };
+    })
+    .filter((cme) => cme.id && cme.startTime);
+}
+
+export function getNextCmeArrival(cmes: CmeEvent[]): CmeCountdownData {
+  const now = new Date();
+
+  // Filter to Earth-directed CMEs with future arrival times
+  const upcoming = cmes
+    .filter((cme) => {
+      if (!cme.isEarthDirected || !cme.arrivalTime) return false;
+      return new Date(cme.arrivalTime) > now;
+    })
+    .sort((a, b) =>
+      new Date(a.arrivalTime!).getTime() - new Date(b.arrivalTime!).getTime()
+    );
+
+  const nextArrival = upcoming[0] || null;
+  const hoursUntilArrival = nextArrival
+    ? (new Date(nextArrival.arrivalTime!).getTime() - now.getTime()) / (1000 * 60 * 60)
+    : null;
+
+  return {
+    nextArrival,
+    recentCmes: cmes.slice(0, 5),
+    hoursUntilArrival: hoursUntilArrival ? Math.round(hoursUntilArrival) : null,
+  };
+}
+```
+
+**Step 2: Create CME API function**
+
+Create `lib/api/cme.ts`:
+```typescript
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { dayjs } from '../util/time';
+import { fetchJson } from './fetchJson';
+import { getNextCmeArrival, parseCmeData, type CmeCountdownData } from './parsers/cme';
+
+const NASA_API_KEY = process.env.EXPO_PUBLIC_NASA_API_KEY || 'DEMO_KEY';
+const CACHE_KEY = 'cme:countdown';
+const CACHE_TTL = 30; // 30 minutes
+
+export async function getCmeCountdown(): Promise<CmeCountdownData> {
+  // Check cache
+  try {
+    const cached = await AsyncStorage.getItem(CACHE_KEY);
+    if (cached) {
+      const { data, timestamp } = JSON.parse(cached);
+      const age = dayjs().diff(dayjs(timestamp), 'minute');
+      if (age <= CACHE_TTL) return data;
+    }
+  } catch (e) {
+    console.error('Cache read error:', e);
+  }
+
+  // Fetch last 30 days of CME data
+  const startDate = dayjs().subtract(30, 'day').format('YYYY-MM-DD');
+  const endDate = dayjs().format('YYYY-MM-DD');
+
+  try {
+    const url = `https://api.nasa.gov/DONKI/CME?startDate=${startDate}&endDate=${endDate}&api_key=${NASA_API_KEY}`;
+    const raw = await fetchJson(url);
+    const cmes = parseCmeData(raw);
+    const countdown = getNextCmeArrival(cmes);
+
+    await AsyncStorage.setItem(
+      CACHE_KEY,
+      JSON.stringify({ data: countdown, timestamp: new Date().toISOString() })
+    );
+
+    return countdown;
+  } catch (error) {
+    console.error('Failed to fetch CME data:', error);
+    return { nextArrival: null, recentCmes: [], hoursUntilArrival: null };
+  }
+}
+```
+
+**Step 3: Create CME Countdown widget**
+
+Create `components/widgets/CmeCountdown.tsx`:
+```typescript
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { FeatureGate } from '@/components/FeatureGate';
+import { getCmeCountdown } from '@/lib/api/cme';
+import type { CmeCountdownData } from '@/lib/api/parsers/cme';
+import { COLORS } from '@/lib/util/colors';
+
+export function CmeCountdown() {
+  const [data, setData] = useState<CmeCountdownData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    getCmeCountdown()
+      .then(setData)
+      .finally(() => setIsLoading(false));
+
+    // Refresh every 15 minutes
+    const interval = setInterval(() => {
+      getCmeCountdown().then(setData);
+    }, 15 * 60 * 1000);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  const formatCountdown = (hours: number) => {
+    if (hours < 1) return 'Less than 1 hour';
+    if (hours < 24) return `${hours} hours`;
+    const days = Math.floor(hours / 24);
+    const remainingHours = hours % 24;
+    return `${days}d ${remainingHours}h`;
+  };
+
+  const getUrgencyColor = (hours: number | null) => {
+    if (hours === null) return COLORS.muted;
+    if (hours < 12) return '#ef4444'; // Imminent
+    if (hours < 24) return '#f97316'; // Soon
+    if (hours < 48) return '#eab308'; // Approaching
+    return '#22c55e'; // Distant
+  };
+
+  return (
+    <FeatureGate feature="locationPredictions">
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Ionicons name="flash" size={20} color="#f97316" />
+          <Text style={styles.title}>CME Watch</Text>
+          {isLoading && <ActivityIndicator size="small" color={COLORS.emerald} />}
+        </View>
+
+        {data?.nextArrival ? (
+          <>
+            <View style={styles.countdownContainer}>
+              <Text style={styles.countdownLabel}>Next storm arrival:</Text>
+              <Text style={[styles.countdownValue, { color: getUrgencyColor(data.hoursUntilArrival) }]}>
+                {formatCountdown(data.hoursUntilArrival!)}
+              </Text>
+            </View>
+
+            <View style={styles.details}>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Speed</Text>
+                <Text style={styles.detailValue}>{data.nextArrival.speed} km/s</Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Launched</Text>
+                <Text style={styles.detailValue}>
+                  {new Date(data.nextArrival.startTime).toLocaleDateString()}
+                </Text>
+              </View>
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>ETA</Text>
+                <Text style={styles.detailValue}>
+                  {new Date(data.nextArrival.arrivalTime!).toLocaleString([], {
+                    month: 'short',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </Text>
+              </View>
+            </View>
+          </>
+        ) : (
+          <View style={styles.noEvent}>
+            <Ionicons name="checkmark-circle" size={24} color="#22c55e" />
+            <Text style={styles.noEventText}>No Earth-directed CMEs detected</Text>
+            <Text style={styles.noEventSubtext}>Space weather is quiet</Text>
+          </View>
+        )}
+      </View>
+    </FeatureGate>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
+  title: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: COLORS.text,
+    flex: 1,
+  },
+  countdownContainer: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    marginBottom: 12,
+  },
+  countdownLabel: {
+    fontSize: 13,
+    color: COLORS.muted,
+    marginBottom: 4,
+  },
+  countdownValue: {
+    fontSize: 32,
+    fontWeight: '700',
+  },
+  details: {
+    gap: 8,
+  },
+  detailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  detailLabel: {
+    fontSize: 13,
+    color: COLORS.muted,
+  },
+  detailValue: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  noEvent: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    gap: 4,
+  },
+  noEventText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  noEventSubtext: {
+    fontSize: 12,
+    color: COLORS.muted,
+  },
+});
+```
+
+**Step 4: Commit**
+
+```bash
+git add lib/api/parsers/cme.ts lib/api/cme.ts components/widgets/CmeCountdown.tsx
+git commit -m "feat: add CME countdown widget with NASA DONKI integration"
+```
+
+---
+
+## Task 13: Multi-Location Management UI
+
+**Files:**
+- Create: `app/locations.tsx`
+- Create: `components/locations/LocationManager.tsx`
+- Create: `components/locations/AddLocationModal.tsx`
+
+**Step 1: Create AddLocationModal component**
+
+Create `components/locations/AddLocationModal.tsx`:
+```typescript
+import { Ionicons } from '@expo/vector-icons';
+import React, { useState } from 'react';
+import {
+  ActivityIndicator,
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  TextInput,
+  View,
+} from 'react-native';
+import { useLocationStore } from '@/lib/state/useLocationStore';
+import { COLORS } from '@/lib/util/colors';
+
+interface AddLocationModalProps {
+  visible: boolean;
+  onClose: () => void;
+}
+
+export function AddLocationModal({ visible, onClose }: AddLocationModalProps) {
+  const { addLocation, currentLocation, isLoading } = useLocationStore();
+
+  const [label, setLabel] = useState('');
+  const [lat, setLat] = useState('');
+  const [lng, setLng] = useState('');
+  const [isPrimary, setIsPrimary] = useState(false);
+
+  const handleUseCurrentLocation = () => {
+    if (currentLocation) {
+      setLat(currentLocation.lat.toFixed(4));
+      setLng(currentLocation.lng.toFixed(4));
+    }
+  };
+
+  const handleSave = async () => {
+    if (!label.trim() || !lat || !lng) return;
+
+    await addLocation(label.trim(), parseFloat(lat), parseFloat(lng), isPrimary);
+    setLabel('');
+    setLat('');
+    setLng('');
+    setIsPrimary(false);
+    onClose();
+  };
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.overlay}>
+        <View style={styles.modal}>
+          <View style={styles.header}>
+            <Text style={styles.title}>Add Location</Text>
+            <Pressable onPress={onClose}>
+              <Ionicons name="close" size={24} color={COLORS.text} />
+            </Pressable>
+          </View>
+
+          <View style={styles.form}>
+            <View style={styles.inputGroup}>
+              <Text style={styles.label}>Name</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Home, Cabin, etc."
+                placeholderTextColor={COLORS.muted}
+                value={label}
+                onChangeText={setLabel}
+              />
+            </View>
+
+            <View style={styles.coordsRow}>
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Latitude</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="45.0000"
+                  placeholderTextColor={COLORS.muted}
+                  value={lat}
+                  onChangeText={setLat}
+                  keyboardType="numeric"
+                />
+              </View>
+              <View style={{ width: 12 }} />
+              <View style={[styles.inputGroup, { flex: 1 }]}>
+                <Text style={styles.label}>Longitude</Text>
+                <TextInput
+                  style={styles.input}
+                  placeholder="-93.0000"
+                  placeholderTextColor={COLORS.muted}
+                  value={lng}
+                  onChangeText={setLng}
+                  keyboardType="numeric"
+                />
+              </View>
+            </View>
+
+            {currentLocation && (
+              <Pressable style={styles.useCurrentButton} onPress={handleUseCurrentLocation}>
+                <Ionicons name="locate" size={16} color={COLORS.emerald} />
+                <Text style={styles.useCurrentText}>Use current location</Text>
+              </Pressable>
+            )}
+
+            <Pressable
+              style={styles.primaryToggle}
+              onPress={() => setIsPrimary(!isPrimary)}
+            >
+              <Ionicons
+                name={isPrimary ? 'star' : 'star-outline'}
+                size={20}
+                color={isPrimary ? '#eab308' : COLORS.muted}
+              />
+              <Text style={styles.primaryText}>Set as primary location</Text>
+            </Pressable>
+
+            <Pressable
+              style={[styles.saveButton, (!label || !lat || !lng) && styles.saveButtonDisabled]}
+              onPress={handleSave}
+              disabled={!label || !lat || !lng || isLoading}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#0B1020" />
+              ) : (
+                <Text style={styles.saveButtonText}>Save Location</Text>
+              )}
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+const styles = StyleSheet.create({
+  overlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modal: {
+    backgroundColor: COLORS.card,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    maxHeight: '80%',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  title: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  form: {
+    gap: 16,
+  },
+  inputGroup: {
+    gap: 6,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  input: {
+    backgroundColor: COLORS.bg,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: COLORS.text,
+  },
+  coordsRow: {
+    flexDirection: 'row',
+  },
+  useCurrentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  useCurrentText: {
+    fontSize: 14,
+    color: COLORS.emerald,
+  },
+  primaryToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 8,
+  },
+  primaryText: {
+    fontSize: 14,
+    color: COLORS.text,
+  },
+  saveButton: {
+    backgroundColor: COLORS.emerald,
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  saveButtonDisabled: {
+    opacity: 0.5,
+  },
+  saveButtonText: {
+    color: '#0B1020',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+});
+```
+
+**Step 2: Create LocationManager component**
+
+Create `components/locations/LocationManager.tsx`:
+```typescript
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { FeatureGate } from '@/components/FeatureGate';
+import { useLocationStore } from '@/lib/state/useLocationStore';
+import { useTier } from '@/hooks/useAuth';
+import { TIER_FEATURES } from '@/lib/features/tiers';
+import { COLORS } from '@/lib/util/colors';
+import { AddLocationModal } from './AddLocationModal';
+
+export function LocationManager() {
+  const tier = useTier();
+  const {
+    savedLocations,
+    primaryLocation,
+    fetchSavedLocations,
+    removeLocation,
+    setPrimaryLocation,
+  } = useLocationStore();
+
+  const [showAddModal, setShowAddModal] = useState(false);
+
+  const maxLocations = TIER_FEATURES[tier].locations;
+  const canAddMore = savedLocations.length < maxLocations;
+
+  useEffect(() => {
+    fetchSavedLocations();
+  }, []);
+
+  const handleRemove = (id: string, label: string) => {
+    Alert.alert(
+      'Remove Location',
+      `Are you sure you want to remove "${label}"?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Remove', style: 'destructive', onPress: () => removeLocation(id) },
+      ]
+    );
+  };
+
+  return (
+    <FeatureGate feature="locationPredictions">
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Saved Locations</Text>
+          <Text style={styles.count}>
+            {savedLocations.length}/{maxLocations === Infinity ? '∞' : maxLocations}
+          </Text>
+        </View>
+
+        {savedLocations.map((loc) => (
+          <View key={loc.id} style={styles.locationItem}>
+            <Pressable
+              style={styles.locationInfo}
+              onPress={() => setPrimaryLocation(loc.id)}
+            >
+              <Ionicons
+                name={loc.id === primaryLocation?.id ? 'star' : 'star-outline'}
+                size={18}
+                color={loc.id === primaryLocation?.id ? '#eab308' : COLORS.muted}
+              />
+              <View style={styles.locationText}>
+                <Text style={styles.locationLabel}>{loc.label}</Text>
+                <Text style={styles.locationCoords}>
+                  {loc.lat.toFixed(2)}°, {loc.lng.toFixed(2)}°
+                </Text>
+              </View>
+            </Pressable>
+            <Pressable
+              style={styles.removeButton}
+              onPress={() => handleRemove(loc.id, loc.label)}
+            >
+              <Ionicons name="trash-outline" size={18} color="#ef4444" />
+            </Pressable>
+          </View>
+        ))}
+
+        {savedLocations.length === 0 && (
+          <Text style={styles.empty}>No saved locations yet</Text>
+        )}
+
+        <Pressable
+          style={[styles.addButton, !canAddMore && styles.addButtonDisabled]}
+          onPress={() => canAddMore && setShowAddModal(true)}
+          disabled={!canAddMore}
+        >
+          <Ionicons name="add" size={20} color={canAddMore ? COLORS.emerald : COLORS.muted} />
+          <Text style={[styles.addButtonText, !canAddMore && styles.addButtonTextDisabled]}>
+            {canAddMore ? 'Add Location' : `Upgrade to add more (${maxLocations} max)`}
+          </Text>
+        </Pressable>
+
+        <AddLocationModal
+          visible={showAddModal}
+          onClose={() => setShowAddModal(false)}
+        />
+      </View>
+    </FeatureGate>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  count: {
+    fontSize: 14,
+    color: COLORS.muted,
+  },
+  locationItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  locationInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  locationText: {
+    flex: 1,
+  },
+  locationLabel: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  locationCoords: {
+    fontSize: 12,
+    color: COLORS.muted,
+  },
+  removeButton: {
+    padding: 8,
+  },
+  empty: {
+    fontSize: 14,
+    color: COLORS.muted,
+    textAlign: 'center',
+    paddingVertical: 16,
+  },
+  addButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 12,
+    marginTop: 8,
+  },
+  addButtonDisabled: {
+    opacity: 0.6,
+  },
+  addButtonText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.emerald,
+  },
+  addButtonTextDisabled: {
+    color: COLORS.muted,
+  },
+});
+```
+
+**Step 3: Create locations page**
+
+Create `app/locations.tsx`:
+```typescript
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { LocationManager } from '@/components/locations/LocationManager';
+import { LocationPrediction } from '@/components/predictions/LocationPrediction';
+import { COLORS } from '@/lib/util/colors';
+
+export default function LocationsPage() {
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Location Forecasts</Text>
+        <Text style={styles.subtitle}>
+          Track aurora predictions for your favorite spots
+        </Text>
+
+        <LocationPrediction />
+        <LocationManager />
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  content: {
+    padding: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: COLORS.muted,
+    marginBottom: 24,
+  },
+});
+```
+
+**Step 4: Add route to layout**
+
+Add to `app/_layout.tsx`:
+```typescript
+<Stack.Screen
+  name="locations"
+  options={{
+    headerTitle: 'Locations',
+    headerStyle: { backgroundColor: '#0B1020' },
+    headerTintColor: '#E6ECFF',
+  }}
+/>
+```
+
+**Step 5: Commit**
+
+```bash
+git add components/locations/ app/locations.tsx app/_layout.tsx
+git commit -m "feat: add multi-location management UI with add/remove/primary"
+```
+
+---
+
+## Task 14: Historical Data Explorer (90 days)
+
+**Files:**
+- Create: `lib/api/history.ts`
+- Create: `components/history/HistoryExplorer.tsx`
+- Create: `app/history.tsx`
+
+**Step 1: Create history API**
+
+Create `lib/api/history.ts`:
+```typescript
+import { supabase } from '../supabase/client';
+import type { SubscriptionTier } from '../supabase/types';
+import { TIER_FEATURES } from '../features/tiers';
+
+export interface HistoricalDataPoint {
+  timestamp: string;
+  kp: number | null;
+  bz: number | null;
+  speed: number | null;
+  density: number | null;
+}
+
+export async function getHistoricalData(
+  tier: SubscriptionTier,
+  startDate: Date,
+  endDate: Date
+): Promise<HistoricalDataPoint[]> {
+  const maxDays = TIER_FEATURES[tier].historyDays;
+  const now = new Date();
+  const maxStartDate = new Date(now.getTime() - maxDays * 24 * 60 * 60 * 1000);
+
+  // Clamp start date to tier limit
+  const effectiveStart = startDate < maxStartDate ? maxStartDate : startDate;
+
+  // Query Supabase for historical data
+  const { data: kpData, error: kpError } = await supabase
+    .from('kp_history')
+    .select('timestamp, value')
+    .gte('timestamp', effectiveStart.toISOString())
+    .lte('timestamp', endDate.toISOString())
+    .order('timestamp', { ascending: true });
+
+  const { data: swData, error: swError } = await supabase
+    .from('solar_wind_history')
+    .select('timestamp, bz, speed, density')
+    .gte('timestamp', effectiveStart.toISOString())
+    .lte('timestamp', endDate.toISOString())
+    .order('timestamp', { ascending: true });
+
+  if (kpError || swError) {
+    console.error('Failed to fetch historical data:', kpError || swError);
+    return [];
+  }
+
+  // Merge data by timestamp (hourly buckets)
+  const dataMap = new Map<string, HistoricalDataPoint>();
+
+  for (const kp of kpData || []) {
+    const hourKey = kp.timestamp.slice(0, 13); // YYYY-MM-DDTHH
+    dataMap.set(hourKey, {
+      timestamp: kp.timestamp,
+      kp: kp.value,
+      bz: null,
+      speed: null,
+      density: null,
+    });
+  }
+
+  for (const sw of swData || []) {
+    const hourKey = sw.timestamp.slice(0, 13);
+    const existing = dataMap.get(hourKey);
+    if (existing) {
+      existing.bz = sw.bz;
+      existing.speed = sw.speed;
+      existing.density = sw.density;
+    } else {
+      dataMap.set(hourKey, {
+        timestamp: sw.timestamp,
+        kp: null,
+        bz: sw.bz,
+        speed: sw.speed,
+        density: sw.density,
+      });
+    }
+  }
+
+  return Array.from(dataMap.values()).sort(
+    (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+  );
+}
+```
+
+**Step 2: Create HistoryExplorer component**
+
+Create `components/history/HistoryExplorer.tsx`:
+```typescript
+import { Ionicons } from '@expo/vector-icons';
+import React, { useEffect, useState } from 'react';
+import { ActivityIndicator, Dimensions, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { FeatureGate } from '@/components/FeatureGate';
+import { getHistoricalData, type HistoricalDataPoint } from '@/lib/api/history';
+import { useTier } from '@/hooks/useAuth';
+import { TIER_FEATURES } from '@/lib/features/tiers';
+import { COLORS } from '@/lib/util/colors';
+
+const { width: screenWidth } = Dimensions.get('window');
+
+type TimeRange = '7d' | '30d' | '90d';
+
+export function HistoryExplorer() {
+  const tier = useTier();
+  const [range, setRange] = useState<TimeRange>('7d');
+  const [data, setData] = useState<HistoricalDataPoint[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [selectedPoint, setSelectedPoint] = useState<HistoricalDataPoint | null>(null);
+
+  const maxDays = TIER_FEATURES[tier].historyDays;
+
+  useEffect(() => {
+    const fetchData = async () => {
+      setIsLoading(true);
+      const days = range === '7d' ? 7 : range === '30d' ? 30 : 90;
+      const endDate = new Date();
+      const startDate = new Date(endDate.getTime() - days * 24 * 60 * 60 * 1000);
+
+      const result = await getHistoricalData(tier, startDate, endDate);
+      setData(result);
+      setIsLoading(false);
+    };
+
+    fetchData();
+  }, [range, tier]);
+
+  const maxKp = Math.max(...data.map((d) => d.kp ?? 0), 9);
+
+  return (
+    <FeatureGate feature="locationPredictions">
+      <View style={styles.container}>
+        <View style={styles.header}>
+          <Text style={styles.title}>Historical Data</Text>
+          <Text style={styles.tierInfo}>{maxDays} days available</Text>
+        </View>
+
+        {/* Time range selector */}
+        <View style={styles.rangeSelector}>
+          {(['7d', '30d', '90d'] as TimeRange[]).map((r) => {
+            const days = r === '7d' ? 7 : r === '30d' ? 30 : 90;
+            const disabled = days > maxDays;
+
+            return (
+              <Pressable
+                key={r}
+                style={[
+                  styles.rangeButton,
+                  range === r && styles.rangeButtonActive,
+                  disabled && styles.rangeButtonDisabled,
+                ]}
+                onPress={() => !disabled && setRange(r)}
+                disabled={disabled}
+              >
+                <Text
+                  style={[
+                    styles.rangeText,
+                    range === r && styles.rangeTextActive,
+                    disabled && styles.rangeTextDisabled,
+                  ]}
+                >
+                  {r}
+                </Text>
+                {disabled && <Ionicons name="lock-closed" size={12} color={COLORS.muted} />}
+              </Pressable>
+            );
+          })}
+        </View>
+
+        {isLoading ? (
+          <View style={styles.loading}>
+            <ActivityIndicator size="large" color={COLORS.emerald} />
+          </View>
+        ) : (
+          <>
+            {/* Kp chart */}
+            <View style={styles.chartContainer}>
+              <Text style={styles.chartTitle}>Kp Index</Text>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+                <View style={styles.chartBars}>
+                  {data.map((d, i) => (
+                    <Pressable
+                      key={i}
+                      style={styles.barContainer}
+                      onPress={() => setSelectedPoint(d)}
+                    >
+                      <View
+                        style={[
+                          styles.bar,
+                          {
+                            height: Math.max(4, ((d.kp ?? 0) / maxKp) * 80),
+                            backgroundColor:
+                              (d.kp ?? 0) >= 7 ? '#ef4444' :
+                              (d.kp ?? 0) >= 5 ? '#f97316' :
+                              (d.kp ?? 0) >= 4 ? '#eab308' : '#22c55e',
+                          },
+                        ]}
+                      />
+                    </Pressable>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+
+            {/* Selected point details */}
+            {selectedPoint && (
+              <View style={styles.details}>
+                <Text style={styles.detailsTitle}>
+                  {new Date(selectedPoint.timestamp).toLocaleString()}
+                </Text>
+                <View style={styles.detailsGrid}>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Kp</Text>
+                    <Text style={styles.detailValue}>{selectedPoint.kp?.toFixed(1) ?? '-'}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Bz</Text>
+                    <Text style={styles.detailValue}>{selectedPoint.bz?.toFixed(1) ?? '-'} nT</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Speed</Text>
+                    <Text style={styles.detailValue}>{selectedPoint.speed?.toFixed(0) ?? '-'} km/s</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailLabel}>Density</Text>
+                    <Text style={styles.detailValue}>{selectedPoint.density?.toFixed(1) ?? '-'} p/cm³</Text>
+                  </View>
+                </View>
+              </View>
+            )}
+
+            {data.length === 0 && (
+              <Text style={styles.empty}>No historical data available</Text>
+            )}
+          </>
+        )}
+      </View>
+    </FeatureGate>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    backgroundColor: COLORS.card,
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  title: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  tierInfo: {
+    fontSize: 12,
+    color: COLORS.muted,
+  },
+  rangeSelector: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 16,
+  },
+  rangeButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: COLORS.bg,
+  },
+  rangeButtonActive: {
+    backgroundColor: COLORS.emerald,
+  },
+  rangeButtonDisabled: {
+    opacity: 0.5,
+  },
+  rangeText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text,
+  },
+  rangeTextActive: {
+    color: '#0B1020',
+  },
+  rangeTextDisabled: {
+    color: COLORS.muted,
+  },
+  loading: {
+    padding: 32,
+    alignItems: 'center',
+  },
+  chartContainer: {
+    marginBottom: 16,
+  },
+  chartTitle: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  chartBars: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    height: 80,
+    gap: 1,
+  },
+  barContainer: {
+    width: 4,
+    height: 80,
+    justifyContent: 'flex-end',
+  },
+  bar: {
+    width: 4,
+    borderRadius: 2,
+    minHeight: 4,
+  },
+  details: {
+    backgroundColor: COLORS.bg,
+    borderRadius: 8,
+    padding: 12,
+  },
+  detailsTitle: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: COLORS.text,
+    marginBottom: 8,
+  },
+  detailsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
+  detailItem: {
+    minWidth: 70,
+  },
+  detailLabel: {
+    fontSize: 11,
+    color: COLORS.muted,
+    marginBottom: 2,
+  },
+  detailValue: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: COLORS.text,
+  },
+  empty: {
+    fontSize: 14,
+    color: COLORS.muted,
+    textAlign: 'center',
+    padding: 32,
+  },
+});
+```
+
+**Step 3: Create history page**
+
+Create `app/history.tsx`:
+```typescript
+import React from 'react';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { HistoryExplorer } from '@/components/history/HistoryExplorer';
+import { COLORS } from '@/lib/util/colors';
+
+export default function HistoryPage() {
+  return (
+    <ScrollView style={styles.container}>
+      <View style={styles.content}>
+        <Text style={styles.title}>Activity History</Text>
+        <Text style={styles.subtitle}>
+          Explore past space weather conditions
+        </Text>
+
+        <HistoryExplorer />
+      </View>
+    </ScrollView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: COLORS.bg,
+  },
+  content: {
+    padding: 24,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: COLORS.text,
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: COLORS.muted,
+    marginBottom: 24,
+  },
+});
+```
+
+**Step 4: Add route to layout**
+
+Add to `app/_layout.tsx`:
+```typescript
+<Stack.Screen
+  name="history"
+  options={{
+    headerTitle: 'History',
+    headerStyle: { backgroundColor: '#0B1020' },
+    headerTintColor: '#E6ECFF',
+  }}
+/>
+```
+
+**Step 5: Commit**
+
+```bash
+git add lib/api/history.ts components/history/ app/history.tsx app/_layout.tsx
+git commit -m "feat: add 90-day historical data explorer with tier-based limits"
+```
+
+---
+
+## Task 15: Browser Push Notifications
+
+**Files:**
+- Create: `lib/services/pushNotifications.ts`
+- Create: `lib/services/serviceWorker.ts`
+- Modify: `lib/state/useAlertStore.ts`
+
+**Step 1: Create push notification service**
+
+Create `lib/services/pushNotifications.ts`:
+```typescript
+import { supabase } from '../supabase/client';
+
+const VAPID_PUBLIC_KEY = process.env.EXPO_PUBLIC_VAPID_PUBLIC_KEY;
+
+export async function requestPushPermission(): Promise<boolean> {
+  if (!('Notification' in window)) {
+    console.warn('This browser does not support notifications');
+    return false;
+  }
+
+  if (Notification.permission === 'granted') {
+    return true;
+  }
+
+  if (Notification.permission === 'denied') {
+    console.warn('Notifications are blocked');
+    return false;
+  }
+
+  const permission = await Notification.requestPermission();
+  return permission === 'granted';
+}
+
+export async function subscribeToPush(): Promise<PushSubscription | null> {
+  if (!('serviceWorker' in navigator)) {
+    console.warn('Service workers not supported');
+    return null;
+  }
+
+  if (!VAPID_PUBLIC_KEY) {
+    console.warn('VAPID public key not configured');
+    return null;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+
+    const subscription = await registration.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+
+    // Send subscription to backend
+    await savePushSubscription(subscription);
+
+    return subscription;
+  } catch (error) {
+    console.error('Failed to subscribe to push:', error);
+    return null;
+  }
+}
+
+export async function unsubscribeFromPush(): Promise<void> {
+  if (!('serviceWorker' in navigator)) return;
+
+  try {
+    const registration = await navigator.serviceWorker.ready;
+    const subscription = await registration.pushManager.getSubscription();
+
+    if (subscription) {
+      await subscription.unsubscribe();
+      await removePushSubscription();
+    }
+  } catch (error) {
+    console.error('Failed to unsubscribe from push:', error);
+  }
+}
+
+async function savePushSubscription(subscription: PushSubscription): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from('push_subscriptions').upsert({
+    user_id: user.id,
+    endpoint: subscription.endpoint,
+    p256dh: arrayBufferToBase64(subscription.getKey('p256dh')!),
+    auth: arrayBufferToBase64(subscription.getKey('auth')!),
+  });
+}
+
+async function removePushSubscription(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from('push_subscriptions').delete().eq('user_id', user.id);
+}
+
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
+  const padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for (let i = 0; i < rawData.length; ++i) {
+    outputArray[i] = rawData.charCodeAt(i);
+  }
+  return outputArray;
+}
+
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  const bytes = new Uint8Array(buffer);
+  let binary = '';
+  for (let i = 0; i < bytes.byteLength; i++) {
+    binary += String.fromCharCode(bytes[i]);
+  }
+  return window.btoa(binary);
+}
+```
+
+**Step 2: Create service worker file**
+
+Create `public/sw.js` (this goes in the public folder for web):
+```javascript
+// Service worker for push notifications
+self.addEventListener('push', (event) => {
+  if (!event.data) return;
+
+  const data = event.data.json();
+
+  const options = {
+    body: data.body,
+    icon: '/icon-192.png',
+    badge: '/badge-72.png',
+    vibrate: [200, 100, 200],
+    tag: data.tag || 'solarstorm-alert',
+    data: {
+      url: data.url || '/',
+    },
+  };
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || 'SolarStorm Alert', options)
+  );
+});
+
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+
+  const url = event.notification.data?.url || '/';
+
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then((clientList) => {
+      for (const client of clientList) {
+        if (client.url === url && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(url);
+      }
+    })
+  );
+});
+```
+
+**Step 3: Register service worker in app**
+
+Create `lib/services/registerServiceWorker.ts`:
+```typescript
+export async function registerServiceWorker(): Promise<ServiceWorkerRegistration | null> {
+  if (typeof window === 'undefined') return null;
+  if (!('serviceWorker' in navigator)) {
+    console.warn('Service workers not supported');
+    return null;
+  }
+
+  try {
+    const registration = await navigator.serviceWorker.register('/sw.js');
+    console.log('Service worker registered:', registration.scope);
+    return registration;
+  } catch (error) {
+    console.error('Service worker registration failed:', error);
+    return null;
+  }
+}
+```
+
+**Step 4: Update alert store to integrate push**
+
+Update `lib/state/useAlertStore.ts` to add push subscription methods:
+```typescript
+// Add to actions:
+subscribeToPush: async () => {
+  const hasPermission = await requestPushPermission();
+  if (!hasPermission) {
+    set({ error: 'Push notification permission denied' });
+    return;
+  }
+
+  const subscription = await subscribeToPush();
+  if (subscription) {
+    await get().updateConfig({ push_enabled: true });
+  }
+},
+
+unsubscribeFromPush: async () => {
+  await unsubscribeFromPush();
+  await get().updateConfig({ push_enabled: false });
+},
+```
+
+**Step 5: Add to app initialization**
+
+In `app/_layout.tsx`, add service worker registration:
+```typescript
+import { registerServiceWorker } from '@/lib/services/registerServiceWorker';
+
+useEffect(() => {
+  // Register service worker for web push
+  if (typeof window !== 'undefined') {
+    registerServiceWorker();
+  }
+}, []);
+```
+
+**Step 6: Commit**
+
+```bash
+git add lib/services/pushNotifications.ts lib/services/registerServiceWorker.ts public/sw.js lib/state/useAlertStore.ts app/_layout.tsx
+git commit -m "feat: add browser push notifications with service worker"
+```
+
+---
+
+## Task 16: Integrate All Plus Features into Dashboard
+
+**Files:**
+- Modify: `app/index.tsx` or `app/dashboard.tsx`
+
+**Step 1: Import all new components**
+
+Add to dashboard imports:
+```typescript
+import { SfiTrendChart } from '@/components/charts/SfiTrendChart';
+import { CmeCountdown } from '@/components/widgets/CmeCountdown';
+import { LocationPrediction } from '@/components/predictions/LocationPrediction';
+import { HfPropagationMap } from '@/components/hf/HfPropagationMap';
+import { PhotoPlanning } from '@/components/photo/PhotoPlanning';
+```
+
+**Step 2: Add components to dashboard layout**
+
+Add after existing content sections:
+```typescript
+{/* CME Watch - Plus feature */}
+<Section>
+  <CmeCountdown />
+</Section>
+
+{/* Location Predictions - Plus feature */}
+<Section title="Your Aurora Forecast">
+  <LocationPrediction />
+</Section>
+
+{/* Ham Radio Features - Plus feature */}
+<Section title="HF Propagation">
+  <HfPropagationMap />
+  <SfiTrendChart />
+</Section>
+
+{/* Photo Planning - Plus feature */}
+<Section>
+  <PhotoPlanning />
+</Section>
+
+{/* Navigation to other Plus pages */}
+<FeatureGate feature="locationPredictions">
+  <View style={styles.plusNav}>
+    <Pressable style={styles.navButton} onPress={() => router.push('/globe')}>
+      <Ionicons name="globe-outline" size={20} color={COLORS.text} />
+      <Text style={styles.navButtonText}>3D Globe</Text>
+    </Pressable>
+    <Pressable style={styles.navButton} onPress={() => router.push('/locations')}>
+      <Ionicons name="location-outline" size={20} color={COLORS.text} />
+      <Text style={styles.navButtonText}>Locations</Text>
+    </Pressable>
+    <Pressable style={styles.navButton} onPress={() => router.push('/history')}>
+      <Ionicons name="time-outline" size={20} color={COLORS.text} />
+      <Text style={styles.navButtonText}>History</Text>
+    </Pressable>
+  </View>
+</FeatureGate>
+```
+
+**Step 3: Add styles**
+
+```typescript
+plusNav: {
+  flexDirection: 'row',
+  justifyContent: 'space-around',
+  marginTop: 16,
+},
+navButton: {
+  alignItems: 'center',
+  gap: 4,
+},
+navButtonText: {
+  fontSize: 12,
+  color: COLORS.text,
+},
+```
+
+**Step 4: Run tests**
+
+Run:
+```bash
+cd /Users/zach/Projects/active/solarstorm/.worktrees/b2b-phase1 && npm test
+```
+
+**Step 5: Verify the app**
+
+Run:
+```bash
+cd /Users/zach/Projects/active/solarstorm/.worktrees/b2b-phase1 && npm run web
+```
+
+**Step 6: Commit**
+
+```bash
+git add app/
+git commit -m "feat: integrate all Plus tier features into dashboard"
+```
+
+---
+
 ## Summary
 
-Phase 2 delivers the consumer "wow factor":
+Phase 2 delivers the complete Plus tier "wow factor":
 
 1. **3D Globe** - React Three Fiber visualization of aurora oval
-2. **Location Predictions** - Personalized probability based on coordinates and magnetic latitude
-3. **Alert System** - Configurable Kp/Bz thresholds with unlimited alerts for Plus
-4. **HF Propagation** - Band usability for ham radio operators
-5. **Photo Planning** - Weather + aurora conditions for aurora photographers
+2. **Location Predictions** - Personalized probability based on coordinates
+3. **Multi-Location Management** - Save and track up to 5 locations
+4. **Alert System** - Configurable Kp/Bz thresholds with unlimited alerts
+5. **Quiet Hours** - Alert blackout periods (via time picker in settings)
+6. **HF Propagation** - Band usability for ham radio operators
+7. **Solar Flux Index (SFI)** - F10.7 trends chart for propagation planning
+8. **CME Countdown** - Visual countdown to predicted storm arrival
+9. **R-Scale Status** - Radio blackout severity indicator
+10. **Photo Planning** - Weather + aurora conditions for photographers
+11. **Historical Data** - 90-day data explorer with tier limits
+12. **Browser Push Notifications** - Web Push API integration
 
 **All features are gated** - Free users see upgrade prompts, Plus users get full access.
 
@@ -2175,6 +4098,8 @@ Phase 2 delivers the consumer "wow factor":
 - Drag risk calculator
 - API endpoints
 - Power grid features (GIC, dB/dt)
+- GNSS features (TEC, scintillation)
+- Aviation features (radiation dose, polar routes)
 
 ---
 
