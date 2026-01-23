@@ -1,14 +1,14 @@
-# Phase 2: Plus Tier Features Implementation Plan
+# Phase 4: Plus Tier Features Implementation Plan (Nice-to-Have)
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
-**Goal:** Build the consumer "wow factor" features that justify the $9.99/month Plus tier - 3D globe, location predictions, HF propagation, and enhanced alerts.
+**Goal:** Build consumer "wow factor" features for the Plus tier - 3D globe, aurora predictions, HF propagation. These are nice-to-have after satellite ops and GNSS are complete.
 
 **Architecture:** React Three Fiber for 3D globe rendering, OpenWeather API for cloud cover, Supabase Edge Functions for location-based aurora probability calculations. Feature-gated components from Phase 1.
 
 **Tech Stack:** React Three Fiber, Three.js, @react-three/drei, OpenWeather API, Supabase Edge Functions, existing Zustand state
 
-**Prerequisites:** Phase 1 must be complete (Supabase auth, Stripe subscriptions, feature gating)
+**Prerequisites:** Phase 1 (foundation), Phase 2 (satellite ops), Phase 3 (GNSS) should be complete first
 
 ---
 
