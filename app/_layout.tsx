@@ -77,6 +77,15 @@ export default function RootLayout() {
             headerTintColor: '#E6ECFF',
           }}
         />
+        <Stack.Screen
+          name="history"
+          options={{
+            headerShown: true,
+            headerTitle: 'Historical Data',
+            headerStyle: { backgroundColor: '#0B1020' },
+            headerTintColor: '#E6ECFF',
+          }}
+        />
       </Stack>
       <StatusBar style="light" backgroundColor="#0B1020" />
     </ThemeProvider>
