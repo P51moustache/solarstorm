@@ -86,6 +86,33 @@ export default function RootLayout() {
             headerTintColor: '#E6ECFF',
           }}
         />
+        <Stack.Screen
+          name="satellites"
+          options={{
+            headerShown: true,
+            headerTitle: 'Satellite Fleet',
+            headerStyle: { backgroundColor: '#0B1020' },
+            headerTintColor: '#E6ECFF',
+          }}
+        />
+        <Stack.Screen
+          name="satellite-dashboard"
+          options={{
+            headerShown: true,
+            headerTitle: 'Satellite Operations',
+            headerStyle: { backgroundColor: '#0B1020' },
+            headerTintColor: '#E6ECFF',
+          }}
+        />
+        <Stack.Screen
+          name="gnss-dashboard"
+          options={{
+            headerShown: true,
+            headerTitle: 'GNSS Operations',
+            headerStyle: { backgroundColor: '#0B1020' },
+            headerTintColor: '#E6ECFF',
+          }}
+        />
       </Stack>
       <StatusBar style="light" backgroundColor="#0B1020" />
     </ThemeProvider>

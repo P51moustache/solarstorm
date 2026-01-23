@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.solarstorm",
+      "bundleIdentifier": "com.zlceapps.solarstorm",
       "infoPlist": {
         "UIBackgroundModes": [
           "background-fetch",
@@ -28,7 +28,7 @@
         "backgroundImage": "./assets/images/android-icon-background.png",
         "monochromeImage": "./assets/images/android-icon-monochrome.png"
       },
-      "package": "com.yourcompany.solarstorm",
+      "package": "com.zlceapps.solarstorm",
       "permissions": [
         "android.permission.RECEIVE_BOOT_COMPLETED",
         "android.permission.WAKE_LOCK"
