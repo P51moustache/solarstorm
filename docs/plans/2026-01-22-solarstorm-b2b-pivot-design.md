@@ -87,6 +87,8 @@ Everything in Plus, plus:
 | Feature | Description |
 |---------|-------------|
 | **Satellite Fleet Manager** | Add satellites by name, altitude, inclination, **ballistic coefficient**, orbit type (LEO/MEO/GEO) |
+| **NORAD ID / TLE Import** | Import satellites by NORAD catalog ID or TLE data for automatic orbit parameters |
+| **Bulk Fleet Operations** | Import/manage large constellations via CSV, batch status checks, fleet-wide risk overview |
 | **Drag Risk Index** | Real-time risk assessment per satellite (LEO focus) |
 | **Surface Charging Risk** | Electron flux monitoring for GEO satellite charging/arcing risk |
 | **Thermospheric Density Forecast** | Density increase predictions |
@@ -121,6 +123,7 @@ Everything in Plus, plus:
 | **Route-Specific Alerts** | "North Atlantic Track B at risk in 3 hours" |
 | **Alternative Route Suggestions** | "Consider Track D as lower-risk alternative" |
 | **Compliance Report Export** | FAA/ICAO advisory format reports |
+| **Career Dose Tracking** | Long-term cumulative dose tracking per crew member against regulatory limits |
 
 **GNSS/Navigation:**
 | Feature | Description |
@@ -131,6 +134,7 @@ Everything in Plus, plus:
 | **RTK/PPP Degradation Alerts** | Notify when precision ops should pause |
 | **Regional Focus Mode** | Set your operating region for localized TEC/scintillation data |
 | **GNSS Correction Data Export** | Download historical TEC data for post-processing position corrections |
+| **Multi-Constellation Status** | Real-time health/degradation status for GPS, GLONASS, Galileo, and BeiDou |
 
 **General Pro:**
 | Feature | Description |
@@ -174,6 +178,8 @@ This matrix validates that each persona's critical needs are addressed:
 | **Early orbit-raising burns** | **Early Burn Recommendation** | Pro | 3 |
 | **MEO radiation belt transit** | **MEO Radiation Belt Risk** | Pro | 3 |
 | **Anomaly correlation** | **Anomaly Logging** | Pro | 3 |
+| **Satellite identification by NORAD** | **NORAD ID / TLE Import** | Pro | 3 |
+| **Large constellation management** | **Bulk Fleet Operations** | Pro/Ent | 3 |
 
 ### Persona 2: Power Grid Engineer (Pro/Enterprise)
 
@@ -199,6 +205,7 @@ This matrix validates that each persona's critical needs are addressed:
 | **RTK/PPP degradation alerts** | **Degradation Threshold Alerts** | Pro | 3 |
 | **Regional focus** | **Regional Focus Mode** | Pro | 3 |
 | **Post-processing correction** | **GNSS Correction Data Export** | Pro | 3 |
+| **Constellation health monitoring** | **Multi-Constellation Status** | Pro | 3 |
 | API for autonomous systems | REST API | Pro | 3 |
 
 ### Persona 4: Airline Ops Manager (Pro/Enterprise) - Priority 4
@@ -211,6 +218,7 @@ This matrix validates that each persona's critical needs are addressed:
 | **Route-specific alerts** | **Named Route Alerts (NAT Tracks)** | Pro | 3 |
 | **Alternative routing** | **Alternative Route Suggestions** | Pro | 3 |
 | **Compliance reporting** | **FAA/ICAO Report Export** | Pro | 3 |
+| **Long-term crew dose tracking** | **Career Dose Tracking** | Pro/Ent | 3 |
 
 ### Persona 5: Amateur Radio Operator (Plus)
 
@@ -267,8 +275,13 @@ ovation_history (timestamp, grid_data)
 alerts_noaa (timestamp, type, message, severity)
 
 -- Pro/Enterprise features
-satellites (org_id, name, norad_id, altitude_km, inclination, ballistic_coeff)
+satellites (org_id, name, norad_id, altitude_km, inclination, ballistic_coeff, orbit_type, tle_line1, tle_line2, tle_epoch)
 satellite_risk_log (satellite_id, timestamp, risk_level, density_estimate)
+
+-- Aviation crew dose tracking
+crew_members (org_id, employee_id, name, role, created_at)
+crew_dose_log (crew_id, flight_date, route, dose_msv, duration_hrs, altitude_ft)
+-- Note: Regulatory limits typically 20 mSv/year (ICRP) or 50 mSv/year (US FAA)
 
 -- System
 alert_log (user_id, type, sent_at, payload, delivered)
@@ -299,6 +312,10 @@ GET  /api/v1/risk/drag           # Drag risk (LEO)
 GET  /api/v1/risk/charging       # Surface charging risk (GEO) - electron flux
 GET  /api/v1/density/forecast    # Thermospheric density forecast
 POST /api/v1/satellites          # Add satellite to fleet
+POST /api/v1/satellites/import   # Bulk import satellites (CSV)
+POST /api/v1/satellites/tle      # Import satellite by TLE data
+GET  /api/v1/satellites/norad/:id # Lookup satellite by NORAD ID
+GET  /api/v1/satellites/fleet    # Fleet-wide status overview
 GET  /api/v1/satellites/:id/risk # Risk for specific satellite
 GET  /api/v1/satellites/:id/orbit-raising  # Orbit-raising mode status
 GET  /api/v1/satellites/:id/early-burn    # Early burn recommendation
@@ -324,6 +341,7 @@ GET  /api/v1/scintillation       # Scintillation index (loss of lock risk)
 GET  /api/v1/gnss/error          # GNSS error probability
 GET  /api/v1/rtk/status          # RTK/PPP degradation status
 GET  /api/v1/gnss/correction-data # Download TEC for post-processing (?from=&to=&region=)
+GET  /api/v1/gnss/constellations # Multi-constellation status (GPS/GLONASS/Galileo/BeiDou)
 
 Aviation (Pro+):
 GET  /api/v1/radiation/dose      # Dose rate at altitude (?alt_ft=&lat=&lng=)
@@ -332,6 +350,9 @@ GET  /api/v1/routes/risk         # Named route risk (NAT, Pacific)
 GET  /api/v1/routes/alternatives # Alternative route suggestions
 GET  /api/v1/hf-blackout/polar   # Polar HF blackout forecast
 GET  /api/v1/reports/compliance  # Generate FAA/ICAO advisory format report
+POST /api/v1/crew/dose           # Log crew member dose for career tracking
+GET  /api/v1/crew/:id/dose       # Get crew member cumulative career dose
+GET  /api/v1/crew/:id/dose/limit # Career dose vs regulatory limit status
 
 Integrations (Enterprise):
 POST /api/v1/webhooks            # Configure webhook
@@ -481,6 +502,8 @@ Output:
 | **Magnetometer dB/dt** | NOAA SWPC / USGS | 1 minute | **GIC driver (Power Grid)** |
 | **Scintillation Index** | NOAA SWPC | 15 minutes | **GNSS loss of lock** |
 | **Radiation Belt (Van Allen)** | NOAA SWPC / NASA RBSP | Hourly | **MEO satellites** |
+| **NORAD TLE Data** | CelesTrak / Space-Track.org | Daily | **Satellite identification** |
+| **GNSS Constellation Status** | IGS / MGEX / NANU/NAQU notices | Hourly | **Multi-constellation health** |
 
 ---
 
@@ -523,6 +546,8 @@ Output:
 
 **Satellite Operations:**
 - [ ] Satellite fleet manager (CRUD with ballistic coefficient, orbit type)
+- [ ] **NORAD ID lookup and TLE import**
+- [ ] **Bulk fleet import/management (CSV, batch operations)**
 - [ ] Drag risk index calculator (LEO focus)
 - [ ] **Surface charging risk monitor (GEO focus - electron flux)**
 - [ ] Thermospheric density model integration
@@ -552,6 +577,7 @@ Output:
 - [ ] **RTK/PPP degradation threshold alerts**
 - [ ] **Regional focus mode (set operating area for localized data)**
 - [ ] **GNSS correction data export (TEC data for post-processing)**
+- [ ] **Multi-constellation status (GPS/GLONASS/Galileo/BeiDou health)**
 
 **Aviation (Priority 4):**
 - [ ] **Radiation dose calculator (multi-altitude: FL350, FL390, etc.)**
@@ -561,6 +587,7 @@ Output:
 - [ ] **Route-specific alerts ("Track B at risk in 3h")**
 - [ ] **Alternative route suggestions ("Consider Track D")**
 - [ ] **Compliance report export (FAA/ICAO advisory format)**
+- [ ] **Career dose tracking (crew member long-term dose vs regulatory limits)**
 
 **General Pro:**
 - [ ] REST API with authentication
