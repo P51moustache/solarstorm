@@ -8,6 +8,15 @@ import {
 } from './parsers/gnssConstellation';
 import type { GnssConstellation } from '../supabase/types';
 
+interface ConstellationStatusRow {
+  constellation: string;
+  healthy_count: number;
+  unhealthy_count: number;
+  degraded_count: number;
+  notes: string | null;
+  timestamp: string;
+}
+
 // Fetch latest constellation status from database
 // (Populated by background job that monitors IGS/MGEX/NANUs)
 export async function getConstellationStatus(): Promise<AllConstellationsStatus> {
@@ -25,8 +34,9 @@ export async function getConstellationStatus(): Promise<AllConstellationsStatus>
 
   // Group by constellation, take latest for each
   const byConstellation: Partial<Record<GnssConstellation, ConstellationHealth>> = {};
+  const rows = (data || []) as ConstellationStatusRow[];
 
-  for (const row of data || []) {
+  for (const row of rows) {
     if (!byConstellation[row.constellation as GnssConstellation]) {
       byConstellation[row.constellation as GnssConstellation] = calculateConstellationHealth(
         row.constellation as GnssConstellation,
