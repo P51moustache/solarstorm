@@ -20,6 +20,8 @@
     "@react-navigation/elements": "^2.6.3",
     "@react-navigation/native": "^7.1.8",
     "@shopify/react-native-skia": "^2.2.13",
+    "@supabase/auth-helpers-react": "^0.15.0",
+    "@supabase/supabase-js": "^2.91.0",
     "dayjs": "^1.11.18",
     "expo": "~54.0.1",
     "expo-background-task": "^1.0.6",
