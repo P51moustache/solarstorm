@@ -4,7 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 
-import { useColorScheme } from '@/hooks/use-color-scheme';
+import { useAuthStore } from '@/lib/state/useAuthStore';
 import { registerBackgroundFetch } from '@/lib/util/background';
 import { configureNotifications } from '@/lib/util/notifications';
 
@@ -21,40 +21,43 @@ const SolarStormTheme = {
   },
 };
 
-export const unstable_settings = {
-  anchor: 'index',
-};
-
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
+  const initialize = useAuthStore((state) => state.initialize);
 
   useEffect(() => {
+    initialize();
     // Configure notifications and background tasks
     configureNotifications();
     registerBackgroundFetch();
-  }, []);
+  }, [initialize]);
 
   return (
     <ThemeProvider value={SolarStormTheme}>
-      <Stack>
-        <Stack.Screen name="index" options={{ headerShown: false }} />
-        <Stack.Screen 
-          name="modal-map" 
-          options={{ 
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="index" />
+        <Stack.Screen name="login" />
+        <Stack.Screen name="signup" />
+        <Stack.Screen name="pricing" />
+        <Stack.Screen name="dashboard" />
+        <Stack.Screen
+          name="modal-map"
+          options={{
             presentation: 'modal',
+            headerShown: true,
             headerTitle: 'Aurora Map',
             headerStyle: { backgroundColor: '#0B1020' },
             headerTintColor: '#E6ECFF',
-          }} 
+          }}
         />
-        <Stack.Screen 
-          name="modal-settings" 
-          options={{ 
+        <Stack.Screen
+          name="modal-settings"
+          options={{
             presentation: 'modal',
+            headerShown: true,
             headerTitle: 'Settings',
             headerStyle: { backgroundColor: '#0B1020' },
             headerTintColor: '#E6ECFF',
-          }} 
+          }}
         />
       </Stack>
       <StatusBar style="light" backgroundColor="#0B1020" />
