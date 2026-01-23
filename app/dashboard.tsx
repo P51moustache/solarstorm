@@ -15,8 +15,10 @@ import {
     View,
 } from 'react-native';
 
+import { AlertConfig } from '@/components/alerts/AlertConfig';
 import { AlertBanner } from '@/components/AlertBanner';
 import { AuroraHeatmap } from '@/components/AuroraHeatmap';
+import { SfiTrendChart } from '@/components/charts/SfiTrendChart';
 import { FeatureGate } from '@/components/FeatureGate';
 import { HfPropagationMap } from '@/components/hf/HfPropagationMap';
 import { KpMiniTrend } from '@/components/KpMiniTrend';
@@ -26,6 +28,7 @@ import { KpiCard } from '@/components/KpiCard';
 import { PhotoPlanning } from '@/components/photo/PhotoPlanning';
 import { LocationPrediction } from '@/components/predictions/LocationPrediction';
 import { Section } from '@/components/Section';
+import { CmeCountdown } from '@/components/widgets/CmeCountdown';
 import { getKpHistory } from '@/lib/api/swpc';
 import { useAuthStore } from '@/lib/state/useAuthStore';
 import { useAuroraChance, useLatestUpdateTime, useSolarStormStore } from '@/lib/state/useStore';
@@ -263,11 +266,47 @@ export default function HomeScreen() {
           </Section>
 
           <Section>
+            <CmeCountdown />
+          </Section>
+
+          <Section>
+            <SfiTrendChart />
+          </Section>
+
+          <Section>
             <HfPropagationMap />
           </Section>
 
           <Section>
             <PhotoPlanning />
+          </Section>
+
+          {/* Quick Actions - Plus Features */}
+          <Section title="Quick Actions">
+            <View style={styles.quickActions}>
+              <TouchableOpacity
+                style={styles.quickActionButton}
+                onPress={() => router.push('/locations')}
+              >
+                <Ionicons name="location-outline" size={20} color={COLORS.emerald} />
+                <Text style={styles.quickActionText}>My Locations</Text>
+              </TouchableOpacity>
+
+              <FeatureGate feature="historicalData" showUpgrade={false}>
+                <TouchableOpacity
+                  style={styles.quickActionButton}
+                  onPress={() => router.push('/history')}
+                >
+                  <Ionicons name="analytics-outline" size={20} color={COLORS.emerald} />
+                  <Text style={styles.quickActionText}>Historical Data</Text>
+                </TouchableOpacity>
+              </FeatureGate>
+            </View>
+          </Section>
+
+          {/* Alert Configuration */}
+          <Section title="Alerts">
+            <AlertConfig />
           </Section>
 
           {/* 3D Globe Navigation - Plus Feature */}
@@ -398,6 +437,26 @@ const styles = StyleSheet.create({
   globeButtonText: {
     fontSize: 16,
     fontWeight: '600',
+    color: COLORS.text,
+  },
+  quickActions: {
+    flexDirection: 'row',
+    gap: SPACING.md,
+  },
+  quickActionButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: COLORS.card,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+  },
+  quickActionText: {
+    fontSize: 14,
+    fontWeight: '500',
     color: COLORS.text,
   },
 });
