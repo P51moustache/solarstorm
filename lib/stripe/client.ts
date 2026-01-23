@@ -19,24 +19,32 @@ export function getStripe(): Promise<Stripe | null> {
   return stripePromise;
 }
 
-export async function redirectToCheckout(priceId: string, customerId?: string) {
-  const stripe = await getStripe();
+/**
+ * Create a checkout session via the backend and redirect to Stripe Checkout.
+ * This requires a Supabase Edge Function to create the checkout session.
+ */
+export async function createCheckoutSession(priceId: string, userEmail?: string): Promise<string> {
+  // In production, this would call a Supabase Edge Function like:
+  // const { data, error } = await supabase.functions.invoke('create-checkout-session', {
+  //   body: { priceId, email: userEmail }
+  // });
+  // return data.url;
 
-  if (!stripe) {
-    throw new Error('Stripe not initialized');
-  }
+  // For now, throw an error indicating setup is needed
+  throw new Error(
+    'Stripe checkout requires setting up a Supabase Edge Function. ' +
+    'See supabase/functions/create-checkout-session for implementation.'
+  );
+}
 
-  // For now, we'll redirect to Stripe Checkout
-  // In production, you'd create a checkout session via your backend
-  const { error } = await stripe.redirectToCheckout({
-    lineItems: [{ price: priceId, quantity: 1 }],
-    mode: 'subscription',
-    successUrl: `${window.location.origin}/dashboard?success=true`,
-    cancelUrl: `${window.location.origin}/pricing?canceled=true`,
-    customerEmail: customerId, // Use email if no customer ID
-  });
-
-  if (error) {
-    throw error;
-  }
+/**
+ * Redirect to the Stripe Customer Portal for subscription management.
+ * This also requires a backend endpoint.
+ */
+export async function createPortalSession(): Promise<string> {
+  // In production, this would call a Supabase Edge Function
+  throw new Error(
+    'Customer portal requires setting up a Supabase Edge Function. ' +
+    'See supabase/functions/create-portal-session for implementation.'
+  );
 }

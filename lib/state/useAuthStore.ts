@@ -44,13 +44,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
       if (session) {
         // Fetch profile
-        const { data: profile, error: profileError } = await supabase
+        const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
 
         if (profileError) throw profileError;
+
+        const profile = profileData as Profile | null;
 
         set({
           session,
@@ -64,11 +66,13 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Listen for auth changes
       supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          const { data: profile } = await supabase
+          const { data: profileData } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
+
+          const profile = profileData as Profile | null;
 
           set({
             session,
@@ -173,13 +177,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     if (!user) return;
 
     try {
-      const { data: profile, error } = await supabase
+      const { data: profileData, error } = await supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
         .single();
 
       if (error) throw error;
+
+      const profile = profileData as Profile | null;
 
       set({
         profile,
