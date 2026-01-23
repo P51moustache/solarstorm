@@ -3,10 +3,8 @@ import { supabase } from '../supabase/client';
 import type { GnssRegion } from '../supabase/types';
 import { getTecStatus, type TecStatus } from '../api/tec';
 import { getScintillationStatus, type ScintillationStatus } from '../api/scintillation';
-import {
-  getConstellationStatus,
-  type AllConstellationsStatus,
-} from '../api/gnssConstellation';
+import { getConstellationStatus } from '../api/gnssConstellation';
+import type { AllConstellationsStatus } from '../api/parsers/gnssConstellation';
 
 interface GnssState {
   // Regions of interest
