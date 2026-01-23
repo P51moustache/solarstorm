@@ -93,6 +93,8 @@ Everything in Plus, plus:
 | **Safe Mode Recommendation** | Automated safe mode timing suggestions |
 | **Maneuver Window Planner** | Low-risk windows for orbit adjustments |
 | **Orbit-Raising Mode** | Special monitoring for newly-launched satellites in vulnerable orbit-raising phase |
+| **Early Burn Recommendation** | "Recommend accelerating orbit-raising burns before storm arrival" |
+| **MEO Radiation Belt Risk** | Van Allen belt transit risk for MEO satellites |
 | **SEP/Proton Event Alerts** | Solar energetic particle monitoring for electronics protection |
 | **Launch Window Assessment** | Delay recommendations based on storm forecasts |
 | **Storm Replay + Correlation** | Historical storm analysis vs. your assets |
@@ -128,6 +130,7 @@ Everything in Plus, plus:
 | **GNSS Error Probability** | Positioning accuracy degradation forecast |
 | **RTK/PPP Degradation Alerts** | Notify when precision ops should pause |
 | **Regional Focus Mode** | Set your operating region for localized TEC/scintillation data |
+| **GNSS Correction Data Export** | Download historical TEC data for post-processing position corrections |
 
 **General Pro:**
 | Feature | Description |
@@ -168,6 +171,8 @@ This matrix validates that each persona's critical needs are addressed:
 | **Surface charging (GEO)** | **Surface Charging Risk** | Pro | 3 |
 | **Launch delay recommendations** | **Launch Window Assessment** | Pro | 3 |
 | **Orbit-raising vulnerability** | **Orbit-Raising Mode** | Pro | 3 |
+| **Early orbit-raising burns** | **Early Burn Recommendation** | Pro | 3 |
+| **MEO radiation belt transit** | **MEO Radiation Belt Risk** | Pro | 3 |
 | **Anomaly correlation** | **Anomaly Logging** | Pro | 3 |
 
 ### Persona 2: Power Grid Engineer (Pro/Enterprise)
@@ -193,6 +198,7 @@ This matrix validates that each persona's critical needs are addressed:
 | **GNSS error probability** | **Error Probability Overlay** | Pro | 3 |
 | **RTK/PPP degradation alerts** | **Degradation Threshold Alerts** | Pro | 3 |
 | **Regional focus** | **Regional Focus Mode** | Pro | 3 |
+| **Post-processing correction** | **GNSS Correction Data Export** | Pro | 3 |
 | API for autonomous systems | REST API | Pro | 3 |
 
 ### Persona 4: Airline Ops Manager (Pro/Enterprise) - Priority 4
@@ -295,6 +301,8 @@ GET  /api/v1/density/forecast    # Thermospheric density forecast
 POST /api/v1/satellites          # Add satellite to fleet
 GET  /api/v1/satellites/:id/risk # Risk for specific satellite
 GET  /api/v1/satellites/:id/orbit-raising  # Orbit-raising mode status
+GET  /api/v1/satellites/:id/early-burn    # Early burn recommendation
+GET  /api/v1/risk/radiation-belt          # MEO Van Allen belt transit risk
 GET  /api/v1/sep/current         # Solar energetic particle status
 GET  /api/v1/launch-window       # Launch window assessment
 POST /api/v1/anomalies           # Log satellite anomaly
@@ -315,6 +323,7 @@ GET  /api/v1/tec/regional        # Regional TEC (?lat=&lng=&radius=)
 GET  /api/v1/scintillation       # Scintillation index (loss of lock risk)
 GET  /api/v1/gnss/error          # GNSS error probability
 GET  /api/v1/rtk/status          # RTK/PPP degradation status
+GET  /api/v1/gnss/correction-data # Download TEC for post-processing (?from=&to=&region=)
 
 Aviation (Pro+):
 GET  /api/v1/radiation/dose      # Dose rate at altitude (?alt_ft=&lat=&lng=)
@@ -471,6 +480,7 @@ Output:
 | **G-Scale (Geomagnetic)** | NOAA SWPC | As issued | **Power Grid (NERC)** |
 | **Magnetometer dB/dt** | NOAA SWPC / USGS | 1 minute | **GIC driver (Power Grid)** |
 | **Scintillation Index** | NOAA SWPC | 15 minutes | **GNSS loss of lock** |
+| **Radiation Belt (Van Allen)** | NOAA SWPC / NASA RBSP | Hourly | **MEO satellites** |
 
 ---
 
@@ -519,6 +529,8 @@ Output:
 - [ ] Safe mode recommendation engine
 - [ ] Maneuver window planner
 - [ ] **Orbit-raising mode (special monitoring for newly-launched satellites)**
+- [ ] **Early burn recommendation ("accelerate orbit-raising before storm")**
+- [ ] **MEO radiation belt risk (Van Allen belt transit monitoring)**
 - [ ] **SEP/Solar proton event monitoring and alerts**
 - [ ] **Launch window assessment tool**
 - [ ] Storm replay with asset correlation
@@ -539,6 +551,7 @@ Output:
 - [ ] **GNSS error probability visualization**
 - [ ] **RTK/PPP degradation threshold alerts**
 - [ ] **Regional focus mode (set operating area for localized data)**
+- [ ] **GNSS correction data export (TEC data for post-processing)**
 
 **Aviation (Priority 4):**
 - [ ] **Radiation dose calculator (multi-altitude: FL350, FL390, etc.)**
