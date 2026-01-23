@@ -126,7 +126,12 @@ export function Pricing() {
 
           <Pressable
             style={styles.buttonSecondary}
-            onPress={() => router.push('/contact')}
+            onPress={() => {
+              // Enterprise tier requires contacting sales
+              if (typeof window !== 'undefined') {
+                window.open('mailto:sales@solarstorm.app?subject=Enterprise%20Inquiry', '_blank');
+              }
+            }}
           >
             <Text style={styles.buttonSecondaryText}>Contact Sales</Text>
           </Pressable>
