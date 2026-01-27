@@ -9,12 +9,17 @@ import {
   type UserCoordinates,
 } from '../services/location';
 
+// Dev mode bypass for testing (only in development)
+// In dev mode, use localStorage since the mock user doesn't exist in Supabase
+const DEV_BYPASS_AUTH = process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
+
 interface LocationState {
   // Current device location
   currentLocation: UserCoordinates | null;
   magneticLatitude: number | null;
 
-  // Saved locations (from Supabase)
+  // Saved locations (Supabase in prod, localStorage in dev)
   savedLocations: UserLocation[];
   primaryLocation: UserLocation | null;
 
@@ -63,6 +68,14 @@ export const useLocationStore = create<LocationState>()(
       },
 
       fetchSavedLocations: async () => {
+        // In dev bypass mode, locations are already in state via persist
+        if (DEV_BYPASS_AUTH) {
+          const { savedLocations } = get();
+          const primary = savedLocations.find((l) => l.is_primary) || null;
+          set({ primaryLocation: primary });
+          return;
+        }
+
         try {
           const { data, error } = await supabase
             .from('user_locations')
@@ -83,6 +96,42 @@ export const useLocationStore = create<LocationState>()(
       addLocation: async (label, lat, lng, isPrimary = false) => {
         set({ isLoading: true, error: null });
         try {
+          // In dev bypass mode, use localStorage
+          if (DEV_BYPASS_AUTH) {
+            const { savedLocations } = get();
+
+            // If setting as primary, unset existing primary
+            let updatedLocations = savedLocations;
+            if (isPrimary) {
+              updatedLocations = savedLocations.map((loc) => ({
+                ...loc,
+                is_primary: false,
+              }));
+            }
+
+            // Create new location
+            const newLocation: UserLocation = {
+              id: crypto.randomUUID(),
+              user_id: 'dev-user',
+              label,
+              lat,
+              lng,
+              is_primary: isPrimary || savedLocations.length === 0,
+              created_at: new Date().toISOString(),
+            };
+
+            const newLocations = [newLocation, ...updatedLocations];
+            const primary = newLocations.find((l) => l.is_primary) || null;
+
+            set({
+              savedLocations: newLocations,
+              primaryLocation: primary,
+              isLoading: false
+            });
+            return;
+          }
+
+          // Production: use Supabase
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) throw new Error('Not authenticated');
 
@@ -119,6 +168,23 @@ export const useLocationStore = create<LocationState>()(
 
       removeLocation: async (id) => {
         try {
+          // In dev bypass mode, use localStorage
+          if (DEV_BYPASS_AUTH) {
+            const { savedLocations } = get();
+            const newLocations = savedLocations.filter((loc) => loc.id !== id);
+
+            // If we removed the primary, set the first remaining as primary
+            let primary = newLocations.find((l) => l.is_primary) || null;
+            if (!primary && newLocations.length > 0) {
+              newLocations[0].is_primary = true;
+              primary = newLocations[0];
+            }
+
+            set({ savedLocations: newLocations, primaryLocation: primary });
+            return;
+          }
+
+          // Production: use Supabase
           const { error } = await supabase
             .from('user_locations')
             .delete()
@@ -134,6 +200,21 @@ export const useLocationStore = create<LocationState>()(
 
       setPrimaryLocation: async (id) => {
         try {
+          // In dev bypass mode, use localStorage
+          if (DEV_BYPASS_AUTH) {
+            const { savedLocations } = get();
+
+            const newLocations = savedLocations.map((loc) => ({
+              ...loc,
+              is_primary: loc.id === id,
+            }));
+
+            const primary = newLocations.find((l) => l.is_primary) || null;
+            set({ savedLocations: newLocations, primaryLocation: primary });
+            return;
+          }
+
+          // Production: use Supabase
           const { data: { user } } = await supabase.auth.getUser();
           if (!user) throw new Error('Not authenticated');
 
@@ -164,6 +245,11 @@ export const useLocationStore = create<LocationState>()(
       partialize: (state) => ({
         currentLocation: state.currentLocation,
         magneticLatitude: state.magneticLatitude,
+        // In dev mode, also persist saved locations to localStorage
+        ...(DEV_BYPASS_AUTH ? {
+          savedLocations: state.savedLocations,
+          primaryLocation: state.primaryLocation,
+        } : {}),
       }),
     }
   )
