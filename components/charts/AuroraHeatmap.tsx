@@ -5,6 +5,14 @@ import type { OvationPayload } from '@/lib/api/parsers/ovation';
 import { getOvation } from '@/lib/api/swpc';
 import { calculateHeatmapCircles } from '@/lib/viz/heatmap';
 
+// Simplified northern hemisphere continent outlines (normalized 0-1 coordinates)
+// These are approximate shapes for visual reference
+const CONTINENT_PATHS = {
+  northAmerica: 'M 0.05,0.3 Q 0.1,0.2 0.15,0.15 L 0.2,0.1 Q 0.25,0.08 0.3,0.1 L 0.35,0.2 Q 0.38,0.35 0.35,0.5 L 0.3,0.6 Q 0.25,0.7 0.2,0.75 L 0.15,0.8 Q 0.1,0.75 0.08,0.65 L 0.05,0.5 Q 0.03,0.4 0.05,0.3',
+  europe: 'M 0.45,0.15 Q 0.5,0.1 0.55,0.12 L 0.58,0.18 Q 0.6,0.25 0.57,0.35 L 0.52,0.45 Q 0.48,0.5 0.45,0.48 L 0.42,0.4 Q 0.4,0.3 0.42,0.2 Z',
+  asia: 'M 0.6,0.1 Q 0.7,0.08 0.8,0.1 L 0.9,0.15 Q 0.95,0.25 0.92,0.4 L 0.85,0.55 Q 0.75,0.65 0.65,0.6 L 0.58,0.5 Q 0.55,0.35 0.58,0.2 Z',
+};
+
 interface AuroraHeatmapProps {
   width?: number;
   height?: number;
@@ -98,6 +106,20 @@ export function AuroraHeatmap({
               ))}
             </g>
           )}
+
+          {/* Continent outlines for geographic reference */}
+          <g className="continent-outlines" opacity="0.3">
+            {Object.entries(CONTINENT_PATHS).map(([name, path]) => (
+              <path
+                key={name}
+                d={path}
+                fill="none"
+                stroke="#4B5563"
+                strokeWidth="1"
+                transform={`scale(${width}, ${height})`}
+              />
+            ))}
+          </g>
         </svg>
       </div>
 

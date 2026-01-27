@@ -40,9 +40,7 @@ export function ParticleFluxWidget() {
 
   return (
     <FeatureGate feature="satelliteRisk">
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-solar-text mb-3">Particle Environment</h3>
-
+      <div>
         {/* Solar Radiation Storm (Protons) */}
         <div className="bg-solar-card rounded-xl p-4 mb-3">
           <div className="flex items-center gap-2 mb-2">

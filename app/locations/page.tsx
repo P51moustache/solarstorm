@@ -10,11 +10,11 @@ import { AddLocationModal } from '@/components/locations/AddLocationModal';
 
 export default function LocationsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
+  const [isLoadingLocations, setIsLoadingLocations] = useState(true);
   const {
     savedLocations,
     primaryLocation,
     currentLocation,
-    isLoading,
     fetchSavedLocations,
     fetchCurrentLocation,
     removeLocation,
@@ -22,8 +22,14 @@ export default function LocationsPage() {
   } = useLocationStore();
 
   useEffect(() => {
-    fetchSavedLocations();
-    fetchCurrentLocation();
+    const loadData = async () => {
+      setIsLoadingLocations(true);
+      await fetchSavedLocations();
+      setIsLoadingLocations(false);
+      // Fetch current location separately (can take time due to permission prompt)
+      fetchCurrentLocation();
+    };
+    loadData();
   }, [fetchSavedLocations, fetchCurrentLocation]);
 
   const handleDelete = (id: string, label: string) => {
@@ -71,7 +77,7 @@ export default function LocationsPage() {
               </div>
 
               {/* Locations Table */}
-              {isLoading ? (
+              {isLoadingLocations ? (
                 <div className="flex items-center justify-center py-24">
                   <div className="w-8 h-8 border-2 border-solar-emerald border-t-transparent rounded-full animate-spin" />
                 </div>

@@ -8,7 +8,7 @@ import { getSfiTrend } from '@/lib/api/solarFlux';
 import { getCmeCountdown } from '@/lib/api/cme';
 import { AuroraHeatmap, KpTrendLine } from '@/components/charts';
 import { COLORS } from '@/lib/util/colors';
-import type { SwpcAlert } from '@/lib/api/parsers/alerts';
+import { type SwpcAlert, getAlertLevel } from '@/lib/api/parsers/alerts';
 import type { SfiTrend } from '@/lib/api/parsers/solarFlux';
 import type { CmeCountdownData } from '@/lib/api/parsers/cme';
 
@@ -78,6 +78,24 @@ function DataCard({
   );
 }
 
+function getAlertSummary(alert: SwpcAlert): { level: string; description: string; color: string } {
+  const level = getAlertLevel(alert.message);
+  const message = alert.message.toUpperCase();
+
+  if (level === 'G5') return { level: 'G5', description: 'Extreme Storm', color: 'text-red-500' };
+  if (level === 'G4') return { level: 'G4', description: 'Severe Storm', color: 'text-red-400' };
+  if (level === 'G3') return { level: 'G3', description: 'Strong Storm', color: 'text-orange-400' };
+  if (level === 'G2') return { level: 'G2', description: 'Moderate Storm', color: 'text-yellow-400' };
+  if (level === 'G1') return { level: 'G1', description: 'Minor Storm', color: 'text-yellow-300' };
+  if (level === 'K4') return { level: 'K4', description: 'Active Conditions', color: 'text-green-400' };
+
+  if (message.includes('WARNING')) return { level: 'WARN', description: 'Warning Issued', color: 'text-orange-400' };
+  if (message.includes('WATCH')) return { level: 'WATCH', description: 'Watch Active', color: 'text-yellow-400' };
+  if (message.includes('ALERT')) return { level: 'ALERT', description: 'Alert Active', color: 'text-orange-400' };
+
+  return { level: 'INFO', description: 'Geomagnetic Activity', color: 'text-solar-muted' };
+}
+
 function AlertsPanel({ alerts }: { alerts: SwpcAlert[] }) {
   const recentAlerts = alerts.slice(0, 5);
 
@@ -100,21 +118,29 @@ function AlertsPanel({ alerts }: { alerts: SwpcAlert[] }) {
         Active Alerts ({recentAlerts.length})
       </h3>
       <div className="space-y-2 max-h-48 overflow-y-auto">
-        {recentAlerts.map((alert, i) => (
-          <div
-            key={i}
-            className="p-2 bg-[#0a0f1a] rounded border border-solar-border text-xs"
-          >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-orange-400 font-medium">
-                {alert.message.slice(0, 50)}...
-              </span>
-              <span className="text-solar-muted">
-                {new Date(alert.issue_datetime).toLocaleTimeString()}
-              </span>
+        {recentAlerts.map((alert, i) => {
+          const summary = getAlertSummary(alert);
+          return (
+            <div
+              key={i}
+              className="p-2 bg-[#0a0f1a] rounded border border-solar-border text-xs"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`font-mono font-bold ${summary.color}`}>
+                    {summary.level}
+                  </span>
+                  <span className="text-solar-text">
+                    {summary.description}
+                  </span>
+                </div>
+                <span className="text-solar-muted">
+                  {new Date(alert.issue_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
