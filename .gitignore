@@ -51,3 +51,6 @@ app-example
 
 # worktrees
 .worktrees/
+
+# Supabase CLI temp files
+supabase/.temp/
