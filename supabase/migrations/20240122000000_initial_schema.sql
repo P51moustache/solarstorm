@@ -1,5 +1,4 @@
--- Enable UUID extension
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- gen_random_uuid() is built into PostgreSQL 13+ (no extension needed)
 
 -- Profiles table (extends Supabase auth.users)
 CREATE TABLE public.profiles (
@@ -14,7 +13,7 @@ CREATE TABLE public.profiles (
 
 -- Organizations table
 CREATE TABLE public.organizations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
   tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'plus', 'pro', 'enterprise')),
   stripe_customer_id TEXT,
@@ -37,7 +36,7 @@ CREATE TABLE public.org_members (
 
 -- Alert configurations
 CREATE TABLE public.alert_configs (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   kp_threshold INTEGER NOT NULL DEFAULT 5 CHECK (kp_threshold >= 0 AND kp_threshold <= 9),
   bz_threshold INTEGER CHECK (bz_threshold IS NULL OR bz_threshold <= 0),
@@ -51,7 +50,7 @@ CREATE TABLE public.alert_configs (
 
 -- User saved locations
 CREATE TABLE public.user_locations (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   label TEXT NOT NULL,
   lat DOUBLE PRECISION NOT NULL,
@@ -62,7 +61,7 @@ CREATE TABLE public.user_locations (
 
 -- Alert log (for tracking sent alerts and enforcing limits)
 CREATE TABLE public.alert_log (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   alert_type TEXT NOT NULL,
   payload JSONB,
@@ -71,7 +70,7 @@ CREATE TABLE public.alert_log (
 
 -- Push notification subscriptions (for browser push)
 CREATE TABLE public.push_subscriptions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   endpoint TEXT NOT NULL,
   p256dh TEXT NOT NULL,
@@ -104,7 +103,7 @@ CREATE TABLE public.solar_wind_history (
 
 -- User satellite fleet
 CREATE TABLE public.satellites (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   org_id UUID REFERENCES public.organizations(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
@@ -122,7 +121,7 @@ CREATE TABLE public.satellites (
 
 -- Satellite anomaly log (correlate with space weather)
 CREATE TABLE public.satellite_anomalies (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   satellite_id UUID NOT NULL REFERENCES public.satellites(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   anomaly_type TEXT NOT NULL CHECK (anomaly_type IN ('safe_mode', 'reboot', 'sensor_error', 'comm_loss', 'attitude_error', 'power_anomaly', 'other')),
@@ -163,7 +162,7 @@ CREATE TABLE public.electron_flux_history (
 
 -- User GNSS regions of interest
 CREATE TABLE public.gnss_regions (
-  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
   label TEXT NOT NULL,
   center_lat DOUBLE PRECISION NOT NULL,
