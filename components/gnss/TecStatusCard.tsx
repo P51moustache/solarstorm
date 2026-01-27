@@ -1,9 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+'use client';
+
+import { Signal } from 'lucide-react';
 import { estimatePositionError } from '@/lib/api/parsers/tec';
 import type { TecStatus } from '@/lib/api/tec';
-import { COLORS } from '@/lib/util/colors';
 
 interface TecStatusCardProps {
   status: TecStatus;
@@ -16,137 +15,58 @@ export function TecStatusCard({ status }: TecStatusCardProps) {
   const dualFreqError = estimatePositionError(global.mean, true);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Ionicons name="cellular" size={20} color={condition.color} />
-        <Text style={styles.title}>Ionospheric TEC</Text>
-        <View style={[styles.badge, { backgroundColor: condition.color + '20' }]}>
-          <Text style={[styles.badgeText, { color: condition.color }]}>
-            {condition.level.toUpperCase()}
-          </Text>
-        </View>
-      </View>
+    <div className="bg-solar-card rounded-xl p-4 mb-3">
+      <div className="flex items-center gap-2 mb-3">
+        <Signal className="w-5 h-5" style={{ color: condition.color }} />
+        <span className="text-base font-semibold text-solar-text flex-1">
+          Ionospheric TEC
+        </span>
+        <span
+          className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase"
+          style={{
+            backgroundColor: condition.color + '20',
+            color: condition.color,
+          }}
+        >
+          {condition.level}
+        </span>
+      </div>
 
-      <View style={styles.tecValue}>
-        <Text style={styles.tecNumber}>{global.mean}</Text>
-        <Text style={styles.tecUnit}>TECU</Text>
-        <Text style={styles.tecMax}>(max: {global.max})</Text>
-      </View>
+      <div className="flex items-baseline gap-1 mb-3">
+        <span className="text-4xl font-bold text-solar-text">{global.mean}</span>
+        <span className="text-sm text-solar-muted">TECU</span>
+        <span className="text-xs text-solar-muted ml-2">(max: {global.max})</span>
+      </div>
 
-      <Text style={styles.description}>{condition.gnssImpact}</Text>
+      <p className="text-sm text-solar-text leading-5 mb-4">{condition.gnssImpact}</p>
 
-      <View style={styles.errorEstimates}>
-        <Text style={styles.errorTitle}>Estimated Position Error:</Text>
-        <View style={styles.errorRow}>
-          <View style={styles.errorItem}>
-            <Text style={styles.errorLabel}>Single-freq</Text>
-            <Text style={styles.errorValue}>±{singleFreqError.horizontalM}m H</Text>
-            <Text style={styles.errorValue}>±{singleFreqError.verticalM}m V</Text>
-          </View>
-          <View style={styles.errorItem}>
-            <Text style={styles.errorLabel}>Dual-freq</Text>
-            <Text style={[styles.errorValue, { color: COLORS.emerald }]}>
+      <div className="bg-solar-bg rounded-lg p-3 mb-3">
+        <p className="text-xs text-solar-muted mb-2">Estimated Position Error:</p>
+        <div className="flex gap-6">
+          <div className="flex-1">
+            <p className="text-xs text-solar-muted mb-1">Single-freq</p>
+            <p className="text-sm font-semibold text-solar-text">
+              ±{singleFreqError.horizontalM}m H
+            </p>
+            <p className="text-sm font-semibold text-solar-text">
+              ±{singleFreqError.verticalM}m V
+            </p>
+          </div>
+          <div className="flex-1">
+            <p className="text-xs text-solar-muted mb-1">Dual-freq</p>
+            <p className="text-sm font-semibold text-solar-emerald">
               ±{dualFreqError.horizontalM}m H
-            </Text>
-            <Text style={[styles.errorValue, { color: COLORS.emerald }]}>
+            </p>
+            <p className="text-sm font-semibold text-solar-emerald">
               ±{dualFreqError.verticalM}m V
-            </Text>
-          </View>
-        </View>
-      </View>
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <Text style={styles.updated}>
+      <p className="text-[11px] text-solar-muted text-right">
         Updated: {new Date(status.updatedAt).toLocaleTimeString()}
-      </Text>
-    </View>
+      </p>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    flex: 1,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  tecValue: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-    marginBottom: 12,
-  },
-  tecNumber: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  tecUnit: {
-    fontSize: 14,
-    color: COLORS.muted,
-  },
-  tecMax: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginLeft: 8,
-  },
-  description: {
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  errorEstimates: {
-    backgroundColor: COLORS.bg,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  errorTitle: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginBottom: 8,
-  },
-  errorRow: {
-    flexDirection: 'row',
-    gap: 24,
-  },
-  errorItem: {
-    flex: 1,
-  },
-  errorLabel: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginBottom: 4,
-  },
-  errorValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  updated: {
-    fontSize: 11,
-    color: COLORS.muted,
-    textAlign: 'right',
-  },
-});

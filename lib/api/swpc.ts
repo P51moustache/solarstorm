@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dayjs } from '../util/time';
 import { fetchJson } from './fetchJson';
 import { parseAlertsData, type SwpcAlert } from './parsers/alerts';
@@ -29,10 +28,15 @@ interface CachedData<T> {
   timestamp: string;
 }
 
-// Generic cache helpers
-async function getCachedData<T>(cacheKey: string, ttlMinutes: number): Promise<T | null> {
+const isClient = typeof window !== 'undefined';
+const isDev = process.env.NODE_ENV === 'development';
+
+// Generic cache helpers using localStorage
+function getCachedData<T>(cacheKey: string, ttlMinutes: number): T | null {
+  if (!isClient) return null;
+
   try {
-    const cached = await AsyncStorage.getItem(cacheKey);
+    const cached = localStorage.getItem(cacheKey);
     if (!cached) return null;
 
     const { data, timestamp }: CachedData<T> = JSON.parse(cached);
@@ -43,7 +47,7 @@ async function getCachedData<T>(cacheKey: string, ttlMinutes: number): Promise<T
     }
 
     // Cache expired
-    await AsyncStorage.removeItem(cacheKey);
+    localStorage.removeItem(cacheKey);
     return null;
   } catch (error) {
     console.error(`Failed to get cached data for ${cacheKey}:`, error);
@@ -51,13 +55,15 @@ async function getCachedData<T>(cacheKey: string, ttlMinutes: number): Promise<T
   }
 }
 
-async function setCachedData<T>(cacheKey: string, data: T): Promise<void> {
+function setCachedData<T>(cacheKey: string, data: T): void {
+  if (!isClient) return;
+
   try {
     const cached: CachedData<T> = {
       data,
       timestamp: new Date().toISOString(),
     };
-    await AsyncStorage.setItem(cacheKey, JSON.stringify(cached));
+    localStorage.setItem(cacheKey, JSON.stringify(cached));
   } catch (error) {
     console.error(`Failed to cache data for ${cacheKey}:`, error);
   }
@@ -65,32 +71,32 @@ async function setCachedData<T>(cacheKey: string, data: T): Promise<void> {
 
 // API functions
 export async function getKpNow(): Promise<{ kp: number; at: string }> {
-  if (__DEV__) console.log('[SWPC] Fetching Kp data...');
-  
+  if (isDev) console.log('[SWPC] Fetching Kp data...');
+
   // Try cache first
-  const cached = await getCachedData<{ kp: number; at: string }>(
+  const cached = getCachedData<{ kp: number; at: string }>(
     CACHE.KP.key,
     CACHE.KP.ttl
   );
   if (cached) {
-    if (__DEV__) console.log('[SWPC] Using cached Kp data:', cached);
+    if (isDev) console.log('[SWPC] Using cached Kp data:', cached);
     return cached;
   }
 
   // Fetch fresh data
-  if (__DEV__) console.log('[SWPC] Fetching fresh Kp data from:', ENDPOINTS.KP_1MIN);
+  if (isDev) console.log('[SWPC] Fetching fresh Kp data from:', ENDPOINTS.KP_1MIN);
   const data = await fetchJson(ENDPOINTS.KP_1MIN);
-  if (__DEV__) console.log('[SWPC] Raw Kp data received, length:', Array.isArray(data) ? data.length : 'not array');
-  
+  if (isDev) console.log('[SWPC] Raw Kp data received, length:', Array.isArray(data) ? data.length : 'not array');
+
   const parsed = parseKpData(data);
-  if (__DEV__) console.log('[SWPC] Parsed Kp data:', parsed);
+  if (isDev) console.log('[SWPC] Parsed Kp data:', parsed);
 
   if (!parsed) {
     throw new Error('Failed to parse Kp data');
   }
 
   // Cache the result
-  await setCachedData(CACHE.KP.key, parsed);
+  setCachedData(CACHE.KP.key, parsed);
   return parsed;
 }
 
@@ -105,28 +111,28 @@ export async function getKpHistory(): Promise<Array<{ kp: number; at: string }>>
 }
 
 export async function getSolarWindRecent(): Promise<{
-  points: Array<{ at: string; bz: number | null; speed: number | null; density: number | null }>;
+  points: Array<{ at: string; bz: number | null; bt: number | null; speed: number | null; density: number | null }>;
 }> {
-  if (__DEV__) console.log('[SWPC] Fetching Solar Wind data...');
-  
+  if (isDev) console.log('[SWPC] Fetching Solar Wind data...');
+
   // Try cache first
-  const cached = await getCachedData<{
-    points: Array<{ at: string; bz: number | null; speed: number | null; density: number | null }>;
+  const cached = getCachedData<{
+    points: Array<{ at: string; bz: number | null; bt: number | null; speed: number | null; density: number | null }>;
   }>(CACHE.SW.key, CACHE.SW.ttl);
   if (cached) {
-    if (__DEV__) console.log('[SWPC] Using cached SW data, points:', cached.points.length);
+    if (isDev) console.log('[SWPC] Using cached SW data, points:', cached.points.length);
     return cached;
   }
 
   // Fetch both mag and plasma data
-  if (__DEV__) console.log('[SWPC] Fetching fresh SW data from mag and plasma endpoints...');
+  if (isDev) console.log('[SWPC] Fetching fresh SW data from mag and plasma endpoints...');
   const [magData, plasmaData] = await Promise.all([
     fetchJson(ENDPOINTS.MAG_2HOUR).catch(() => []),
     fetchJson(ENDPOINTS.PLASMA_2HOUR).catch(() => []),
   ]);
-  
-  if (__DEV__) console.log('[SWPC] Raw mag data length:', Array.isArray(magData) ? magData.length : 'not array');
-  if (__DEV__) console.log('[SWPC] Raw plasma data length:', Array.isArray(plasmaData) ? plasmaData.length : 'not array');
+
+  if (isDev) console.log('[SWPC] Raw mag data length:', Array.isArray(magData) ? magData.length : 'not array');
+  if (isDev) console.log('[SWPC] Raw plasma data length:', Array.isArray(plasmaData) ? plasmaData.length : 'not array');
 
   const magPoints = parseMagData(magData);
   const plasmaPoints = parsePlasmaData(plasmaData);
@@ -135,6 +141,7 @@ export async function getSolarWindRecent(): Promise<{
   const pointsMap = new Map<string, {
     at: string;
     bz: number | null;
+    bt: number | null;
     speed: number | null;
     density: number | null;
   }>();
@@ -144,6 +151,7 @@ export async function getSolarWindRecent(): Promise<{
     pointsMap.set(point.time_tag, {
       at: point.time_tag,
       bz: point.bz,
+      bt: point.bt ?? null,
       speed: null,
       density: null,
     });
@@ -159,6 +167,7 @@ export async function getSolarWindRecent(): Promise<{
       pointsMap.set(point.time_tag, {
         at: point.time_tag,
         bz: null,
+        bt: null,
         speed: point.speed,
         density: point.density,
       });
@@ -173,20 +182,20 @@ export async function getSolarWindRecent(): Promise<{
   const result = { points };
 
   // Cache the result
-  await setCachedData(CACHE.SW.key, result);
+  setCachedData(CACHE.SW.key, result);
   return result;
 }
 
 export async function getOvation(): Promise<OvationPayload> {
-  if (__DEV__) console.log('[SWPC] Fetching OVATION data...');
-  
+  if (isDev) console.log('[SWPC] Fetching OVATION data...');
+
   // Try cache first
-  const cached = await getCachedData<OvationPayload>(
+  const cached = getCachedData<OvationPayload>(
     CACHE.OVATION.key,
     CACHE.OVATION.ttl
   );
   if (cached) {
-    if (__DEV__) console.log('[SWPC] Using cached OVATION data, cells:', cached.cells.length);
+    if (isDev) console.log('[SWPC] Using cached OVATION data, cells:', cached.cells.length);
     return cached;
   }
 
@@ -199,47 +208,47 @@ export async function getOvation(): Promise<OvationPayload> {
       throw new Error('Failed to parse OVATION data');
     }
 
-    if (__DEV__) console.log('[SWPC] Fetched fresh OVATION data, cells:', parsed.cells.length);
+    if (isDev) console.log('[SWPC] Fetched fresh OVATION data, cells:', parsed.cells.length);
 
     // Cache the result
-    await setCachedData(CACHE.OVATION.key, parsed);
+    setCachedData(CACHE.OVATION.key, parsed);
     return parsed;
   } catch (error) {
-    if (__DEV__) console.error('Failed to fetch OVATION data, using test data:', error);
-    
+    if (isDev) console.error('Failed to fetch OVATION data, using test data:', error);
+
     // Fallback to test data
     const testData = generateTestOvationData();
-    if (__DEV__) console.log('[SWPC] Using test OVATION data, cells:', testData.cells.length);
-    await setCachedData(CACHE.OVATION.key, testData);
+    if (isDev) console.log('[SWPC] Using test OVATION data, cells:', testData.cells.length);
+    setCachedData(CACHE.OVATION.key, testData);
     return testData;
   }
 }
 
 export async function getAlerts(): Promise<SwpcAlert[]> {
-  if (__DEV__) console.log('[SWPC] Fetching Alerts data...');
-  
+  if (isDev) console.log('[SWPC] Fetching Alerts data...');
+
   // Try cache first
-  const cached = await getCachedData<SwpcAlert[]>(
+  const cached = getCachedData<SwpcAlert[]>(
     CACHE.ALERTS.key,
     CACHE.ALERTS.ttl
   );
   if (cached) {
-    if (__DEV__) console.log('[SWPC] Using cached alerts data, count:', cached.length);
+    if (isDev) console.log('[SWPC] Using cached alerts data, count:', cached.length);
     return cached;
   }
 
   try {
     // Fetch fresh data
-    if (__DEV__) console.log('[SWPC] Fetching fresh alerts from:', ENDPOINTS.ALERTS);
+    if (isDev) console.log('[SWPC] Fetching fresh alerts from:', ENDPOINTS.ALERTS);
     const data = await fetchJson(ENDPOINTS.ALERTS);
-    if (__DEV__) console.log('[SWPC] Raw alerts data length:', Array.isArray(data) ? data.length : 'not array');
-    
+    if (isDev) console.log('[SWPC] Raw alerts data length:', Array.isArray(data) ? data.length : 'not array');
+
     const parsed = parseAlertsData(data);
-    if (__DEV__) console.log('[SWPC] Parsed alerts count:', parsed.length);
-    if (__DEV__) console.log('[SWPC] First few alerts:', parsed.slice(0, 2));
+    if (isDev) console.log('[SWPC] Parsed alerts count:', parsed.length);
+    if (isDev) console.log('[SWPC] First few alerts:', parsed.slice(0, 2));
 
     // Cache the result
-    await setCachedData(CACHE.ALERTS.key, parsed);
+    setCachedData(CACHE.ALERTS.key, parsed);
     return parsed;
   } catch (error) {
     console.error('Failed to fetch alerts:', error);
@@ -248,14 +257,14 @@ export async function getAlerts(): Promise<SwpcAlert[]> {
 }
 
 // Clear all caches
-export async function clearCache(): Promise<void> {
+export function clearCache(): void {
+  if (!isClient) return;
+
   try {
-    await Promise.all([
-      AsyncStorage.removeItem(CACHE.KP.key),
-      AsyncStorage.removeItem(CACHE.SW.key),
-      AsyncStorage.removeItem(CACHE.OVATION.key),
-      AsyncStorage.removeItem(CACHE.ALERTS.key),
-    ]);
+    localStorage.removeItem(CACHE.KP.key);
+    localStorage.removeItem(CACHE.SW.key);
+    localStorage.removeItem(CACHE.OVATION.key);
+    localStorage.removeItem(CACHE.ALERTS.key);
     console.log('Cache cleared successfully');
   } catch (error) {
     console.error('Failed to clear cache:', error);

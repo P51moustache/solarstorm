@@ -1,12 +1,10 @@
 import { loadStripe, type Stripe } from '@stripe/stripe-js';
-import Constants from 'expo-constants';
 
 let stripePromise: Promise<Stripe | null> | null = null;
 
 export function getStripe(): Promise<Stripe | null> {
   if (!stripePromise) {
-    const key = Constants.expoConfig?.extra?.stripePublishableKey ||
-                process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY;
+    const key = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY;
 
     if (!key) {
       console.error('Missing Stripe publishable key');

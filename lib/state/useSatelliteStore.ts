@@ -279,26 +279,21 @@ export const useSatelliteStore = create<SatelliteState>((set, get) => ({
   },
 }));
 
-// Derived selectors
-export const useSatellitesByOrbit = () => {
-  return useSatelliteStore((state) => {
-    const byOrbit: Record<OrbitType, Satellite[]> = {
-      LEO: [],
-      MEO: [],
-      GEO: [],
-      HEO: [],
-    };
+// Helper functions for derived data - use with useMemo in components
+export const getSatellitesByOrbit = (satellites: Satellite[]) => {
+  const byOrbit: Record<OrbitType, Satellite[]> = {
+    LEO: [],
+    MEO: [],
+    GEO: [],
+    HEO: [],
+  };
 
-    for (const sat of state.satellites) {
-      byOrbit[sat.orbit_type].push(sat);
-    }
+  for (const sat of satellites) {
+    byOrbit[sat.orbit_type].push(sat);
+  }
 
-    return byOrbit;
-  });
+  return byOrbit;
 };
 
-export const useOrbitRaisingSatellites = () => {
-  return useSatelliteStore((state) =>
-    state.satellites.filter((s) => s.is_orbit_raising)
-  );
-};
+export const getOrbitRaisingSatellites = (satellites: Satellite[]) =>
+  satellites.filter((s) => s.is_orbit_raising);

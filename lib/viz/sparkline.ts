@@ -1,4 +1,3 @@
-import { Skia, SkPath } from '@shopify/react-native-skia';
 import { COLORS } from '../util/colors';
 
 export interface SparklineData {
@@ -21,10 +20,20 @@ export interface SparklineOptions {
   };
 }
 
+export interface SparklinePathData {
+  strokePath: string;  // SVG path d attribute
+  fillPath?: string;   // SVG path d attribute for area fill
+  points: Array<{ x: number; y: number; value: number }>;
+}
+
+/**
+ * Create SVG path strings for a sparkline chart.
+ * Returns SVG-compatible path data that can be used with D3 or plain SVG.
+ */
 export function createSparklinePath(
   data: SparklineData[],
   options: SparklineOptions
-): { strokePath: SkPath; fillPath?: SkPath } | null {
+): SparklinePathData | null {
   const {
     width,
     height,
@@ -42,46 +51,45 @@ export function createSparklinePath(
     const values = data.map(d => d.value);
     const minValue = Math.min(...values);
     const maxValue = Math.max(...values);
-    
+
     // Handle case where all values are the same
     const valueRange = maxValue - minValue || 1;
 
-    // Create stroke path
-    const strokePath = Skia.Path.Make();
-    
-    // Create fill path if needed
-    const fillPath = showFill ? Skia.Path.Make() : undefined;
+    const points: Array<{ x: number; y: number; value: number }> = [];
+    let strokePath = '';
+    let fillPath = '';
 
     for (let i = 0; i < data.length; i++) {
       const x = padding.left + (i / (data.length - 1)) * chartWidth;
       const normalizedValue = (data[i].value - minValue) / valueRange;
       const y = padding.top + (1 - normalizedValue) * chartHeight;
 
+      points.push({ x, y, value: data[i].value });
+
       if (i === 0) {
-        strokePath.moveTo(x, y);
-        if (fillPath) {
-          fillPath.moveTo(padding.left, padding.top + chartHeight); // Start at bottom-left
-          fillPath.lineTo(x, y);
+        strokePath = `M ${x} ${y}`;
+        if (showFill) {
+          fillPath = `M ${padding.left} ${padding.top + chartHeight} L ${x} ${y}`;
         }
       } else {
-        strokePath.lineTo(x, y);
-        if (fillPath) {
-          fillPath.lineTo(x, y);
+        strokePath += ` L ${x} ${y}`;
+        if (showFill) {
+          fillPath += ` L ${x} ${y}`;
         }
       }
     }
 
     // Complete fill path by connecting to bottom-right and back to start
-    if (fillPath) {
+    if (showFill && fillPath) {
       const lastX = padding.left + chartWidth;
       const bottomY = padding.top + chartHeight;
-      fillPath.lineTo(lastX, bottomY);
-      fillPath.close();
+      fillPath += ` L ${lastX} ${bottomY} Z`;
     }
 
     return {
       strokePath,
-      fillPath,
+      fillPath: showFill ? fillPath : undefined,
+      points,
     };
   } catch (error) {
     console.error('Failed to create sparkline path:', error);
@@ -93,7 +101,7 @@ export function getSparklineColor(data: SparklineData[]): string {
   if (data.length === 0) return COLORS.muted;
 
   const latestValue = data[data.length - 1].value;
-  
+
   // Color based on Kp value ranges
   if (latestValue >= 6) return COLORS.kpBands[4]; // Red
   if (latestValue >= 4) return COLORS.kpBands[3]; // Orange

@@ -1,9 +1,9 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { scheduleNotification } from '../util/notifications';
 import type { AlertConfig } from '../supabase/types';
 
 const LAST_ALERT_KEY = 'alerts:lastTriggered';
 const COOLDOWN_MINUTES = 60; // Minimum time between same alert type
+
+const isClient = typeof window !== 'undefined';
 
 interface SpaceWeatherData {
   kp: number;
@@ -22,10 +22,12 @@ export async function checkAndNotify(
   config: AlertConfig | null,
   data: SpaceWeatherData
 ): Promise<void> {
+  if (!isClient) return;
+
   // Only check if push notifications are enabled
   if (!config?.push_enabled) return;
 
-  const lastAlert = await getLastAlertRecord();
+  const lastAlert = getLastAlertRecord();
   const now = new Date();
 
   // Check cooldown
@@ -42,7 +44,7 @@ export async function checkAndNotify(
   // Check Kp threshold
   if (data.kp >= config.kp_threshold && data.kp > (lastAlert.kp ?? 0)) {
     alerts.push({
-      title: '🌌 Aurora Alert!',
+      title: 'Aurora Alert!',
       body: `Kp index has reached ${data.kp}. Check for aurora activity in your area!`,
       tag: 'kp-alert',
     });
@@ -52,7 +54,7 @@ export async function checkAndNotify(
   const bzThreshold = config.bz_threshold ?? -5;
   if (data.bz <= bzThreshold && data.bz < (lastAlert.bz ?? 0)) {
     alerts.push({
-      title: '🧭 Southward Bz Alert',
+      title: 'Southward Bz Alert',
       body: `IMF Bz has dropped to ${data.bz.toFixed(1)} nT. Favorable conditions for aurora!`,
       tag: 'bz-alert',
     });
@@ -62,23 +64,20 @@ export async function checkAndNotify(
   const speedThreshold = 500;
   if (data.speed >= speedThreshold && data.speed > (lastAlert.speed ?? 0)) {
     alerts.push({
-      title: '💨 Solar Wind Alert',
+      title: 'Solar Wind Alert',
       body: `Solar wind speed has reached ${Math.round(data.speed)} km/s. Enhanced aurora possible!`,
       tag: 'speed-alert',
     });
   }
 
-  // Send notifications
+  // Send notifications using Web Notifications API
   for (const alert of alerts) {
-    await scheduleNotification(alert.title, alert.body, {
-      tag: alert.tag,
-      requireInteraction: true,
-    });
+    await showWebNotification(alert.title, alert.body, alert.tag);
   }
 
   // Update last alert record
   if (alerts.length > 0) {
-    await setLastAlertRecord({
+    setLastAlertRecord({
       kp: data.kp,
       bz: data.bz,
       speed: data.speed,
@@ -87,30 +86,61 @@ export async function checkAndNotify(
   }
 }
 
-async function getLastAlertRecord(): Promise<LastAlertRecord> {
+async function showWebNotification(
+  title: string,
+  body: string,
+  tag: string
+): Promise<void> {
+  if (!isClient || !('Notification' in window)) return;
+
+  // Request permission if not already granted
+  if (Notification.permission === 'default') {
+    await Notification.requestPermission();
+  }
+
+  if (Notification.permission === 'granted') {
+    new Notification(title, {
+      body,
+      tag,
+      icon: '/favicon.ico',
+      requireInteraction: true,
+    });
+  }
+}
+
+function getLastAlertRecord(): LastAlertRecord {
+  if (!isClient) return {};
+
   try {
-    const stored = await AsyncStorage.getItem(LAST_ALERT_KEY);
+    const stored = localStorage.getItem(LAST_ALERT_KEY);
     return stored ? JSON.parse(stored) : {};
   } catch {
     return {};
   }
 }
 
-async function setLastAlertRecord(record: LastAlertRecord): Promise<void> {
+function setLastAlertRecord(record: LastAlertRecord): void {
+  if (!isClient) return;
+
   try {
-    await AsyncStorage.setItem(LAST_ALERT_KEY, JSON.stringify(record));
+    localStorage.setItem(LAST_ALERT_KEY, JSON.stringify(record));
   } catch (error) {
     console.error('Failed to save alert record:', error);
   }
 }
 
 export async function sendTestNotification(): Promise<void> {
-  await scheduleNotification(
-    '🧪 Test Notification',
+  await showWebNotification(
+    'Test Notification',
     'Your aurora alerts are working! You\'ll be notified when conditions match your thresholds.',
-    {
-      tag: 'test-alert',
-      requireInteraction: false,
-    }
+    'test-alert'
   );
+}
+
+export async function requestNotificationPermission(): Promise<NotificationPermission> {
+  if (!isClient || !('Notification' in window)) {
+    return 'denied';
+  }
+
+  return Notification.requestPermission();
 }

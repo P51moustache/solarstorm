@@ -69,26 +69,57 @@ export function parseHistoricalPlasma(
 
   const dayData = new Map<string, { speeds: number[]; densities: number[] }>();
 
-  for (const item of data) {
-    if (
-      item &&
-      typeof item === 'object' &&
-      'time_tag' in item &&
-      'proton_speed' in item
-    ) {
-      const point = item as RawPlasmaDataPoint;
-      const dateKey = point.time_tag.split('T')[0];
+  // NOAA 7-day data comes as array: [headers, row1, row2, ...]
+  // Headers: ["time_tag", "density", "speed", "temperature"]
+  const isArrayFormat = Array.isArray(data[0]);
+
+  if (isArrayFormat) {
+    // Array format - first row is headers
+    const headers = data[0] as string[];
+    const timeIdx = headers.indexOf('time_tag');
+    const speedIdx = headers.indexOf('speed');
+    const densityIdx = headers.indexOf('density');
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i] as (string | number)[];
+      const timeTag = String(row[timeIdx] || '');
+      const speed = parseFloat(String(row[speedIdx])) || 0;
+      const density = parseFloat(String(row[densityIdx])) || 0;
+
+      if (!timeTag) continue;
+      const dateKey = timeTag.split(' ')[0]; // Format: "2026-01-22 00:00:00"
 
       if (!dayData.has(dateKey)) {
         dayData.set(dateKey, { speeds: [], densities: [] });
       }
 
       const day = dayData.get(dateKey)!;
-      if (point.proton_speed > 0) {
-        day.speeds.push(point.proton_speed);
-      }
-      if (point.proton_density > 0) {
-        day.densities.push(point.proton_density);
+      if (speed > 0) day.speeds.push(speed);
+      if (density > 0) day.densities.push(density);
+    }
+  } else {
+    // Object format
+    for (const item of data) {
+      if (
+        item &&
+        typeof item === 'object' &&
+        'time_tag' in item &&
+        'proton_speed' in item
+      ) {
+        const point = item as RawPlasmaDataPoint;
+        const dateKey = point.time_tag.split('T')[0];
+
+        if (!dayData.has(dateKey)) {
+          dayData.set(dateKey, { speeds: [], densities: [] });
+        }
+
+        const day = dayData.get(dateKey)!;
+        if (point.proton_speed > 0) {
+          day.speeds.push(point.proton_speed);
+        }
+        if (point.proton_density > 0) {
+          day.densities.push(point.proton_density);
+        }
       }
     }
   }
@@ -116,22 +147,49 @@ export function parseHistoricalMag(data: unknown): Map<string, number> {
 
   const dayData = new Map<string, number[]>();
 
-  for (const item of data) {
-    if (item && typeof item === 'object' && 'time_tag' in item && 'bz_gsm' in item) {
-      const point = item as RawMagDataPoint;
-      const dateKey = point.time_tag.split('T')[0];
+  // NOAA 7-day mag data comes as array: [headers, row1, row2, ...]
+  // Headers: ["time_tag", "bx_gsm", "by_gsm", "bz_gsm", "lon_gsm", "lat_gsm", "bt"]
+  const isArrayFormat = Array.isArray(data[0]);
+
+  if (isArrayFormat) {
+    const headers = data[0] as string[];
+    const timeIdx = headers.indexOf('time_tag');
+    const bzIdx = headers.indexOf('bz_gsm');
+
+    for (let i = 1; i < data.length; i++) {
+      const row = data[i] as (string | number)[];
+      const timeTag = String(row[timeIdx] || '');
+      const bz = parseFloat(String(row[bzIdx]));
+
+      if (!timeTag || isNaN(bz)) continue;
+      const dateKey = timeTag.split(' ')[0]; // Format: "2026-01-22 00:00:00"
 
       if (!dayData.has(dateKey)) {
         dayData.set(dateKey, []);
       }
 
-      dayData.get(dateKey)!.push(point.bz_gsm);
+      dayData.get(dateKey)!.push(bz);
+    }
+  } else {
+    for (const item of data) {
+      if (item && typeof item === 'object' && 'time_tag' in item && 'bz_gsm' in item) {
+        const point = item as RawMagDataPoint;
+        const dateKey = point.time_tag.split('T')[0];
+
+        if (!dayData.has(dateKey)) {
+          dayData.set(dateKey, []);
+        }
+
+        dayData.get(dateKey)!.push(point.bz_gsm);
+      }
     }
   }
 
   // Calculate daily min Bz (most negative)
   for (const [date, values] of dayData) {
-    result.set(date, Math.min(...values));
+    if (values.length > 0) {
+      result.set(date, Math.min(...values));
+    }
   }
 
   return result;

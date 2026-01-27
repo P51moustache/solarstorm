@@ -1,23 +1,26 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dayjs } from '../util/time';
 import { fetchJson } from './fetchJson';
 import { getNextCmeArrival, parseCmeData, type CmeCountdownData } from './parsers/cme';
 
-const NASA_API_KEY = process.env.EXPO_PUBLIC_NASA_API_KEY || 'DEMO_KEY';
+const NASA_API_KEY = process.env.NEXT_PUBLIC_NASA_API_KEY || 'DEMO_KEY';
 const CACHE_KEY = 'cme:countdown';
 const CACHE_TTL = 30; // 30 minutes
 
+const isClient = typeof window !== 'undefined';
+
 export async function getCmeCountdown(): Promise<CmeCountdownData> {
   // Check cache
-  try {
-    const cached = await AsyncStorage.getItem(CACHE_KEY);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      const age = dayjs().diff(dayjs(timestamp), 'minute');
-      if (age <= CACHE_TTL) return data;
+  if (isClient) {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = dayjs().diff(dayjs(timestamp), 'minute');
+        if (age <= CACHE_TTL) return data;
+      }
+    } catch (e) {
+      console.error('Cache read error:', e);
     }
-  } catch (e) {
-    console.error('Cache read error:', e);
   }
 
   // Fetch last 30 days of CME data
@@ -30,10 +33,12 @@ export async function getCmeCountdown(): Promise<CmeCountdownData> {
     const cmes = parseCmeData(raw);
     const countdown = getNextCmeArrival(cmes);
 
-    await AsyncStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ data: countdown, timestamp: new Date().toISOString() })
-    );
+    if (isClient) {
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ data: countdown, timestamp: new Date().toISOString() })
+      );
+    }
 
     return countdown;
   } catch (error) {

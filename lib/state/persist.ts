@@ -1,26 +1,29 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { StateStorage } from 'zustand/middleware';
+
+const isClient = typeof window !== 'undefined';
 
 export const asyncStorage: StateStorage = {
   getItem: async (name: string): Promise<string | null> => {
+    if (!isClient) return null;
     try {
-      const value = await AsyncStorage.getItem(name);
-      return value;
+      return localStorage.getItem(name);
     } catch (error) {
       console.error(`Failed to get item from storage: ${name}`, error);
       return null;
     }
   },
   setItem: async (name: string, value: string): Promise<void> => {
+    if (!isClient) return;
     try {
-      await AsyncStorage.setItem(name, value);
+      localStorage.setItem(name, value);
     } catch (error) {
       console.error(`Failed to set item in storage: ${name}`, error);
     }
   },
   removeItem: async (name: string): Promise<void> => {
+    if (!isClient) return;
     try {
-      await AsyncStorage.removeItem(name);
+      localStorage.removeItem(name);
     } catch (error) {
       console.error(`Failed to remove item from storage: ${name}`, error);
     }

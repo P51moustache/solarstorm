@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dayjs } from '../util/time';
 import { fetchJson } from './fetchJson';
 import {
@@ -12,17 +11,21 @@ import {
 const CACHE_KEY = 'historical:90day';
 const CACHE_TTL = 360; // 6 hours
 
+const isClient = typeof window !== 'undefined';
+
 export async function getHistoricalData(): Promise<HistoricalSummary | null> {
   // Check cache
-  try {
-    const cached = await AsyncStorage.getItem(CACHE_KEY);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      const age = dayjs().diff(dayjs(timestamp), 'minute');
-      if (age <= CACHE_TTL) return data;
+  if (isClient) {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = dayjs().diff(dayjs(timestamp), 'minute');
+        if (age <= CACHE_TTL) return data;
+      }
+    } catch (e) {
+      console.error('Cache read error:', e);
     }
-  } catch (e) {
-    console.error('Cache read error:', e);
   }
 
   try {
@@ -44,10 +47,12 @@ export async function getHistoricalData(): Promise<HistoricalSummary | null> {
     const historical = combineHistoricalData(kpData, plasmaData, magData, 30);
 
     // Cache the result
-    await AsyncStorage.setItem(
-      CACHE_KEY,
-      JSON.stringify({ data: historical, timestamp: new Date().toISOString() })
-    );
+    if (isClient) {
+      localStorage.setItem(
+        CACHE_KEY,
+        JSON.stringify({ data: historical, timestamp: new Date().toISOString() })
+      );
+    }
 
     return historical;
   } catch (error) {

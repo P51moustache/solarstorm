@@ -1,15 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
-import { COLORS } from '@/lib/util/colors';
+'use client';
+
+import { useState } from 'react';
+import { X } from 'lucide-react';
 
 interface AddRegionModalProps {
   visible: boolean;
@@ -49,172 +41,109 @@ export function AddRegionModal({ visible, onClose, onAdd }: AddRegionModalProps)
     onClose();
   };
 
+  if (!visible) return null;
+
+  const isValid = label && lat && lng;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.modal}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Add GNSS Region</Text>
-            <Pressable onPress={onClose}>
-              <Ionicons name="close" size={24} color={COLORS.text} />
-            </Pressable>
-          </View>
+    <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-50">
+      <div className="bg-solar-bg rounded-t-2xl w-full max-w-lg max-h-[80vh] overflow-hidden">
+        <div className="flex items-center justify-between p-5 border-b border-solar-border">
+          <h2 className="text-lg font-semibold text-solar-text">Add GNSS Region</h2>
+          <button onClick={onClose} className="text-solar-text hover:text-solar-muted">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
-          <View style={styles.form}>
-            <View style={styles.field}>
-              <Text style={styles.label}>Region Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={label}
-                onChangeText={setLabel}
-                placeholder="e.g., Denver Metro"
-                placeholderTextColor={COLORS.muted}
+        <div className="p-5 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-solar-text mb-2">
+              Region Name *
+            </label>
+            <input
+              type="text"
+              value={label}
+              onChange={(e) => setLabel(e.target.value)}
+              placeholder="e.g., Denver Metro"
+              className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-solar-text mb-2">
+                Latitude *
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={lat}
+                onChange={(e) => setLat(e.target.value)}
+                placeholder="39.7392"
+                className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
               />
-            </View>
-
-            <View style={styles.row}>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.label}>Latitude *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={lat}
-                  onChangeText={setLat}
-                  placeholder="39.7392"
-                  placeholderTextColor={COLORS.muted}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.label}>Longitude *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={lng}
-                  onChangeText={setLng}
-                  placeholder="-104.9903"
-                  placeholderTextColor={COLORS.muted}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Radius (km)</Text>
-              <TextInput
-                style={styles.input}
-                value={radius}
-                onChangeText={setRadius}
-                placeholder="500"
-                placeholderTextColor={COLORS.muted}
-                keyboardType="numeric"
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-solar-text mb-2">
+                Longitude *
+              </label>
+              <input
+                type="number"
+                step="any"
+                value={lng}
+                onChange={(e) => setLng(e.target.value)}
+                placeholder="-104.9903"
+                className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
               />
-              <Text style={styles.hint}>
-                Area to monitor for localized TEC and scintillation
-              </Text>
-            </View>
+            </div>
+          </div>
 
-            <View style={styles.switchField}>
-              <View>
-                <Text style={styles.label}>Primary Region</Text>
-                <Text style={styles.hint}>
-                  Used for scintillation forecasts
-                </Text>
-              </View>
-              <Switch
-                value={isPrimary}
-                onValueChange={setIsPrimary}
-                trackColor={{ false: COLORS.border, true: COLORS.emerald + '40' }}
-                thumbColor={isPrimary ? COLORS.emerald : COLORS.muted}
+          <div>
+            <label className="block text-sm font-medium text-solar-text mb-2">
+              Radius (km)
+            </label>
+            <input
+              type="number"
+              value={radius}
+              onChange={(e) => setRadius(e.target.value)}
+              placeholder="500"
+              className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
+            />
+            <p className="text-xs text-solar-muted mt-1">
+              Area to monitor for localized TEC and scintillation
+            </p>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-solar-text">Primary Region</p>
+              <p className="text-xs text-solar-muted">Used for scintillation forecasts</p>
+            </div>
+            <button
+              onClick={() => setIsPrimary(!isPrimary)}
+              className={`w-12 h-6 rounded-full transition-colors ${
+                isPrimary ? 'bg-solar-emerald' : 'bg-solar-border'
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  isPrimary ? 'translate-x-6' : 'translate-x-0.5'
+                }`}
               />
-            </View>
-          </View>
+            </button>
+          </div>
+        </div>
 
-          <Pressable
-            style={[styles.addButton, (!label || !lat || !lng) && styles.addButtonDisabled]}
-            onPress={handleAdd}
-            disabled={!label || !lat || !lng}
+        <div className="p-5">
+          <button
+            onClick={handleAdd}
+            disabled={!isValid}
+            className="w-full bg-solar-emerald text-white py-4 rounded-xl font-semibold hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Text style={styles.addButtonText}>Add Region</Text>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
+            Add Region
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
-  modal: {
-    backgroundColor: COLORS.bg,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '80%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  form: {
-    padding: 20,
-  },
-  field: {
-    marginBottom: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: COLORS.card,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  hint: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginTop: 4,
-  },
-  switchField: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  addButton: {
-    backgroundColor: COLORS.emerald,
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  addButtonDisabled: {
-    opacity: 0.5,
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-});

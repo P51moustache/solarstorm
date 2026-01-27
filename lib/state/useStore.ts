@@ -14,16 +14,16 @@ export interface SolarStormState {
   swUpdatedAt: string | null;
   ovationUpdatedAt: string | null;
   alerts: SwpcAlert[];
-  
+
   // Loading states
   isLoading: boolean;
   error: string | null;
-  
+
   // Settings
   kpThreshold: 4 | 5 | 6 | 0; // 0 = off
   requireBzGate: boolean;
   lastAlertAt: string | null;
-  
+
   // Actions
   refreshAll: () => Promise<void>;
   refreshKP: () => Promise<void>;
@@ -58,7 +58,7 @@ export const useSolarStormStore = create<SolarStormState>()(
       // Actions
       refreshAll: async () => {
         set({ isLoading: true, error: null });
-        
+
         try {
           await Promise.all([
             get().refreshKP(),
@@ -160,7 +160,7 @@ export const useSolarStormStore = create<SolarStormState>()(
 
       resetCache: async () => {
         try {
-          await clearCache();
+          clearCache();
           set({
             kp: null,
             kpUpdatedAt: null,
@@ -199,11 +199,11 @@ export const useSolarStormStore = create<SolarStormState>()(
 export const useAuroraChance = () => {
   return useSolarStormStore((state) => {
     const { kp, bz, speed } = state;
-    
+
     if (kp === null || bz === null || speed === null) {
       return 'Fetching data...';
     }
-    
+
     if (kp >= 5 && bz <= -5 && speed >= 500) {
       return 'High chance at mid-latitudes';
     } else if (kp >= 4 && bz <= -3) {
@@ -220,9 +220,9 @@ export const useLatestUpdateTime = () => {
       state.kpUpdatedAt,
       state.swUpdatedAt,
     ].filter(Boolean);
-    
+
     if (times.length === 0) return null;
-    
+
     // Return the most recent timestamp
     return times.sort((a, b) => new Date(b!).getTime() - new Date(a!).getTime())[0]!;
   });

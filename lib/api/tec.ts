@@ -1,19 +1,29 @@
 import { fetchJson } from './fetchJson';
 import {
-  parseTecData,
-  calculateTecMapStats,
   calculateRegionalTec,
   getTecCondition,
   type TecMapData,
+  type TecReading,
   type RegionalTec,
   type TecCondition,
 } from './parsers/tec';
 
-// SWPC TEC data endpoint (US coverage)
-const TEC_URL = 'https://services.swpc.noaa.gov/json/us_tec.json';
+// Use local API proxy to avoid CORS issues in browser
+const isClient = typeof window !== 'undefined';
+const TEC_URL = isClient ? '/api/tec' : null; // Server-side not supported yet
 
 const CACHE_TTL = 15 * 60 * 1000; // 15 minutes (matches update frequency)
 let tecCache: { data: TecMapData; timestamp: number } | null = null;
+
+// API response format from our proxy
+interface TecApiResponse {
+  readings: Array<{ lat: number; lng: number; tec: number }>;
+  globalMean: number;
+  globalMax: number;
+  timestamp: string;
+  totalPoints: number;
+  error?: string;
+}
 
 export async function getTecMap(): Promise<TecMapData> {
   const now = Date.now();
@@ -21,10 +31,33 @@ export async function getTecMap(): Promise<TecMapData> {
     return tecCache.data;
   }
 
+  if (!TEC_URL) {
+    throw new Error('TEC API not available on server side');
+  }
+
   try {
-    const data = await fetchJson(TEC_URL);
-    const readings = parseTecData(data);
-    const mapData = calculateTecMapStats(readings);
+    const response = await fetchJson(TEC_URL) as TecApiResponse;
+
+    if (response.error) {
+      throw new Error(response.error);
+    }
+
+    // Convert API response to TecReading format
+    const readings: TecReading[] = response.readings.map((r) => ({
+      timestamp: response.timestamp,
+      lat: r.lat,
+      lng: r.lng,
+      tec: r.tec,
+    }));
+
+    const mapData: TecMapData = {
+      timestamp: response.timestamp,
+      readings,
+      globalMax: response.globalMax,
+      globalMin: Math.min(...readings.map((r) => r.tec)),
+      globalMean: response.globalMean,
+    };
+
     tecCache = { data: mapData, timestamp: now };
     return mapData;
   } catch (error) {

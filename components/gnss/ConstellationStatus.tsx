@@ -1,58 +1,61 @@
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+'use client';
+
+import { Globe2, Flag, Snowflake, Star, CircleDot } from 'lucide-react';
 import {
   getMultiConstellationImpact,
   type AllConstellationsStatus,
   type ConstellationHealth,
 } from '@/lib/api/parsers/gnssConstellation';
-import { COLORS } from '@/lib/util/colors';
 
 interface ConstellationStatusProps {
   status: AllConstellationsStatus;
 }
 
-const CONSTELLATION_ICONS: Record<string, keyof typeof Ionicons.glyphMap> = {
-  GPS: 'flag',
-  GLONASS: 'snow',
-  Galileo: 'star',
-  BeiDou: 'planet',
+const CONSTELLATION_ICONS: Record<string, React.ReactNode> = {
+  GPS: <Flag className="w-4 h-4" />,
+  GLONASS: <Snowflake className="w-4 h-4" />,
+  Galileo: <Star className="w-4 h-4" />,
+  BeiDou: <CircleDot className="w-4 h-4" />,
 };
 
 function ConstellationCard({ health }: { health: ConstellationHealth }) {
   return (
-    <View style={styles.constellationCard}>
-      <View style={styles.constellationHeader}>
-        <Ionicons
-          name={CONSTELLATION_ICONS[health.constellation]}
-          size={16}
-          color={health.statusColor}
+    <div className="w-[48%] bg-solar-bg rounded-lg p-3">
+      <div className="flex items-center gap-1.5 mb-2">
+        <span style={{ color: health.statusColor }}>
+          {CONSTELLATION_ICONS[health.constellation]}
+        </span>
+        <span className="text-xs font-semibold text-solar-text flex-1">
+          {health.constellation}
+        </span>
+        <div
+          className="w-2 h-2 rounded-full"
+          style={{ backgroundColor: health.statusColor }}
         />
-        <Text style={styles.constellationName}>{health.constellation}</Text>
-        <View style={[styles.statusDot, { backgroundColor: health.statusColor }]} />
-      </View>
+      </div>
 
-      <View style={styles.svCounts}>
-        <Text style={styles.healthyCount}>{health.healthyCount}</Text>
-        <Text style={styles.svLabel}>/{health.totalCount} SVs</Text>
-      </View>
+      <div className="flex items-baseline mb-2">
+        <span className="text-2xl font-bold text-solar-text">{health.healthyCount}</span>
+        <span className="text-xs text-solar-muted ml-0.5">/{health.totalCount} SVs</span>
+      </div>
 
-      <View style={styles.healthBar}>
-        <View
-          style={[
-            styles.healthFill,
-            {
-              width: `${health.healthPercentage}%`,
-              backgroundColor: health.statusColor,
-            },
-          ]}
+      <div className="h-1 bg-solar-border rounded-full mb-1.5 overflow-hidden">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${health.healthPercentage}%`,
+            backgroundColor: health.statusColor,
+          }}
         />
-      </View>
+      </div>
 
-      <Text style={[styles.statusText, { color: health.statusColor }]}>
+      <p
+        className="text-[10px] font-semibold uppercase"
+        style={{ color: health.statusColor }}
+      >
         {health.status}
-      </Text>
-    </View>
+      </p>
+    </div>
   );
 }
 
@@ -60,170 +63,58 @@ export function ConstellationStatus({ status }: ConstellationStatusProps) {
   const impact = getMultiConstellationImpact(status);
 
   const overallColor =
-    status.overallStatus === 'operational' ? '#22c55e' :
-    status.overallStatus === 'degraded' ? '#fbbf24' : '#f59e0b';
+    status.overallStatus === 'operational'
+      ? '#22c55e'
+      : status.overallStatus === 'degraded'
+      ? '#fbbf24'
+      : '#f59e0b';
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Ionicons name="globe-outline" size={20} color={overallColor} />
-        <Text style={styles.title}>GNSS Constellations</Text>
-        <View style={[styles.badge, { backgroundColor: overallColor + '20' }]}>
-          <Text style={[styles.badgeText, { color: overallColor }]}>
-            {status.overallStatus.toUpperCase()}
-          </Text>
-        </View>
-      </View>
+    <div className="bg-solar-card rounded-xl p-4 mb-3">
+      <div className="flex items-center gap-2 mb-4">
+        <Globe2 className="w-5 h-5" style={{ color: overallColor }} />
+        <span className="text-base font-semibold text-solar-text flex-1">
+          GNSS Constellations
+        </span>
+        <span
+          className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase"
+          style={{
+            backgroundColor: overallColor + '20',
+            color: overallColor,
+          }}
+        >
+          {status.overallStatus}
+        </span>
+      </div>
 
-      <View style={styles.grid}>
+      <div className="flex flex-wrap gap-2 mb-4">
         <ConstellationCard health={status.gps} />
         <ConstellationCard health={status.glonass} />
         <ConstellationCard health={status.galileo} />
         <ConstellationCard health={status.beidou} />
-      </View>
+      </div>
 
-      <View style={styles.summary}>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Available SVs:</Text>
-          <Text style={styles.summaryValue}>{impact.availableSvs}</Text>
-        </View>
-        <View style={styles.summaryRow}>
-          <Text style={styles.summaryLabel}>Geometry Impact:</Text>
-          <Text style={[
-            styles.summaryValue,
-            { color: impact.geometryImpact === 'none' ? COLORS.emerald : '#f59e0b' }
-          ]}>
+      <div className="bg-solar-bg rounded-lg p-3 mb-3">
+        <div className="flex justify-between mb-1">
+          <span className="text-sm text-solar-muted">Available SVs:</span>
+          <span className="text-sm font-semibold text-solar-text">{impact.availableSvs}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-sm text-solar-muted">Geometry Impact:</span>
+          <span
+            className="text-sm font-semibold"
+            style={{ color: impact.geometryImpact === 'none' ? '#22c55e' : '#f59e0b' }}
+          >
             {impact.geometryImpact}
-          </Text>
-        </View>
-      </View>
+          </span>
+        </div>
+      </div>
 
-      <Text style={styles.recommendation}>{impact.recommendation}</Text>
+      <p className="text-sm text-solar-text leading-5 mb-3">{impact.recommendation}</p>
 
-      <Text style={styles.updated}>
+      <p className="text-[11px] text-solar-muted text-right">
         Updated: {new Date(status.updatedAt).toLocaleTimeString()}
-      </Text>
-    </View>
+      </p>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    flex: 1,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  grid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginBottom: 16,
-  },
-  constellationCard: {
-    width: '48%',
-    backgroundColor: COLORS.bg,
-    borderRadius: 8,
-    padding: 12,
-  },
-  constellationHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 8,
-  },
-  constellationName: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: COLORS.text,
-    flex: 1,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  svCounts: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 8,
-  },
-  healthyCount: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  svLabel: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginLeft: 2,
-  },
-  healthBar: {
-    height: 4,
-    backgroundColor: COLORS.border,
-    borderRadius: 2,
-    marginBottom: 6,
-    overflow: 'hidden',
-  },
-  healthFill: {
-    height: '100%',
-    borderRadius: 2,
-  },
-  statusText: {
-    fontSize: 10,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  summary: {
-    backgroundColor: COLORS.bg,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 4,
-  },
-  summaryLabel: {
-    fontSize: 13,
-    color: COLORS.muted,
-  },
-  summaryValue: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  recommendation: {
-    fontSize: 13,
-    color: COLORS.text,
-    lineHeight: 18,
-    marginBottom: 12,
-  },
-  updated: {
-    fontSize: 11,
-    color: COLORS.muted,
-    textAlign: 'right',
-  },
-});

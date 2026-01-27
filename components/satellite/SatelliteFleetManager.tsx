@@ -1,17 +1,18 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { FeatureGate } from '@/components/FeatureGate';
-import { useSatelliteStore, useSatellitesByOrbit } from '@/lib/state/useSatelliteStore';
+'use client';
+
+import { useEffect, useState, useMemo } from 'react';
+import { Plus, AlertTriangle, Satellite } from 'lucide-react';
+import { FeatureGate } from '@/components/dashboard/FeatureGate';
+import { useSatelliteStore, getSatellitesByOrbit } from '@/lib/state/useSatelliteStore';
 import { useSolarStormStore } from '@/lib/state/useStore';
 import { calculateFleetDragRisk, type DragRiskAssessment } from '@/lib/services/dragRisk';
-import { COLORS } from '@/lib/util/colors';
 import { SatelliteCard } from './SatelliteCard';
 import { AddSatelliteModal } from './AddSatelliteModal';
 
 export function SatelliteFleetManager() {
-  const { satellites, isLoading, fetchSatellites, addSatellite, deleteSatellite, selectSatellite } = useSatelliteStore();
-  const satellitesByOrbit = useSatellitesByOrbit();
+  const { satellites, isLoading, fetchSatellites, addSatellite, deleteSatellite, selectSatellite } =
+    useSatelliteStore();
+  const satellitesByOrbit = useMemo(() => getSatellitesByOrbit(satellites), [satellites]);
   const { kp } = useSolarStormStore();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -35,50 +36,56 @@ export function SatelliteFleetManager() {
 
   return (
     <FeatureGate feature="satelliteRisk">
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <View>
-            <Text style={styles.title}>Satellite Fleet</Text>
-            <Text style={styles.subtitle}>
+      <div className="min-h-screen gradient-bg p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h1 className="text-2xl font-bold text-solar-text">Satellite Fleet</h1>
+            <p className="text-sm text-solar-muted mt-0.5">
               {satellites.length} satellite{satellites.length !== 1 ? 's' : ''} tracked
-            </Text>
-          </View>
-          <Pressable style={styles.addButton} onPress={() => setShowAddModal(true)}>
-            <Ionicons name="add" size={20} color="#fff" />
-            <Text style={styles.addButtonText}>Add</Text>
-          </Pressable>
-        </View>
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center gap-1.5 bg-solar-emerald text-white px-4 py-2.5 rounded-lg font-semibold hover:bg-opacity-90"
+          >
+            <Plus className="w-5 h-5" />
+            Add
+          </button>
+        </div>
 
         {/* Risk summary */}
         {(criticalCount > 0 || highCount > 0) && (
-          <View style={styles.riskSummary}>
-            <Ionicons name="warning" size={20} color="#f59e0b" />
-            <Text style={styles.riskSummaryText}>
+          <div className="flex items-center gap-2 bg-amber-500/15 p-3 rounded-lg mb-4">
+            <AlertTriangle className="w-5 h-5 text-amber-500" />
+            <span className="text-sm text-amber-500 font-medium">
               {criticalCount > 0 && `${criticalCount} critical`}
               {criticalCount > 0 && highCount > 0 && ', '}
-              {highCount > 0 && `${highCount} high`} risk satellite{criticalCount + highCount !== 1 ? 's' : ''}
-            </Text>
-          </View>
+              {highCount > 0 && `${highCount} high`} risk satellite
+              {criticalCount + highCount !== 1 ? 's' : ''}
+            </span>
+          </div>
         )}
 
         {isLoading ? (
-          <ActivityIndicator size="large" color={COLORS.emerald} style={styles.loader} />
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-solar-emerald border-t-transparent rounded-full animate-spin" />
+          </div>
         ) : satellites.length === 0 ? (
-          <View style={styles.empty}>
-            <Ionicons name="planet-outline" size={48} color={COLORS.muted} />
-            <Text style={styles.emptyText}>No satellites tracked</Text>
-            <Text style={styles.emptyHint}>
+          <div className="flex flex-col items-center py-12 gap-3">
+            <Satellite className="w-12 h-12 text-solar-muted" />
+            <p className="text-lg font-semibold text-solar-text">No satellites tracked</p>
+            <p className="text-sm text-solar-muted text-center px-8">
               Add satellites to monitor drag risk and space weather impacts
-            </Text>
-          </View>
+            </p>
+          </div>
         ) : (
-          <ScrollView style={styles.list} showsVerticalScrollIndicator={false}>
+          <div>
             {/* LEO satellites first (most affected by drag) */}
             {satellitesByOrbit.LEO.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-solar-muted uppercase tracking-wider mb-3">
                   LEO ({satellitesByOrbit.LEO.length})
-                </Text>
+                </p>
                 {satellitesByOrbit.LEO.map((sat) => (
                   <SatelliteCard
                     key={sat.id}
@@ -88,15 +95,15 @@ export function SatelliteFleetManager() {
                     onDelete={() => deleteSatellite(sat.id)}
                   />
                 ))}
-              </View>
+              </div>
             )}
 
             {/* MEO satellites */}
             {satellitesByOrbit.MEO.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-solar-muted uppercase tracking-wider mb-3">
                   MEO ({satellitesByOrbit.MEO.length})
-                </Text>
+                </p>
                 {satellitesByOrbit.MEO.map((sat) => (
                   <SatelliteCard
                     key={sat.id}
@@ -105,15 +112,15 @@ export function SatelliteFleetManager() {
                     onDelete={() => deleteSatellite(sat.id)}
                   />
                 ))}
-              </View>
+              </div>
             )}
 
             {/* GEO satellites */}
             {satellitesByOrbit.GEO.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-solar-muted uppercase tracking-wider mb-3">
                   GEO ({satellitesByOrbit.GEO.length})
-                </Text>
+                </p>
                 {satellitesByOrbit.GEO.map((sat) => (
                   <SatelliteCard
                     key={sat.id}
@@ -122,15 +129,15 @@ export function SatelliteFleetManager() {
                     onDelete={() => deleteSatellite(sat.id)}
                   />
                 ))}
-              </View>
+              </div>
             )}
 
             {/* HEO satellites */}
             {satellitesByOrbit.HEO.length > 0 && (
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>
+              <div className="mb-6">
+                <p className="text-sm font-semibold text-solar-muted uppercase tracking-wider mb-3">
                   HEO ({satellitesByOrbit.HEO.length})
-                </Text>
+                </p>
                 {satellitesByOrbit.HEO.map((sat) => (
                   <SatelliteCard
                     key={sat.id}
@@ -139,9 +146,9 @@ export function SatelliteFleetManager() {
                     onDelete={() => deleteSatellite(sat.id)}
                   />
                 ))}
-              </View>
+              </div>
             )}
-          </ScrollView>
+          </div>
         )}
 
         <AddSatelliteModal
@@ -149,90 +156,7 @@ export function SatelliteFleetManager() {
           onClose={() => setShowAddModal(false)}
           onAdd={addSatellite}
         />
-      </View>
+      </div>
     </FeatureGate>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: COLORS.muted,
-    marginTop: 2,
-  },
-  addButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: COLORS.emerald,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 8,
-  },
-  addButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#fff',
-  },
-  riskSummary: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: '#f59e0b15',
-    padding: 12,
-    borderRadius: 8,
-    marginBottom: 16,
-  },
-  riskSummaryText: {
-    fontSize: 14,
-    color: '#f59e0b',
-    fontWeight: '500',
-  },
-  loader: {
-    marginTop: 48,
-  },
-  empty: {
-    alignItems: 'center',
-    paddingVertical: 48,
-    gap: 12,
-  },
-  emptyText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  emptyHint: {
-    fontSize: 14,
-    color: COLORS.muted,
-    textAlign: 'center',
-    paddingHorizontal: 32,
-  },
-  list: {
-    flex: 1,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.muted,
-    marginBottom: 12,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-});

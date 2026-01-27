@@ -1,17 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import {
-  Modal,
-  Pressable,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  View,
-} from 'react-native';
+'use client';
+
+import { useState } from 'react';
+import { X } from 'lucide-react';
 import type { OrbitType } from '@/lib/supabase/types';
-import { COLORS } from '@/lib/util/colors';
 
 interface AddSatelliteModalProps {
   visible: boolean;
@@ -70,251 +61,142 @@ export function AddSatelliteModal({ visible, onClose, onAdd }: AddSatelliteModal
     onClose();
   };
 
+  if (!visible) return null;
+
+  const isValid = name && altitude && inclination;
+
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.modal}>
-          <View style={styles.header}>
-            <Text style={styles.title}>Add Satellite</Text>
-            <Pressable onPress={onClose}>
-              <Ionicons name="close" size={24} color={COLORS.text} />
-            </Pressable>
-          </View>
+    <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-50">
+      <div className="bg-solar-bg rounded-t-2xl w-full max-w-lg max-h-[90vh] overflow-hidden">
+        <div className="flex items-center justify-between p-5 border-b border-solar-border">
+          <h2 className="text-lg font-semibold text-solar-text">Add Satellite</h2>
+          <button onClick={onClose} className="text-solar-text hover:text-solar-muted">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
-          <ScrollView style={styles.form}>
-            <View style={styles.field}>
-              <Text style={styles.label}>Name *</Text>
-              <TextInput
-                style={styles.input}
-                value={name}
-                onChangeText={setName}
-                placeholder="e.g., Starlink-1234"
-                placeholderTextColor={COLORS.muted}
+        <div className="p-5 overflow-y-auto max-h-[60vh] space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-solar-text mb-2">Name *</label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="e.g., Starlink-1234"
+              className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-solar-text mb-2">NORAD ID (optional)</label>
+            <input
+              type="number"
+              value={noradId}
+              onChange={(e) => setNoradId(e.target.value)}
+              placeholder="e.g., 48274"
+              className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
+            />
+          </div>
+
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-solar-text mb-2">Altitude (km) *</label>
+              <input
+                type="number"
+                value={altitude}
+                onChange={(e) => setAltitude(e.target.value)}
+                placeholder="550"
+                className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
               />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>NORAD ID (optional)</Text>
-              <TextInput
-                style={styles.input}
-                value={noradId}
-                onChangeText={setNoradId}
-                placeholder="e.g., 48274"
-                placeholderTextColor={COLORS.muted}
-                keyboardType="numeric"
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-solar-text mb-2">Inclination (°) *</label>
+              <input
+                type="number"
+                value={inclination}
+                onChange={(e) => setInclination(e.target.value)}
+                placeholder="53"
+                className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
               />
-            </View>
+            </div>
+          </div>
 
-            <View style={styles.row}>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.label}>Altitude (km) *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={altitude}
-                  onChangeText={setAltitude}
-                  placeholder="550"
-                  placeholderTextColor={COLORS.muted}
-                  keyboardType="numeric"
-                />
-              </View>
-              <View style={[styles.field, { flex: 1 }]}>
-                <Text style={styles.label}>Inclination (°) *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={inclination}
-                  onChangeText={setInclination}
-                  placeholder="53"
-                  placeholderTextColor={COLORS.muted}
-                  keyboardType="numeric"
-                />
-              </View>
-            </View>
+          <div>
+            <label className="block text-sm font-medium text-solar-text mb-2">Ballistic Coefficient (kg/m²)</label>
+            <input
+              type="number"
+              value={ballisticCoeff}
+              onChange={(e) => setBallisticCoeff(e.target.value)}
+              placeholder="e.g., 50"
+              className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
+            />
+            <p className="text-xs text-solar-muted mt-1">
+              Used for drag calculations. Lower = more drag.
+            </p>
+          </div>
 
-            <View style={styles.field}>
-              <Text style={styles.label}>Ballistic Coefficient (kg/m²)</Text>
-              <TextInput
-                style={styles.input}
-                value={ballisticCoeff}
-                onChangeText={setBallisticCoeff}
-                placeholder="e.g., 50"
-                placeholderTextColor={COLORS.muted}
-                keyboardType="numeric"
+          <div>
+            <label className="block text-sm font-medium text-solar-text mb-2">Orbit Type</label>
+            <div className="flex gap-2">
+              {ORBIT_TYPES.map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setOrbitType(type)}
+                  className={`flex-1 py-2.5 rounded-lg text-sm font-semibold border transition-colors ${
+                    orbitType === type
+                      ? 'bg-solar-emerald/20 border-solar-emerald text-solar-emerald'
+                      : 'bg-solar-card border-solar-border text-solar-muted'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-solar-text">Orbit Raising Mode</p>
+              <p className="text-xs text-solar-muted">
+                Enable for newly launched satellites in orbit-raising phase
+              </p>
+            </div>
+            <button
+              onClick={() => setIsOrbitRaising(!isOrbitRaising)}
+              className={`w-12 h-6 rounded-full transition-colors ${
+                isOrbitRaising ? 'bg-amber-500' : 'bg-solar-border'
+              }`}
+            >
+              <div
+                className={`w-5 h-5 bg-white rounded-full transition-transform ${
+                  isOrbitRaising ? 'translate-x-6' : 'translate-x-0.5'
+                }`}
               />
-              <Text style={styles.hint}>
-                Used for drag calculations. Lower = more drag.
-              </Text>
-            </View>
+            </button>
+          </div>
 
-            <View style={styles.field}>
-              <Text style={styles.label}>Orbit Type</Text>
-              <View style={styles.orbitButtons}>
-                {ORBIT_TYPES.map((type) => (
-                  <Pressable
-                    key={type}
-                    style={[
-                      styles.orbitButton,
-                      orbitType === type && styles.orbitButtonActive,
-                    ]}
-                    onPress={() => setOrbitType(type)}
-                  >
-                    <Text
-                      style={[
-                        styles.orbitButtonText,
-                        orbitType === type && styles.orbitButtonTextActive,
-                      ]}
-                    >
-                      {type}
-                    </Text>
-                  </Pressable>
-                ))}
-              </View>
-            </View>
+          <div>
+            <label className="block text-sm font-medium text-solar-text mb-2">Notes</label>
+            <textarea
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="Mission notes, configuration, etc."
+              rows={3}
+              className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald resize-none"
+            />
+          </div>
+        </div>
 
-            <View style={styles.switchField}>
-              <View>
-                <Text style={styles.label}>Orbit Raising Mode</Text>
-                <Text style={styles.hint}>
-                  Enable for newly launched satellites in orbit-raising phase
-                </Text>
-              </View>
-              <Switch
-                value={isOrbitRaising}
-                onValueChange={setIsOrbitRaising}
-                trackColor={{ false: COLORS.border, true: '#f59e0b40' }}
-                thumbColor={isOrbitRaising ? '#f59e0b' : COLORS.muted}
-              />
-            </View>
-
-            <View style={styles.field}>
-              <Text style={styles.label}>Notes</Text>
-              <TextInput
-                style={[styles.input, styles.textArea]}
-                value={notes}
-                onChangeText={setNotes}
-                placeholder="Mission notes, configuration, etc."
-                placeholderTextColor={COLORS.muted}
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-          </ScrollView>
-
-          <Pressable
-            style={[styles.addButton, (!name || !altitude || !inclination) && styles.addButtonDisabled]}
-            onPress={handleAdd}
-            disabled={!name || !altitude || !inclination}
+        <div className="p-5">
+          <button
+            onClick={handleAdd}
+            disabled={!isValid}
+            className="w-full bg-solar-emerald text-white py-4 rounded-xl font-semibold hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Text style={styles.addButtonText}>Add Satellite</Text>
-          </Pressable>
-        </View>
-      </View>
-    </Modal>
+            Add Satellite
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'flex-end',
-  },
-  modal: {
-    backgroundColor: COLORS.bg,
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    maxHeight: '90%',
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  form: {
-    padding: 20,
-  },
-  field: {
-    marginBottom: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.text,
-    marginBottom: 8,
-  },
-  input: {
-    backgroundColor: COLORS.card,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  textArea: {
-    minHeight: 80,
-    textAlignVertical: 'top',
-  },
-  hint: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginTop: 4,
-  },
-  orbitButtons: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  orbitButton: {
-    flex: 1,
-    paddingVertical: 10,
-    borderRadius: 8,
-    backgroundColor: COLORS.card,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  orbitButtonActive: {
-    backgroundColor: COLORS.emerald + '20',
-    borderColor: COLORS.emerald,
-  },
-  orbitButtonText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.muted,
-  },
-  orbitButtonTextActive: {
-    color: COLORS.emerald,
-  },
-  switchField: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  addButton: {
-    backgroundColor: COLORS.emerald,
-    margin: 20,
-    padding: 16,
-    borderRadius: 12,
-    alignItems: 'center',
-  },
-  addButtonDisabled: {
-    opacity: 0.5,
-  },
-  addButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#fff',
-  },
-});

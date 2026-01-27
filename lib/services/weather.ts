@@ -1,6 +1,6 @@
 import { fetchJson } from '../api/fetchJson';
 
-const OPENWEATHER_API_KEY = process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY;
+const OPENWEATHER_API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
 
 export interface WeatherData {
   cloudCover: number; // 0-100%

@@ -1,12 +1,9 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { FeatureGate } from '@/components/FeatureGate';
-import {
-  getParticleFluxStatus,
-  type ParticleFluxStatus,
-} from '@/lib/api/particleFlux';
-import { COLORS } from '@/lib/util/colors';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { Zap, MinusCircle } from 'lucide-react';
+import { FeatureGate } from '@/components/dashboard/FeatureGate';
+import { getParticleFluxStatus, type ParticleFluxStatus } from '@/lib/api/particleFlux';
 
 export function ParticleFluxWidget() {
   const [status, setStatus] = useState<ParticleFluxStatus | null>(null);
@@ -14,7 +11,7 @@ export function ParticleFluxWidget() {
 
   useEffect(() => {
     loadStatus();
-    const interval = setInterval(loadStatus, 5 * 60 * 1000); // Refresh every 5 minutes
+    const interval = setInterval(loadStatus, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -31,9 +28,9 @@ export function ParticleFluxWidget() {
 
   if (isLoading) {
     return (
-      <View style={styles.container}>
-        <ActivityIndicator color={COLORS.emerald} />
-      </View>
+      <div className="mb-4 flex items-center justify-center py-8">
+        <div className="w-6 h-6 border-2 border-solar-emerald border-t-transparent rounded-full animate-spin" />
+      </div>
     );
   }
 
@@ -43,144 +40,82 @@ export function ParticleFluxWidget() {
 
   return (
     <FeatureGate feature="satelliteRisk">
-      <View style={styles.container}>
-        <Text style={styles.title}>Particle Environment</Text>
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-solar-text mb-3">Particle Environment</h3>
 
         {/* Solar Radiation Storm (Protons) */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="flash" size={20} color={proton.sScale.color} />
-            <Text style={styles.cardTitle}>Solar Radiation Storm</Text>
-            <View style={[styles.badge, { backgroundColor: proton.sScale.color + '20' }]}>
-              <Text style={[styles.badgeText, { color: proton.sScale.color }]}>
-                {proton.sScale.scale}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.cardDescription}>{proton.sScale.description}</Text>
-          <Text style={styles.cardImpact}>{proton.sScale.impact}</Text>
+        <div className="bg-solar-card rounded-xl p-4 mb-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Zap className="w-5 h-5" style={{ color: proton.sScale.color }} />
+            <span className="text-sm font-semibold text-solar-text flex-1">
+              Solar Radiation Storm
+            </span>
+            <span
+              className="px-2.5 py-1 rounded-lg text-xs font-bold"
+              style={{
+                backgroundColor: proton.sScale.color + '20',
+                color: proton.sScale.color,
+              }}
+            >
+              {proton.sScale.scale}
+            </span>
+          </div>
+          <p className="text-sm font-medium text-solar-text mb-1">
+            {proton.sScale.description}
+          </p>
+          <p className="text-sm text-solar-muted mb-3">{proton.sScale.impact}</p>
           {proton.latest && (
-            <View style={styles.readings}>
-              <View style={styles.reading}>
-                <Text style={styles.readingLabel}>{'>'}10 MeV</Text>
-                <Text style={styles.readingValue}>
+            <div className="flex gap-6 pt-3 border-t border-solar-border">
+              <div>
+                <p className="text-[11px] text-solar-muted uppercase">{'>'}10 MeV</p>
+                <p className="text-sm font-semibold text-solar-text font-mono">
                   {proton.latest.flux_10mev?.toExponential(1) ?? 'N/A'} pfu
-                </Text>
-              </View>
-              <View style={styles.reading}>
-                <Text style={styles.readingLabel}>{'>'}100 MeV</Text>
-                <Text style={styles.readingValue}>
+                </p>
+              </div>
+              <div>
+                <p className="text-[11px] text-solar-muted uppercase">{'>'}100 MeV</p>
+                <p className="text-sm font-semibold text-solar-text font-mono">
                   {proton.latest.flux_100mev?.toExponential(1) ?? 'N/A'} pfu
-                </Text>
-              </View>
-            </View>
+                </p>
+              </div>
+            </div>
           )}
-        </View>
+        </div>
 
         {/* GEO Electron Environment */}
-        <View style={styles.card}>
-          <View style={styles.cardHeader}>
-            <Ionicons name="remove-circle" size={20} color={electron.chargingRisk.color} />
-            <Text style={styles.cardTitle}>GEO Surface Charging</Text>
-            <View style={[styles.badge, { backgroundColor: electron.chargingRisk.color + '20' }]}>
-              <Text style={[styles.badgeText, { color: electron.chargingRisk.color }]}>
-                {electron.chargingRisk.level.toUpperCase()}
-              </Text>
-            </View>
-          </View>
-          <Text style={styles.cardDescription}>{electron.chargingRisk.description}</Text>
+        <div className="bg-solar-card rounded-xl p-4 mb-3">
+          <div className="flex items-center gap-2 mb-2">
+            <MinusCircle className="w-5 h-5" style={{ color: electron.chargingRisk.color }} />
+            <span className="text-sm font-semibold text-solar-text flex-1">
+              GEO Surface Charging
+            </span>
+            <span
+              className="px-2.5 py-1 rounded-lg text-xs font-bold uppercase"
+              style={{
+                backgroundColor: electron.chargingRisk.color + '20',
+                color: electron.chargingRisk.color,
+              }}
+            >
+              {electron.chargingRisk.level}
+            </span>
+          </div>
+          <p className="text-sm text-solar-text">{electron.chargingRisk.description}</p>
           {electron.latest && (
-            <View style={styles.readings}>
-              <View style={styles.reading}>
-                <Text style={styles.readingLabel}>{'>'}2 MeV e-</Text>
-                <Text style={styles.readingValue}>
+            <div className="pt-3 border-t border-solar-border mt-3">
+              <div>
+                <p className="text-[11px] text-solar-muted uppercase">{'>'}2 MeV e-</p>
+                <p className="text-sm font-semibold text-solar-text font-mono">
                   {electron.latest.flux_2mev?.toExponential(1) ?? 'N/A'} e/(cm²·s·sr)
-                </Text>
-              </View>
-            </View>
+                </p>
+              </div>
+            </div>
           )}
-        </View>
+        </div>
 
-        <Text style={styles.updated}>
+        <p className="text-xs text-solar-muted text-center">
           Updated: {new Date(status.updatedAt).toLocaleTimeString()}
-        </Text>
-      </View>
+        </p>
+      </div>
     </FeatureGate>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    marginBottom: 16,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 12,
-  },
-  card: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    flex: 1,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  cardDescription: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.text,
-    marginBottom: 4,
-  },
-  cardImpact: {
-    fontSize: 13,
-    color: COLORS.muted,
-    marginBottom: 12,
-  },
-  readings: {
-    flexDirection: 'row',
-    gap: 24,
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  reading: {
-    gap: 2,
-  },
-  readingLabel: {
-    fontSize: 11,
-    color: COLORS.muted,
-    textTransform: 'uppercase',
-  },
-  readingValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    fontFamily: 'monospace',
-  },
-  updated: {
-    fontSize: 12,
-    color: COLORS.muted,
-    textAlign: 'center',
-  },
-});

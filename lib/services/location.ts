@@ -1,5 +1,3 @@
-import * as Location from 'expo-location';
-
 export interface UserCoordinates {
   lat: number;
   lng: number;
@@ -7,26 +5,38 @@ export interface UserCoordinates {
 }
 
 export async function requestLocationPermission(): Promise<boolean> {
-  const { status } = await Location.requestForegroundPermissionsAsync();
-  return status === 'granted';
+  if (typeof window === 'undefined' || !navigator.geolocation) {
+    return false;
+  }
+
+  try {
+    const result = await navigator.permissions.query({ name: 'geolocation' });
+    return result.state === 'granted' || result.state === 'prompt';
+  } catch {
+    // Permissions API not supported, try to get location directly
+    return true;
+  }
 }
 
 export async function getCurrentLocation(): Promise<UserCoordinates | null> {
-  try {
-    const hasPermission = await requestLocationPermission();
-    if (!hasPermission) {
-      console.warn('Location permission denied');
-      return null;
-    }
+  if (typeof window === 'undefined' || !navigator.geolocation) {
+    console.warn('Geolocation not available');
+    return null;
+  }
 
-    const location = await Location.getCurrentPositionAsync({
-      accuracy: Location.Accuracy.Balanced,
+  try {
+    const position = await new Promise<GeolocationPosition>((resolve, reject) => {
+      navigator.geolocation.getCurrentPosition(resolve, reject, {
+        enableHighAccuracy: false,
+        timeout: 10000,
+        maximumAge: 300000, // 5 minutes
+      });
     });
 
     return {
-      lat: location.coords.latitude,
-      lng: location.coords.longitude,
-      accuracy: location.coords.accuracy ?? undefined,
+      lat: position.coords.latitude,
+      lng: position.coords.longitude,
+      accuracy: position.coords.accuracy ?? undefined,
     };
   } catch (error) {
     console.error('Failed to get location:', error);

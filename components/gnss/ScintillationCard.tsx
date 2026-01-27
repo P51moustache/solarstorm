@@ -1,8 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+'use client';
+
+import { Radio } from 'lucide-react';
 import type { ScintillationStatus } from '@/lib/api/scintillation';
-import { COLORS } from '@/lib/util/colors';
 
 interface ScintillationCardProps {
   status: ScintillationStatus;
@@ -16,135 +15,51 @@ export function ScintillationCard({ status, regionName }: ScintillationCardProps
   const currentRiskIndex = riskLevels.indexOf(current.lossOfLockRisk);
 
   return (
-    <View style={styles.container}>
-      <View style={styles.header}>
-        <Ionicons name="radio" size={20} color={current.color} />
-        <Text style={styles.title}>Scintillation</Text>
-        <View style={[styles.badge, { backgroundColor: current.color + '20' }]}>
-          <Text style={[styles.badgeText, { color: current.color }]}>
-            {current.severity.toUpperCase()}
-          </Text>
-        </View>
-      </View>
+    <div className="bg-solar-card rounded-xl p-4 mb-3">
+      <div className="flex items-center gap-2 mb-1">
+        <Radio className="w-5 h-5" style={{ color: current.color }} />
+        <span className="text-base font-semibold text-solar-text flex-1">Scintillation</span>
+        <span
+          className="px-2.5 py-1 rounded-lg text-[11px] font-bold uppercase"
+          style={{
+            backgroundColor: current.color + '20',
+            color: current.color,
+          }}
+        >
+          {current.severity}
+        </span>
+      </div>
 
-      <Text style={styles.regionName}>{regionName}</Text>
+      <p className="text-xs text-solar-muted mb-3">{regionName}</p>
 
-      <Text style={styles.description}>{current.gnssImpact}</Text>
+      <p className="text-sm text-solar-text leading-5 mb-4">{current.gnssImpact}</p>
 
-      <View style={styles.riskIndicator}>
-        <Text style={styles.riskLabel}>Loss of Lock Risk:</Text>
-        <View style={styles.riskBars}>
+      <div className="mb-4">
+        <p className="text-xs text-solar-muted mb-2">Loss of Lock Risk:</p>
+        <div className="flex gap-1 mb-1">
           {riskLevels.map((level, i) => (
-            <View
+            <div
               key={level}
-              style={[
-                styles.riskBar,
-                {
-                  backgroundColor: i <= currentRiskIndex ? current.color : COLORS.border,
-                },
-              ]}
+              className="flex-1 h-1.5 rounded-full"
+              style={{
+                backgroundColor: i <= currentRiskIndex ? current.color : 'rgba(255,255,255,0.1)',
+              }}
             />
           ))}
-        </View>
-        <Text style={[styles.riskText, { color: current.color }]}>
+        </div>
+        <p className="text-xs font-semibold capitalize" style={{ color: current.color }}>
           {current.lossOfLockRisk.replace('_', ' ')}
-        </Text>
-      </View>
+        </p>
+      </div>
 
-      <View style={styles.forecast}>
-        <Text style={styles.forecastTitle}>Forecast</Text>
-        <Text style={styles.forecastText}>{forecast.description}</Text>
-      </View>
+      <div className="bg-solar-bg rounded-lg p-3 mb-3">
+        <p className="text-[11px] text-solar-muted uppercase mb-1">Forecast</p>
+        <p className="text-sm text-solar-text leading-5">{forecast.description}</p>
+      </div>
 
-      <Text style={styles.updated}>
+      <p className="text-[11px] text-solar-muted text-right">
         Updated: {new Date(status.updatedAt).toLocaleTimeString()}
-      </Text>
-    </View>
+      </p>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 4,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    flex: 1,
-  },
-  badge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  badgeText: {
-    fontSize: 11,
-    fontWeight: '700',
-  },
-  regionName: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginBottom: 12,
-  },
-  description: {
-    fontSize: 14,
-    color: COLORS.text,
-    lineHeight: 20,
-    marginBottom: 16,
-  },
-  riskIndicator: {
-    marginBottom: 16,
-  },
-  riskLabel: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginBottom: 8,
-  },
-  riskBars: {
-    flexDirection: 'row',
-    gap: 4,
-    marginBottom: 4,
-  },
-  riskBar: {
-    flex: 1,
-    height: 6,
-    borderRadius: 3,
-  },
-  riskText: {
-    fontSize: 12,
-    fontWeight: '600',
-    textTransform: 'capitalize',
-  },
-  forecast: {
-    backgroundColor: COLORS.bg,
-    borderRadius: 8,
-    padding: 12,
-    marginBottom: 12,
-  },
-  forecastTitle: {
-    fontSize: 11,
-    color: COLORS.muted,
-    textTransform: 'uppercase',
-    marginBottom: 4,
-  },
-  forecastText: {
-    fontSize: 13,
-    color: COLORS.text,
-    lineHeight: 18,
-  },
-  updated: {
-    fontSize: 11,
-    color: COLORS.muted,
-    textAlign: 'right',
-  },
-});

@@ -1,16 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useState } from 'react';
-import {
-  ActivityIndicator,
-  Modal,
-  StyleSheet,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+'use client';
+
+import { useState } from 'react';
+import { X, MapPin, Check, Square } from 'lucide-react';
 import { useLocationStore } from '@/lib/state/useLocationStore';
-import { COLORS } from '@/lib/util/colors';
 
 interface AddLocationModalProps {
   visible: boolean;
@@ -40,7 +32,8 @@ export function AddLocationModal({ visible, onClose }: AddLocationModalProps) {
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     const latNum = parseFloat(lat);
     const lngNum = parseFloat(lng);
 
@@ -72,176 +65,94 @@ export function AddLocationModal({ visible, onClose }: AddLocationModalProps) {
     parseFloat(lng) >= -180 &&
     parseFloat(lng) <= 180;
 
+  if (!visible) return null;
+
   return (
-    <Modal
-      visible={visible}
-      animationType="slide"
-      presentationStyle="pageSheet"
-      onRequestClose={handleClose}
-    >
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Add Location</Text>
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={24} color={COLORS.text} />
-          </TouchableOpacity>
-        </View>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-solar-bg rounded-2xl w-full max-w-md">
+        <div className="flex items-center justify-between p-4 border-b border-solar-border">
+          <h2 className="text-xl font-semibold text-solar-text">Add Location</h2>
+          <button onClick={handleClose} className="p-1 text-solar-text hover:text-solar-muted">
+            <X className="w-6 h-6" />
+          </button>
+        </div>
 
-        <View style={styles.form}>
-          <View style={styles.field}>
-            <Text style={styles.label}>Location Name</Text>
-            <TextInput
-              style={styles.input}
+        <form onSubmit={handleSubmit} className="p-4 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-solar-text mb-1.5">
+              Location Name
+            </label>
+            <input
+              type="text"
               value={label}
-              onChangeText={setLabel}
+              onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g., Home, Cabin, Favorite Spot"
-              placeholderTextColor={COLORS.muted}
-              autoCapitalize="words"
+              className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
             />
-          </View>
+          </div>
 
-          <View style={styles.row}>
-            <View style={[styles.field, { flex: 1 }]}>
-              <Text style={styles.label}>Latitude</Text>
-              <TextInput
-                style={styles.input}
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-solar-text mb-1.5">
+                Latitude
+              </label>
+              <input
+                type="number"
+                step="any"
                 value={lat}
-                onChangeText={setLat}
+                onChange={(e) => setLat(e.target.value)}
                 placeholder="-90 to 90"
-                placeholderTextColor={COLORS.muted}
-                keyboardType="numeric"
+                className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
               />
-            </View>
-            <View style={[styles.field, { flex: 1, marginLeft: 12 }]}>
-              <Text style={styles.label}>Longitude</Text>
-              <TextInput
-                style={styles.input}
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-solar-text mb-1.5">
+                Longitude
+              </label>
+              <input
+                type="number"
+                step="any"
                 value={lng}
-                onChangeText={setLng}
+                onChange={(e) => setLng(e.target.value)}
                 placeholder="-180 to 180"
-                placeholderTextColor={COLORS.muted}
-                keyboardType="numeric"
+                className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
               />
-            </View>
-          </View>
+            </div>
+          </div>
 
           {currentLocation && (
-            <TouchableOpacity
-              style={styles.useCurrentButton}
-              onPress={handleUseCurrentLocation}
+            <button
+              type="button"
+              onClick={handleUseCurrentLocation}
+              className="flex items-center gap-2 text-solar-emerald hover:underline"
             >
-              <Ionicons name="locate" size={18} color={COLORS.emerald} />
-              <Text style={styles.useCurrentText}>Use Current Location</Text>
-            </TouchableOpacity>
+              <MapPin className="w-4 h-4" />
+              Use Current Location
+            </button>
           )}
 
-          <TouchableOpacity
-            style={styles.primaryToggle}
-            onPress={() => setIsPrimary(!isPrimary)}
+          <button
+            type="button"
+            onClick={() => setIsPrimary(!isPrimary)}
+            className="flex items-center gap-3 py-2"
           >
-            <Ionicons
-              name={isPrimary ? 'checkbox' : 'square-outline'}
-              size={24}
-              color={isPrimary ? COLORS.emerald : COLORS.muted}
-            />
-            <Text style={styles.primaryText}>Set as primary location</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.submitButton, !isValid && styles.submitButtonDisabled]}
-            onPress={handleSubmit}
-            disabled={!isValid || isSubmitting}
-          >
-            {isSubmitting ? (
-              <ActivityIndicator color={COLORS.bg} />
+            {isPrimary ? (
+              <Check className="w-6 h-6 text-solar-emerald" />
             ) : (
-              <Text style={styles.submitText}>Save Location</Text>
+              <Square className="w-6 h-6 text-solar-muted" />
             )}
-          </TouchableOpacity>
-        </View>
-      </View>
-    </Modal>
+            <span className="text-sm text-solar-text">Set as primary location</span>
+          </button>
+
+          <button
+            type="submit"
+            disabled={!isValid || isSubmitting}
+            className="w-full bg-solar-emerald text-solar-bg py-3 rounded-lg font-semibold hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isSubmitting ? 'Saving...' : 'Save Location'}
+          </button>
+        </form>
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  title: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  closeButton: {
-    padding: 4,
-  },
-  form: {
-    padding: 16,
-    gap: 16,
-  },
-  field: {
-    gap: 6,
-  },
-  label: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: COLORS.text,
-  },
-  input: {
-    backgroundColor: COLORS.card,
-    borderRadius: 8,
-    padding: 12,
-    fontSize: 16,
-    color: COLORS.text,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-  },
-  row: {
-    flexDirection: 'row',
-  },
-  useCurrentButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 8,
-  },
-  useCurrentText: {
-    fontSize: 14,
-    color: COLORS.emerald,
-  },
-  primaryToggle: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 8,
-  },
-  primaryText: {
-    fontSize: 14,
-    color: COLORS.text,
-  },
-  submitButton: {
-    backgroundColor: COLORS.emerald,
-    borderRadius: 8,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
-  },
-  submitButtonDisabled: {
-    opacity: 0.5,
-  },
-  submitText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.bg,
-  },
-});

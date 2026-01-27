@@ -1,6 +1,8 @@
+'use client';
+
 import { OrbitControls, Stars, useTexture } from '@react-three/drei';
 import { useFrame } from '@react-three/fiber';
-import React, { useRef, useMemo } from 'react';
+import { useRef, useMemo } from 'react';
 import * as THREE from 'three';
 import type { AuroraCell } from './types';
 

@@ -1,195 +1,119 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
-import { FeatureGate } from '@/components/FeatureGate';
-import { getSfiTrend } from '@/lib/api/solarFlux';
-import { getSfiCondition, type SfiTrend } from '@/lib/api/parsers/solarFlux';
-import { COLORS } from '@/lib/util/colors';
+'use client';
 
-export function SfiTrendChart() {
+import { useEffect, useState } from 'react';
+import { getSfiTrend } from '@/lib/api/solarFlux';
+import type { SfiTrend } from '@/lib/api/parsers/solarFlux';
+
+interface SfiTrendChartProps {
+  className?: string;
+}
+
+export function SfiTrendChart({ className = '' }: SfiTrendChartProps) {
   const [trend, setTrend] = useState<SfiTrend | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    getSfiTrend()
-      .then(setTrend)
-      .finally(() => setIsLoading(false));
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getSfiTrend();
+        setTrend(data);
+      } catch (error) {
+        console.error('Failed to fetch SFI trend:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
   }, []);
 
-  const condition = trend ? getSfiCondition(trend.current) : null;
+  if (isLoading) {
+    return (
+      <div className={`bg-solar-card rounded-2xl p-4 ${className}`}>
+        <div className="flex items-center justify-center h-32">
+          <div className="w-6 h-6 border-2 border-solar-emerald border-t-transparent rounded-full animate-spin" />
+        </div>
+      </div>
+    );
+  }
 
-  const getTrendIcon = (): 'trending-up' | 'trending-down' | 'remove-outline' => {
-    if (!trend) return 'remove-outline';
-    switch (trend.trend) {
-      case 'rising': return 'trending-up';
-      case 'falling': return 'trending-down';
-      default: return 'remove-outline';
-    }
-  };
+  if (!trend) {
+    return (
+      <div className={`bg-solar-card rounded-2xl p-4 ${className}`}>
+        <h3 className="text-base font-semibold text-solar-text mb-2">Solar Flux Index</h3>
+        <p className="text-solar-muted text-sm">Unable to load SFI data</p>
+      </div>
+    );
+  }
+
+  const { current, average30day, trend: trendDirection, history } = trend;
+  const maxValue = Math.max(...history.map((d) => d.f107), 200);
 
   return (
-    <FeatureGate feature="hfPropagation">
-      <View style={styles.container}>
-        <View style={styles.header}>
-          <Text style={styles.title}>Solar Flux Index (F10.7)</Text>
-          {isLoading && <ActivityIndicator size="small" color={COLORS.emerald} />}
-        </View>
+    <div className={`bg-solar-card rounded-2xl p-4 ${className}`}>
+      <div className="flex justify-between items-start mb-4">
+        <div>
+          <h3 className="text-base font-semibold text-solar-text">Solar Flux Index</h3>
+          <p className="text-xs text-solar-muted mt-1">F10.7 cm Radio Flux</p>
+        </div>
+        <div className="text-right">
+          <span className="text-2xl font-bold text-solar-text">{current}</span>
+          <span className="text-sm text-solar-muted ml-1">SFU</span>
+          <div className="flex items-center justify-end mt-1">
+            <span
+              className={`text-xs ${
+                trendDirection === 'rising'
+                  ? 'text-aurora-high'
+                  : trendDirection === 'falling'
+                  ? 'text-solar-emerald'
+                  : 'text-solar-muted'
+              }`}
+            >
+              {trendDirection === 'rising' ? '▲' : trendDirection === 'falling' ? '▼' : '●'}
+            </span>
+            <span className="text-xs text-solar-muted ml-1">30d avg: {average30day}</span>
+          </div>
+        </div>
+      </div>
 
-        {trend && condition && (
-          <>
-            <View style={styles.currentValue}>
-              <Text style={styles.valueNumber}>{Math.round(trend.current)}</Text>
-              <Text style={styles.valueUnit}>sfu</Text>
-              <Ionicons
-                name={getTrendIcon()}
-                size={24}
-                color={trend.trend === 'rising' ? '#22c55e' : trend.trend === 'falling' ? '#ef4444' : COLORS.muted}
-              />
-            </View>
+      {/* Bar chart */}
+      <div className="h-24 flex items-end gap-0.5">
+        {history.slice(0, 14).map((point, index) => {
+          const heightPercent = (point.f107 / maxValue) * 100;
+          const isLast = index === 0;
 
-            <View style={[styles.conditionBadge, { backgroundColor: condition.color + '20' }]}>
-              <Text style={[styles.conditionText, { color: condition.color }]}>
-                {condition.label}
-              </Text>
-            </View>
+          return (
+            <div
+              key={index}
+              className="flex-1 rounded-t transition-all duration-300"
+              style={{
+                height: `${heightPercent}%`,
+                backgroundColor: isLast ? '#00D084' : '#1E2347',
+                minHeight: '4px',
+              }}
+              title={`${point.timestamp}: ${point.f107} SFU`}
+            />
+          );
+        })}
+      </div>
 
-            <Text style={styles.impact}>{condition.hfImpact}</Text>
+      {/* Legend */}
+      <div className="flex justify-between mt-2">
+        <span className="text-[10px] text-solar-muted">14 days ago</span>
+        <span className="text-[10px] text-solar-muted">Today</span>
+      </div>
 
-            {/* Simple sparkline visualization */}
-            <View style={styles.chartContainer}>
-              <View style={styles.chartBars}>
-                {trend.history.slice(0, 30).reverse().map((d, i) => (
-                  <View
-                    key={i}
-                    style={[
-                      styles.chartBar,
-                      {
-                        height: Math.max(4, (d.f107 / 200) * 60),
-                        backgroundColor: d.f107 >= 100 ? '#22c55e' : d.f107 >= 70 ? '#eab308' : '#f97316',
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
-              <View style={styles.chartLabels}>
-                <Text style={styles.chartLabel}>30 days ago</Text>
-                <Text style={styles.chartLabel}>Today</Text>
-              </View>
-            </View>
-
-            <View style={styles.stats}>
-              <View style={styles.stat}>
-                <Text style={styles.statLabel}>30-day avg</Text>
-                <Text style={styles.statValue}>{trend.average30day} sfu</Text>
-              </View>
-            </View>
-          </>
-        )}
-
-        {!isLoading && !trend && (
-          <Text style={styles.error}>Unable to load solar flux data</Text>
-        )}
-      </View>
-    </FeatureGate>
+      {/* Conditions interpretation */}
+      <div className="mt-4 pt-3 border-t border-solar-border">
+        <p className="text-xs text-solar-muted">
+          {current >= 150
+            ? 'High solar activity - Good HF propagation'
+            : current >= 100
+            ? 'Moderate solar activity'
+            : 'Low solar activity - Reduced HF propagation'}
+        </p>
+      </div>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  title: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  currentValue: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-    marginBottom: 8,
-  },
-  valueNumber: {
-    fontSize: 36,
-    fontWeight: '700',
-    color: COLORS.text,
-  },
-  valueUnit: {
-    fontSize: 16,
-    color: COLORS.muted,
-    marginRight: 8,
-  },
-  conditionBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    marginBottom: 8,
-  },
-  conditionText: {
-    fontSize: 13,
-    fontWeight: '600',
-  },
-  impact: {
-    fontSize: 13,
-    color: COLORS.muted,
-    marginBottom: 16,
-  },
-  chartContainer: {
-    marginBottom: 12,
-  },
-  chartBars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    height: 60,
-    gap: 2,
-  },
-  chartBar: {
-    flex: 1,
-    borderRadius: 2,
-    minHeight: 4,
-  },
-  chartLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 4,
-  },
-  chartLabel: {
-    fontSize: 10,
-    color: COLORS.muted,
-  },
-  stats: {
-    flexDirection: 'row',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-  },
-  stat: {
-    flex: 1,
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginBottom: 2,
-  },
-  statValue: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  error: {
-    fontSize: 14,
-    color: COLORS.muted,
-    textAlign: 'center',
-    padding: 16,
-  },
-});

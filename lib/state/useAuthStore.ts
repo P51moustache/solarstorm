@@ -3,6 +3,10 @@ import { create } from 'zustand';
 import { supabase } from '../supabase/client';
 import type { Profile, SubscriptionTier } from '../supabase/types';
 
+// Dev mode bypass for testing (only in development)
+const DEV_BYPASS_AUTH = process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
+
 interface AuthState {
   session: Session | null;
   user: User | null;
@@ -37,22 +41,40 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
+      // Dev bypass mode for testing
+      if (DEV_BYPASS_AUTH) {
+        console.warn('[Auth] DEV_BYPASS_AUTH enabled - using mock authentication');
+        set({
+          session: null,
+          user: { id: 'dev-user', email: 'dev@test.com' } as User,
+          profile: { id: 'dev-user', tier: 'pro' } as Profile,
+          tier: 'pro',
+          isAuthenticated: true,
+          isLoading: false,
+        });
+        return;
+      }
+
       // Get current session
       const { data: { session }, error: sessionError } = await supabase.auth.getSession();
 
       if (sessionError) throw sessionError;
 
       if (session) {
-        // Fetch profile
+        // Fetch profile (may not exist for new users)
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
           .single();
 
-        if (profileError) throw profileError;
+        // Profile fetch can fail if table doesn't exist or user has no profile yet
+        // This is not a fatal error - user is still authenticated
+        if (profileError) {
+          console.warn('Profile fetch failed (may not exist yet):', profileError.message);
+        }
 
-        const profile = profileData as Profile | null;
+        const profile = profileError ? null : (profileData as Profile | null);
 
         set({
           session,
@@ -66,13 +88,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       // Listen for auth changes
       supabase.auth.onAuthStateChange(async (event, session) => {
         if (event === 'SIGNED_IN' && session) {
-          const { data: profileData } = await supabase
+          const { data: profileData, error: profileError } = await supabase
             .from('profiles')
             .select('*')
             .eq('id', session.user.id)
             .single();
 
-          const profile = profileData as Profile | null;
+          if (profileError) {
+            console.warn('Profile fetch failed on auth change:', profileError.message);
+          }
+
+          const profile = profileError ? null : (profileData as Profile | null);
 
           set({
             session,

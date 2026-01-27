@@ -1,8 +1,17 @@
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+'use client';
+
+import {
+  Shield,
+  RefreshCw,
+  Thermometer,
+  Radio,
+  Compass,
+  Battery,
+  AlertCircle,
+  CheckCircle2,
+  Trash2,
+} from 'lucide-react';
 import type { SatelliteAnomaly } from '@/lib/supabase/types';
-import { COLORS } from '@/lib/util/colors';
 
 interface AnomalyListProps {
   anomalies: SatelliteAnomaly[];
@@ -16,168 +25,90 @@ const SEVERITY_COLORS: Record<string, string> = {
   critical: '#dc2626',
 };
 
-const TYPE_ICONS: Record<string, string> = {
-  safe_mode: 'shield-checkmark',
-  reboot: 'refresh',
-  sensor_error: 'thermometer',
-  comm_loss: 'radio',
-  attitude_error: 'compass',
-  power_anomaly: 'battery-half',
-  other: 'alert-circle',
+const TYPE_ICONS: Record<string, React.ReactNode> = {
+  safe_mode: <Shield className="w-5 h-5" />,
+  reboot: <RefreshCw className="w-5 h-5" />,
+  sensor_error: <Thermometer className="w-5 h-5" />,
+  comm_loss: <Radio className="w-5 h-5" />,
+  attitude_error: <Compass className="w-5 h-5" />,
+  power_anomaly: <Battery className="w-5 h-5" />,
+  other: <AlertCircle className="w-5 h-5" />,
 };
 
 export function AnomalyList({ anomalies, onDelete }: AnomalyListProps) {
   if (anomalies.length === 0) {
     return (
-      <View style={styles.empty}>
-        <Ionicons name="checkmark-circle" size={32} color={COLORS.emerald} />
-        <Text style={styles.emptyText}>No anomalies logged</Text>
-      </View>
+      <div className="flex flex-col items-center py-8 gap-2">
+        <CheckCircle2 className="w-8 h-8 text-solar-emerald" />
+        <p className="text-sm text-solar-muted">No anomalies logged</p>
+      </div>
     );
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <div className="space-y-3">
       {anomalies.map((anomaly) => (
-        <View key={anomaly.id} style={styles.card}>
-          <View style={styles.header}>
-            <Ionicons
-              name={TYPE_ICONS[anomaly.anomaly_type] as keyof typeof Ionicons.glyphMap}
-              size={20}
-              color={SEVERITY_COLORS[anomaly.severity]}
-            />
-            <Text style={styles.type}>
+        <div key={anomaly.id} className="bg-solar-card rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-2">
+            <span style={{ color: SEVERITY_COLORS[anomaly.severity] }}>
+              {TYPE_ICONS[anomaly.anomaly_type]}
+            </span>
+            <span className="text-sm font-semibold text-solar-text flex-1 capitalize">
               {anomaly.anomaly_type.replace('_', ' ')}
-            </Text>
-            <View
-              style={[
-                styles.severityBadge,
-                { backgroundColor: SEVERITY_COLORS[anomaly.severity] + '20' },
-              ]}
+            </span>
+            <span
+              className="px-2 py-0.5 rounded text-[11px] font-semibold uppercase"
+              style={{
+                backgroundColor: SEVERITY_COLORS[anomaly.severity] + '20',
+                color: SEVERITY_COLORS[anomaly.severity],
+              }}
             >
-              <Text
-                style={[
-                  styles.severityText,
-                  { color: SEVERITY_COLORS[anomaly.severity] },
-                ]}
-              >
-                {anomaly.severity}
-              </Text>
-            </View>
+              {anomaly.severity}
+            </span>
             {onDelete && (
-              <Pressable onPress={() => onDelete(anomaly.id)} hitSlop={8}>
-                <Ionicons name="trash-outline" size={16} color={COLORS.muted} />
-              </Pressable>
+              <button
+                onClick={() => onDelete(anomaly.id)}
+                className="p-1 text-solar-muted hover:text-red-500"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             )}
-          </View>
+          </div>
 
-          <Text style={styles.date}>
+          <p className="text-xs text-solar-muted mb-2">
             {new Date(anomaly.occurred_at).toLocaleString()}
-          </Text>
+          </p>
 
           {anomaly.description && (
-            <Text style={styles.description}>{anomaly.description}</Text>
+            <p className="text-sm text-solar-text mb-3 leading-5">
+              {anomaly.description}
+            </p>
           )}
 
-          {/* Space weather correlation */}
-          <View style={styles.correlation}>
-            <Text style={styles.correlationTitle}>Space Weather at Time:</Text>
-            <View style={styles.correlationData}>
+          <div className="bg-solar-bg p-2.5 rounded-lg">
+            <p className="text-[11px] text-solar-muted uppercase mb-1.5">
+              Space Weather at Time:
+            </p>
+            <div className="flex flex-wrap gap-3">
               {anomaly.kp_at_time !== null && (
-                <Text style={styles.correlationItem}>
+                <span className="text-xs text-solar-text font-mono">
                   Kp: {anomaly.kp_at_time.toFixed(1)}
-                </Text>
+                </span>
               )}
               {anomaly.proton_flux_at_time !== null && (
-                <Text style={styles.correlationItem}>
+                <span className="text-xs text-solar-text font-mono">
                   Protons: {anomaly.proton_flux_at_time.toExponential(1)} pfu
-                </Text>
+                </span>
               )}
               {anomaly.electron_flux_at_time !== null && (
-                <Text style={styles.correlationItem}>
+                <span className="text-xs text-solar-text font-mono">
                   Electrons: {anomaly.electron_flux_at_time.toExponential(1)}
-                </Text>
+                </span>
               )}
-            </View>
-          </View>
-        </View>
+            </div>
+          </div>
+        </div>
       ))}
-    </ScrollView>
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  empty: {
-    alignItems: 'center',
-    paddingVertical: 32,
-    gap: 8,
-  },
-  emptyText: {
-    fontSize: 14,
-    color: COLORS.muted,
-  },
-  card: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 8,
-  },
-  type: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-    flex: 1,
-    textTransform: 'capitalize',
-  },
-  severityBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  severityText: {
-    fontSize: 11,
-    fontWeight: '600',
-    textTransform: 'uppercase',
-  },
-  date: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginBottom: 8,
-  },
-  description: {
-    fontSize: 14,
-    color: COLORS.text,
-    marginBottom: 12,
-    lineHeight: 20,
-  },
-  correlation: {
-    backgroundColor: COLORS.bg,
-    padding: 10,
-    borderRadius: 8,
-  },
-  correlationTitle: {
-    fontSize: 11,
-    color: COLORS.muted,
-    marginBottom: 6,
-    textTransform: 'uppercase',
-  },
-  correlationData: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  correlationItem: {
-    fontSize: 12,
-    color: COLORS.text,
-    fontFamily: 'monospace',
-  },
-});

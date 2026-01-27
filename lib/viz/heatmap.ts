@@ -1,13 +1,11 @@
-import { Skia, SkImage, BlendMode } from '@shopify/react-native-skia';
 import type { OvationCell } from '../api/parsers/ovation';
 import { COLORS } from '../util/colors';
-import { clamp, geoToCanvas, normalizeValue } from '../util/math';
+import { clamp, normalizeValue } from '../util/math';
 
 export interface HeatmapOptions {
   width: number;
   height: number;
   cellRadius?: number;
-  blurRadius?: number;
   minOpacity?: number;
   maxOpacity?: number;
   latMin?: number;
@@ -16,15 +14,25 @@ export interface HeatmapOptions {
   lonMax?: number;
 }
 
-export function createAuroraHeatmap(
+export interface HeatmapCircle {
+  x: number;
+  y: number;
+  r: number;
+  color: string;
+}
+
+/**
+ * Pre-calculate circle positions and colors for declarative rendering.
+ * This avoids imperative Skia.Surface APIs that don't work on web.
+ */
+export function calculateHeatmapCircles(
   cells: OvationCell[],
   options: HeatmapOptions
-): SkImage | null {
+): HeatmapCircle[] {
   const {
     width,
     height,
     cellRadius = 4,
-    blurRadius = 6,
     minOpacity = 0.15,
     maxOpacity = 0.9,
     latMin = 45,
@@ -33,92 +41,28 @@ export function createAuroraHeatmap(
     lonMax = 180,
   } = options;
 
-  try {
-    // Create base surface
-    const baseSurface = Skia.Surface.Make(width, height);
-    if (!baseSurface) return null;
-    const canvas = baseSurface.getCanvas();
-    canvas.clear(Skia.Color('transparent'));
+  const circles: HeatmapCircle[] = [];
 
-    // Paint with additive blending for accumulation
-    const paint = Skia.Paint();
-    paint.setAntiAlias(true);
-    paint.setStyle(0); // Fill
-    paint.setBlendMode(BlendMode.Plus);
+  for (const cell of cells) {
+    if (cell.prob <= 0) continue;
+    if (cell.lat < latMin || cell.lat > latMax) continue;
 
-    // Draw each cell (northern hemisphere by default)
-    for (const cell of cells) {
-      if (cell.prob <= 0) continue;
-      if (cell.lat < latMin || cell.lat > latMax) continue;
+    const { x, y } = geoToCanvasBounds(cell.lat, cell.lon, width, height, latMin, latMax, lonMin, lonMax);
+    const p = clamp(normalizeValue(cell.prob, 0, 100), 0, 1);
+    const opacity = clamp(minOpacity + Math.pow(p, 1.2) * (maxOpacity - minOpacity), minOpacity, maxOpacity);
 
-      const { x, y } = geoToCanvasBounds(cell.lat, cell.lon, width, height, latMin, latMax, lonMin, lonMax);
-      const p = clamp(normalizeValue(cell.prob, 0, 100), 0, 1);
-      const opacity = clamp(minOpacity + Math.pow(p, 1.2) * (maxOpacity - minOpacity), minOpacity, maxOpacity);
+    const hex = getGradientColor(p);
+    const alpha = Math.floor(opacity * 255).toString(16).padStart(2, '0');
 
-      const hex = getGradientColor(p);
-      const alpha = Math.floor(opacity * 255).toString(16).padStart(2, '0');
-      paint.setColor(Skia.Color(hex + alpha));
+    // Slightly scale radius with probability for presence
+    const r = cellRadius * (0.8 + p * 0.6);
 
-      // Slightly scale radius with probability for presence
-      const r = cellRadius * (0.8 + p * 0.6);
-      canvas.drawCircle(x, y, r, paint);
-    }
-
-    let image = baseSurface.makeImageSnapshot();
-
-    // Optional blur pass: draw the snapshot onto a new surface with blur filter
-    if (blurRadius > 0) {
-      const finalSurface = Skia.Surface.Make(width, height);
-      if (!finalSurface) return image;
-      const blurPaint = Skia.Paint();
-      blurPaint.setImageFilter(Skia.ImageFilter.MakeBlur(blurRadius, blurRadius, 1, null));
-      const c2 = finalSurface.getCanvas();
-      c2.clear(Skia.Color('transparent'));
-      c2.drawImage(image, 0, 0, blurPaint);
-      image = finalSurface.makeImageSnapshot();
-    }
-
-    return image;
-  } catch (error) {
-    console.error('Failed to create aurora heatmap:', error);
-    return null;
+    circles.push({ x, y, r, color: hex + alpha });
   }
+
+  return circles;
 }
 
-export function createTestHeatmap(width: number, height: number): SkImage | null {
-  try {
-    const surface = Skia.Surface.Make(width, height);
-    if (!surface) return null;
-
-    const canvas = surface.getCanvas();
-    canvas.clear(Skia.Color('transparent'));
-
-    const paint = Skia.Paint();
-    paint.setAntiAlias(true);
-    paint.setStyle(0);
-
-    // Create a simple gradient pattern for testing
-    const gradient = Skia.Shader.MakeLinearGradient(
-      { x: 0, y: 0 },
-      { x: width, y: height },
-      [
-        Skia.Color(COLORS.aurora.low),
-        Skia.Color(COLORS.aurora.medium),
-        Skia.Color(COLORS.aurora.high),
-      ],
-      [0, 0.5, 1],
-      0
-    );
-
-    paint.setShader(gradient);
-    canvas.drawRect(Skia.XYWHRect(0, 0, width, height), paint);
-
-    return surface.makeImageSnapshot();
-  } catch (error) {
-    console.error('Failed to create test heatmap:', error);
-    return null;
-  }
-}
 
 // ------- helpers -------
 function hexToRgb(hex: string): { r: number; g: number; b: number } {

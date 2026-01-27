@@ -1,16 +1,10 @@
-import { Ionicons } from '@expo/vector-icons';
-import React, { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  ScrollView,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { FeatureGate } from '@/components/FeatureGate';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { BarChart3, CloudOff } from 'lucide-react';
+import { FeatureGate } from '@/components/dashboard/FeatureGate';
 import { getHistoricalData } from '@/lib/api/historical';
 import type { HistoricalSummary } from '@/lib/api/parsers/historical';
-import { COLORS } from '@/lib/util/colors';
 
 type MetricType = 'kp' | 'bz' | 'speed';
 
@@ -60,7 +54,7 @@ export function HistoricalExplorer() {
       }
     });
 
-    const getValue = (d: typeof chartData[0]) => {
+    const getValue = (d: (typeof chartData)[0]) => {
       switch (selectedMetric) {
         case 'kp':
           return d.kp ?? 0;
@@ -73,11 +67,10 @@ export function HistoricalExplorer() {
 
     const maxValue = Math.max(...chartData.map(getValue), 1);
     const minValue = Math.min(...chartData.map(getValue), 0);
-    const range = maxValue - minValue || 1;
 
     return (
-      <View style={styles.chartContainer}>
-        <View style={styles.chartBars}>
+      <div className="mb-2">
+        <div className="flex items-end h-24 gap-0.5">
           {chartData.map((d, i) => {
             const value = getValue(d);
             const normalizedHeight =
@@ -99,174 +92,130 @@ export function HistoricalExplorer() {
             }
 
             return (
-              <View
+              <div
                 key={i}
-                style={[
-                  styles.chartBar,
-                  {
-                    height: Math.max(4, normalizedHeight),
-                    backgroundColor: color,
-                  },
-                ]}
+                className="flex-1 rounded-sm min-h-[4px]"
+                style={{
+                  height: `${Math.max(4, normalizedHeight)}%`,
+                  backgroundColor: color,
+                }}
               />
             );
           })}
-        </View>
-        <View style={styles.chartLabels}>
-          <Text style={styles.chartLabel}>30 days ago</Text>
-          <Text style={styles.chartLabel}>Today</Text>
-        </View>
-      </View>
+        </div>
+        <div className="flex justify-between mt-2">
+          <span className="text-xs text-solar-muted">30 days ago</span>
+          <span className="text-xs text-solar-muted">Today</span>
+        </div>
+      </div>
     );
   };
 
   return (
     <FeatureGate feature="historicalData">
-      <ScrollView style={styles.container} contentContainerStyle={styles.content}>
-        <View style={styles.header}>
-          <Ionicons name="analytics" size={24} color={COLORS.emerald} />
-          <Text style={styles.title}>Historical Data</Text>
-          {isLoading && <ActivityIndicator size="small" color={COLORS.emerald} />}
-        </View>
+      <div className="min-h-screen gradient-bg p-4">
+        <div className="flex items-center gap-2 mb-4">
+          <BarChart3 className="w-6 h-6 text-solar-emerald" />
+          <h1 className="text-2xl font-bold text-solar-text flex-1">Historical Data</h1>
+          {isLoading && (
+            <div className="w-5 h-5 border-2 border-solar-emerald border-t-transparent rounded-full animate-spin" />
+          )}
+        </div>
 
         {data && (
           <>
             {/* Metric Selector */}
-            <View style={styles.metricSelector}>
-              <MetricButton
-                label="Kp Index"
-                selected={selectedMetric === 'kp'}
-                onPress={() => setSelectedMetric('kp')}
-              />
-              <MetricButton
-                label="Bz"
-                selected={selectedMetric === 'bz'}
-                onPress={() => setSelectedMetric('bz')}
-              />
-              <MetricButton
-                label="Solar Wind"
-                selected={selectedMetric === 'speed'}
-                onPress={() => setSelectedMetric('speed')}
-              />
-            </View>
+            <div className="flex gap-2 mb-4">
+              {[
+                { key: 'kp', label: 'Kp Index' },
+                { key: 'bz', label: 'Bz' },
+                { key: 'speed', label: 'Solar Wind' },
+              ].map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setSelectedMetric(key as MetricType)}
+                  className={`flex-1 py-2.5 px-3 rounded-lg text-sm font-medium transition-colors ${
+                    selectedMetric === key
+                      ? 'bg-solar-emerald/30 text-solar-emerald'
+                      : 'bg-solar-card text-solar-muted'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
 
             {/* Chart */}
-            <View style={styles.chartCard}>
-              <Text style={styles.chartTitle}>
+            <div className="bg-solar-card rounded-xl p-4 mb-4">
+              <h2 className="text-base font-semibold text-solar-text mb-4">
                 {selectedMetric === 'kp' && '30-Day Kp Index'}
                 {selectedMetric === 'bz' && '30-Day Bz (IMF)'}
                 {selectedMetric === 'speed' && '30-Day Solar Wind Speed'}
-              </Text>
+              </h2>
               {renderChart()}
-            </View>
+            </div>
 
             {/* Stats */}
-            <View style={styles.statsCard}>
-              <Text style={styles.statsTitle}>30-Day Summary</Text>
-              <View style={styles.statsGrid}>
-                <StatItem
-                  label="Avg Kp"
-                  value={String(data.stats.avgKp)}
-                  color={getKpColor(data.stats.avgKp)}
-                />
-                <StatItem
-                  label="Max Kp"
-                  value={String(data.stats.maxKp)}
-                  color={getKpColor(data.stats.maxKp)}
-                />
+            <div className="bg-solar-card rounded-xl p-4 mb-4">
+              <h2 className="text-base font-semibold text-solar-text mb-4">30-Day Summary</h2>
+              <div className="grid grid-cols-3 gap-3">
+                <StatItem label="Avg Kp" value={String(data.stats.avgKp)} color={getKpColor(data.stats.avgKp)} />
+                <StatItem label="Max Kp" value={String(data.stats.maxKp)} color={getKpColor(data.stats.maxKp)} />
                 <StatItem
                   label="Storm Days"
                   value={String(data.stats.stormDays)}
                   color={data.stats.stormDays > 0 ? '#f97316' : '#22c55e'}
                   subtitle="Kp ≥ 5"
                 />
-                <StatItem
-                  label="Min Bz"
-                  value={`${data.stats.minBz} nT`}
-                  color={getBzColor(data.stats.minBz)}
-                />
-                <StatItem
-                  label="Avg Speed"
-                  value={`${data.stats.avgSpeed} km/s`}
-                  color={getSpeedColor(data.stats.avgSpeed)}
-                />
-                <StatItem
-                  label="Max Speed"
-                  value={`${data.stats.maxSpeed} km/s`}
-                  color={getSpeedColor(data.stats.maxSpeed)}
-                />
-              </View>
-            </View>
+                <StatItem label="Min Bz" value={`${data.stats.minBz} nT`} color={getBzColor(data.stats.minBz)} />
+                <StatItem label="Avg Speed" value={`${data.stats.avgSpeed} km/s`} color={getSpeedColor(data.stats.avgSpeed)} />
+                <StatItem label="Max Speed" value={`${data.stats.maxSpeed} km/s`} color={getSpeedColor(data.stats.maxSpeed)} />
+              </div>
+            </div>
 
             {/* Recent Notable Events */}
-            <View style={styles.eventsCard}>
-              <Text style={styles.eventsTitle}>Recent Notable Events</Text>
+            <div className="bg-solar-card rounded-xl p-4">
+              <h2 className="text-base font-semibold text-solar-text mb-3">Recent Notable Events</h2>
               {data.data
                 .filter((d) => d.kp !== null && d.kp >= 5)
                 .slice(-5)
                 .reverse()
                 .map((event, i) => (
-                  <View key={i} style={styles.eventItem}>
-                    <View
-                      style={[
-                        styles.eventBadge,
-                        { backgroundColor: getKpColor(event.kp!) + '30' },
-                      ]}
+                  <div key={i} className="flex items-center gap-3 py-2 border-b border-solar-border last:border-0">
+                    <span
+                      className="px-2.5 py-1 rounded text-sm font-semibold"
+                      style={{
+                        backgroundColor: getKpColor(event.kp!) + '30',
+                        color: getKpColor(event.kp!),
+                      }}
                     >
-                      <Text
-                        style={[styles.eventKp, { color: getKpColor(event.kp!) }]}
-                      >
-                        Kp {event.kp}
-                      </Text>
-                    </View>
-                    <Text style={styles.eventDate}>
+                      Kp {event.kp}
+                    </span>
+                    <span className="text-sm text-solar-text">
                       {new Date(event.timestamp).toLocaleDateString(undefined, {
                         month: 'short',
                         day: 'numeric',
                       })}
-                    </Text>
-                  </View>
+                    </span>
+                  </div>
                 ))}
               {data.data.filter((d) => d.kp !== null && d.kp >= 5).length === 0 && (
-                <Text style={styles.noEvents}>
+                <p className="text-sm text-solar-muted text-center py-4">
                   No geomagnetic storms (Kp ≥ 5) in the past 30 days
-                </Text>
+                </p>
               )}
-            </View>
+            </div>
           </>
         )}
 
         {!isLoading && !data && (
-          <View style={styles.error}>
-            <Ionicons name="cloud-offline" size={48} color={COLORS.muted} />
-            <Text style={styles.errorText}>Unable to load historical data</Text>
-          </View>
+          <div className="flex flex-col items-center justify-center py-16 gap-3">
+            <CloudOff className="w-12 h-12 text-solar-muted" />
+            <p className="text-base text-solar-muted">Unable to load historical data</p>
+          </div>
         )}
-      </ScrollView>
+      </div>
     </FeatureGate>
-  );
-}
-
-function MetricButton({
-  label,
-  selected,
-  onPress,
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
-  return (
-    <View
-      style={[styles.metricButton, selected && styles.metricButtonSelected]}
-      onTouchEnd={onPress}
-    >
-      <Text
-        style={[styles.metricButtonText, selected && styles.metricButtonTextSelected]}
-      >
-        {label}
-      </Text>
-    </View>
   );
 }
 
@@ -282,172 +231,12 @@ function StatItem({
   subtitle?: string;
 }) {
   return (
-    <View style={styles.statItem}>
-      <Text style={styles.statLabel}>{label}</Text>
-      <Text style={[styles.statValue, { color }]}>{value}</Text>
-      {subtitle && <Text style={styles.statSubtitle}>{subtitle}</Text>}
-    </View>
+    <div className="text-center">
+      <p className="text-xs text-solar-muted mb-1">{label}</p>
+      <p className="text-lg font-bold" style={{ color }}>
+        {value}
+      </p>
+      {subtitle && <p className="text-[10px] text-solar-muted mt-0.5">{subtitle}</p>}
+    </div>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.bg,
-  },
-  content: {
-    padding: 16,
-    gap: 16,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: COLORS.text,
-    flex: 1,
-  },
-  metricSelector: {
-    flexDirection: 'row',
-    gap: 8,
-  },
-  metricButton: {
-    flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 8,
-    backgroundColor: COLORS.card,
-    alignItems: 'center',
-  },
-  metricButtonSelected: {
-    backgroundColor: COLORS.emerald + '30',
-  },
-  metricButtonText: {
-    fontSize: 13,
-    fontWeight: '500',
-    color: COLORS.muted,
-  },
-  metricButtonTextSelected: {
-    color: COLORS.emerald,
-  },
-  chartCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-  },
-  chartTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 16,
-  },
-  chartContainer: {
-    marginBottom: 8,
-  },
-  chartBars: {
-    flexDirection: 'row',
-    alignItems: 'flex-end',
-    height: 100,
-    gap: 2,
-  },
-  chartBar: {
-    flex: 1,
-    borderRadius: 2,
-    minHeight: 4,
-  },
-  chartLabels: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 8,
-  },
-  chartLabel: {
-    fontSize: 11,
-    color: COLORS.muted,
-  },
-  statsCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-  },
-  statsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 16,
-  },
-  statsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  statItem: {
-    width: '30%',
-    alignItems: 'center',
-  },
-  statLabel: {
-    fontSize: 12,
-    color: COLORS.muted,
-    marginBottom: 4,
-  },
-  statValue: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  statSubtitle: {
-    fontSize: 10,
-    color: COLORS.muted,
-    marginTop: 2,
-  },
-  eventsCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-  },
-  eventsTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-    marginBottom: 12,
-  },
-  eventItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
-  },
-  eventBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  eventKp: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  eventDate: {
-    fontSize: 14,
-    color: COLORS.text,
-  },
-  noEvents: {
-    fontSize: 14,
-    color: COLORS.muted,
-    textAlign: 'center',
-    paddingVertical: 16,
-  },
-  error: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 32,
-    gap: 12,
-  },
-  errorText: {
-    fontSize: 16,
-    color: COLORS.muted,
-  },
-});

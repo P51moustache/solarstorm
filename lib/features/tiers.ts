@@ -1,5 +1,7 @@
 import type { SubscriptionTier } from '../supabase/types';
 
+export type { SubscriptionTier };
+
 export const TIER_FEATURES = {
   free: {
     alertsPerDay: 1,
@@ -13,6 +15,10 @@ export const TIER_FEATURES = {
     satelliteRisk: false,
     apiAccess: false,
     dataExport: false,
+    alertConfig: false,
+    advancedCharts: false,
+    satellites: 0,
+    gnssMonitoring: false,
   },
   plus: {
     alertsPerDay: Infinity,
@@ -26,6 +32,10 @@ export const TIER_FEATURES = {
     satelliteRisk: false,
     apiAccess: false,
     dataExport: false,
+    alertConfig: true,
+    advancedCharts: true,
+    satellites: 0,
+    gnssMonitoring: false,
   },
   pro: {
     alertsPerDay: Infinity,
@@ -39,6 +49,10 @@ export const TIER_FEATURES = {
     satelliteRisk: true,
     apiAccess: true,
     dataExport: true,
+    alertConfig: true,
+    advancedCharts: true,
+    satellites: 10,
+    gnssMonitoring: false,
   },
   enterprise: {
     alertsPerDay: Infinity,
@@ -52,6 +66,10 @@ export const TIER_FEATURES = {
     satelliteRisk: true,
     apiAccess: true,
     dataExport: true,
+    alertConfig: true,
+    advancedCharts: true,
+    satellites: Infinity,
+    gnssMonitoring: true,
   },
 } as const;
 

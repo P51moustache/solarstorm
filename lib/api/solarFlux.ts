@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { dayjs } from '../util/time';
 import { fetchJson } from './fetchJson';
 import { calculateSfiTrend, parseSolarFluxData, type SfiTrend } from './parsers/solarFlux';
@@ -6,17 +5,21 @@ import { calculateSfiTrend, parseSolarFluxData, type SfiTrend } from './parsers/
 const CACHE_KEY = 'sfi:trend';
 const CACHE_TTL = 60; // 1 hour
 
+const isClient = typeof window !== 'undefined';
+
 export async function getSfiTrend(): Promise<SfiTrend | null> {
   // Check cache
-  try {
-    const cached = await AsyncStorage.getItem(CACHE_KEY);
-    if (cached) {
-      const { data, timestamp } = JSON.parse(cached);
-      const age = dayjs().diff(dayjs(timestamp), 'minute');
-      if (age <= CACHE_TTL) return data;
+  if (isClient) {
+    try {
+      const cached = localStorage.getItem(CACHE_KEY);
+      if (cached) {
+        const { data, timestamp } = JSON.parse(cached);
+        const age = dayjs().diff(dayjs(timestamp), 'minute');
+        if (age <= CACHE_TTL) return data;
+      }
+    } catch (e) {
+      console.error('Cache read error:', e);
     }
-  } catch (e) {
-    console.error('Cache read error:', e);
   }
 
   // Fetch fresh data
@@ -25,8 +28,8 @@ export async function getSfiTrend(): Promise<SfiTrend | null> {
     const parsed = parseSolarFluxData(raw);
     const trend = calculateSfiTrend(parsed);
 
-    if (trend) {
-      await AsyncStorage.setItem(
+    if (trend && isClient) {
+      localStorage.setItem(
         CACHE_KEY,
         JSON.stringify({ data: trend, timestamp: new Date().toISOString() })
       );

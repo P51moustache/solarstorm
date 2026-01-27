@@ -1,9 +1,8 @@
-import { Ionicons } from '@expo/vector-icons';
-import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+'use client';
+
+import { Rocket, Trash2 } from 'lucide-react';
 import type { Satellite } from '@/lib/supabase/types';
 import type { DragRiskAssessment } from '@/lib/services/dragRisk';
-import { COLORS } from '@/lib/util/colors';
 
 interface SatelliteCardProps {
   satellite: Satellite;
@@ -12,149 +11,84 @@ interface SatelliteCardProps {
   onDelete?: () => void;
 }
 
+const orbitColors: Record<string, string> = {
+  LEO: '#3b82f6',
+  MEO: '#8b5cf6',
+  GEO: '#f59e0b',
+  HEO: '#ec4899',
+};
+
 export function SatelliteCard({ satellite, dragRisk, onPress, onDelete }: SatelliteCardProps) {
-  const orbitColor = {
-    LEO: '#3b82f6',
-    MEO: '#8b5cf6',
-    GEO: '#f59e0b',
-    HEO: '#ec4899',
-  }[satellite.orbit_type];
+  const orbitColor = orbitColors[satellite.orbit_type] || '#888';
 
   return (
-    <Pressable style={styles.container} onPress={onPress}>
-      <View style={styles.header}>
-        <View style={styles.nameRow}>
-          <Text style={styles.name}>{satellite.name}</Text>
+    <button
+      className="w-full bg-solar-card rounded-xl p-4 mb-3 text-left hover:bg-opacity-80 transition-colors"
+      onClick={onPress}
+    >
+      <div className="flex justify-between items-start mb-3">
+        <div className="flex items-center gap-2 flex-1">
+          <span className="text-base font-semibold text-solar-text">{satellite.name}</span>
           {satellite.is_orbit_raising && (
-            <View style={styles.orbitRaisingBadge}>
-              <Ionicons name="rocket" size={12} color="#f59e0b" />
-              <Text style={styles.orbitRaisingText}>Orbit Raising</Text>
-            </View>
+            <span className="flex items-center gap-1 bg-amber-500/20 px-2 py-0.5 rounded text-[10px] font-semibold text-amber-500">
+              <Rocket className="w-3 h-3" />
+              Orbit Raising
+            </span>
           )}
-        </View>
+        </div>
         {onDelete && (
-          <Pressable onPress={onDelete} hitSlop={8}>
-            <Ionicons name="trash-outline" size={18} color={COLORS.muted} />
-          </Pressable>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onDelete();
+            }}
+            className="p-1 text-solar-muted hover:text-red-500"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         )}
-      </View>
+      </div>
 
-      <View style={styles.details}>
-        <View style={styles.detailRow}>
-          <View style={[styles.orbitBadge, { backgroundColor: orbitColor + '20' }]}>
-            <Text style={[styles.orbitText, { color: orbitColor }]}>
-              {satellite.orbit_type}
-            </Text>
-          </View>
-          <Text style={styles.detailText}>
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center gap-3">
+          <span
+            className="px-2 py-1 rounded text-xs font-bold"
+            style={{ backgroundColor: orbitColor + '20', color: orbitColor }}
+          >
+            {satellite.orbit_type}
+          </span>
+          <span className="text-sm text-solar-muted">
             {satellite.altitude_km.toFixed(0)} km • {satellite.inclination_deg.toFixed(1)}°
-          </Text>
-        </View>
+          </span>
+        </div>
 
         {satellite.norad_id && (
-          <Text style={styles.noradId}>NORAD: {satellite.norad_id}</Text>
+          <span className="text-xs text-solar-muted font-mono">
+            NORAD: {satellite.norad_id}
+          </span>
         )}
-      </View>
+      </div>
 
       {dragRisk && satellite.orbit_type === 'LEO' && (
-        <View style={[styles.riskBanner, { backgroundColor: dragRisk.color + '15' }]}>
-          <View style={[styles.riskDot, { backgroundColor: dragRisk.color }]} />
-          <Text style={[styles.riskText, { color: dragRisk.color }]}>
+        <div
+          className="flex items-center mt-3 p-2.5 rounded-lg gap-2"
+          style={{ backgroundColor: dragRisk.color + '15' }}
+        >
+          <div
+            className="w-2 h-2 rounded-full"
+            style={{ backgroundColor: dragRisk.color }}
+          />
+          <span
+            className="text-xs font-semibold flex-1"
+            style={{ color: dragRisk.color }}
+          >
             {dragRisk.riskLevel.toUpperCase()} drag risk
-          </Text>
-          <Text style={styles.riskFactor}>
+          </span>
+          <span className="text-xs text-solar-muted">
             {dragRisk.densityIncreaseFactor}x density
-          </Text>
-        </View>
+          </span>
+        </div>
       )}
-    </Pressable>
+    </button>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 12,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 12,
-  },
-  nameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flex: 1,
-  },
-  name: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  orbitRaisingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#f59e0b20',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  orbitRaisingText: {
-    fontSize: 10,
-    fontWeight: '600',
-    color: '#f59e0b',
-  },
-  details: {
-    gap: 8,
-  },
-  detailRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  orbitBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-  },
-  orbitText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  detailText: {
-    fontSize: 14,
-    color: COLORS.muted,
-  },
-  noradId: {
-    fontSize: 12,
-    color: COLORS.muted,
-    fontFamily: 'monospace',
-  },
-  riskBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 12,
-    padding: 10,
-    borderRadius: 8,
-    gap: 8,
-  },
-  riskDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  riskText: {
-    fontSize: 12,
-    fontWeight: '600',
-    flex: 1,
-  },
-  riskFactor: {
-    fontSize: 12,
-    color: COLORS.muted,
-  },
-});
