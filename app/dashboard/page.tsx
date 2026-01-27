@@ -78,6 +78,21 @@ function DataCard({
   );
 }
 
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
+}
+
 function getAlertSummary(alert: SwpcAlert): { level: string; description: string; color: string } {
   const level = getAlertLevel(alert.message);
   const message = alert.message.toUpperCase();
@@ -134,8 +149,8 @@ function AlertsPanel({ alerts }: { alerts: SwpcAlert[] }) {
                     {summary.description}
                   </span>
                 </div>
-                <span className="text-solar-muted">
-                  {new Date(alert.issue_datetime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <span className="text-solar-muted whitespace-nowrap">
+                  {formatRelativeTime(alert.issue_datetime)}
                 </span>
               </div>
             </div>
@@ -431,7 +446,7 @@ export default function DashboardPage() {
                   <h3 className="text-sm font-semibold text-solar-text mb-4">
                     Aurora Probability Map
                   </h3>
-                  <AuroraHeatmap width={700} height={350} />
+                  <AuroraHeatmap width={700} height={400} />
                 </div>
               </div>
 
@@ -445,42 +460,36 @@ export default function DashboardPage() {
                   <h3 className="text-sm font-semibold text-solar-text mb-3">
                     System Status
                   </h3>
-                  <table className="w-full text-sm">
-                    <tbody className="divide-y divide-solar-border">
-                      <tr>
-                        <td className="py-2 text-solar-muted">NOAA SWPC</td>
-                        <td className="py-2 text-right">
-                          <span className="inline-flex items-center gap-1 text-green-400">
-                            <StatusIndicator status="nominal" /> Online
-                          </span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-solar-muted">ACE Satellite</td>
-                        <td className="py-2 text-right">
-                          <span className="inline-flex items-center gap-1 text-green-400">
-                            <StatusIndicator status="nominal" /> Nominal
-                          </span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-solar-muted">DSCOVR</td>
-                        <td className="py-2 text-right">
-                          <span className="inline-flex items-center gap-1 text-green-400">
-                            <StatusIndicator status="nominal" /> Nominal
-                          </span>
-                        </td>
-                      </tr>
-                      <tr>
-                        <td className="py-2 text-solar-muted">Data Feed</td>
-                        <td className="py-2 text-right">
-                          <span className="inline-flex items-center gap-1 text-green-400">
-                            <StatusIndicator status="nominal" /> Live
-                          </span>
-                        </td>
-                      </tr>
-                    </tbody>
-                  </table>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between py-2 border-b border-solar-border">
+                      <span className="text-sm text-solar-muted">NOAA SWPC</span>
+                      <span className="inline-flex items-center gap-2 text-sm text-green-400">
+                        <StatusIndicator status="nominal" />
+                        <span>Online</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-solar-border">
+                      <span className="text-sm text-solar-muted">ACE Satellite</span>
+                      <span className="inline-flex items-center gap-2 text-sm text-green-400">
+                        <StatusIndicator status="nominal" />
+                        <span>Nominal</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-2 border-b border-solar-border">
+                      <span className="text-sm text-solar-muted">DSCOVR</span>
+                      <span className="inline-flex items-center gap-2 text-sm text-green-400">
+                        <StatusIndicator status="nominal" />
+                        <span>Nominal</span>
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between py-2">
+                      <span className="text-sm text-solar-muted">Data Feed</span>
+                      <span className="inline-flex items-center gap-2 text-sm text-green-400">
+                        <StatusIndicator status="nominal" />
+                        <span>Live</span>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

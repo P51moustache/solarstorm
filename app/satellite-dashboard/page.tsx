@@ -167,52 +167,62 @@ export default function SatelliteDashboardPage() {
                 <div className="px-4 py-3 border-b border-solar-border">
                   <h3 className="text-sm font-semibold text-solar-text">Fleet Status</h3>
                 </div>
-                <table className="w-full">
-                  <thead>
-                    <tr className="border-b border-solar-border">
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-solar-muted uppercase tracking-wide">Asset</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-solar-muted uppercase tracking-wide">Orbit</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-solar-muted uppercase tracking-wide">Altitude</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-solar-muted uppercase tracking-wide">Drag Risk</th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-solar-muted uppercase tracking-wide">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-solar-border">
-                    {satellites.map((sat) => {
-                      const risk = dragRisks.find((r) => r.satellite.id === sat.id);
-                      return (
-                        <tr
-                          key={sat.id}
-                          className="hover:bg-[#0a0f1a] transition-colors cursor-pointer"
-                          onClick={() => selectSatellite(sat)}
-                        >
-                          <td className="px-4 py-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 bg-solar-card rounded-lg flex items-center justify-center">
-                                <Satellite className="w-4 h-4 text-solar-emerald" />
+                {satellites.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-12 px-4">
+                    <Satellite className="w-12 h-12 text-solar-muted mb-4" />
+                    <p className="text-sm font-medium text-solar-text mb-2">No satellites registered</p>
+                    <p className="text-xs text-solar-muted text-center max-w-sm">
+                      Add satellites to your fleet to monitor drag risk and track anomalies during space weather events.
+                    </p>
+                  </div>
+                ) : (
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-solar-border">
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-solar-muted uppercase tracking-wide">Asset</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-solar-muted uppercase tracking-wide">Orbit</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-solar-muted uppercase tracking-wide">Altitude</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-solar-muted uppercase tracking-wide">Drag Risk</th>
+                        <th className="px-4 py-3 text-left text-xs font-semibold text-solar-muted uppercase tracking-wide">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-solar-border">
+                      {satellites.map((sat) => {
+                        const risk = dragRisks.find((r) => r.satellite.id === sat.id);
+                        return (
+                          <tr
+                            key={sat.id}
+                            className="hover:bg-[#0a0f1a] transition-colors cursor-pointer"
+                            onClick={() => selectSatellite(sat)}
+                          >
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-solar-card rounded-lg flex items-center justify-center">
+                                  <Satellite className="w-4 h-4 text-solar-emerald" />
+                                </div>
+                                <span className="text-sm font-medium text-solar-text">{sat.name}</span>
                               </div>
-                              <span className="text-sm font-medium text-solar-text">{sat.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-solar-muted">{sat.orbit_type}</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className="text-sm text-solar-text font-mono">{sat.altitude_km} km</span>
-                          </td>
-                          <td className="px-4 py-3">
-                            {risk && <RiskLevelBadge level={risk.riskLevel} />}
-                          </td>
-                          <td className="px-4 py-3">
-                            <span className={`text-sm font-medium ${sat.is_orbit_raising ? 'text-amber-400' : 'text-green-400'}`}>
-                              {sat.is_orbit_raising ? 'Raising' : 'Nominal'}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-sm text-solar-muted">{sat.orbit_type}</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className="text-sm text-solar-text font-mono">{sat.altitude_km} km</span>
+                            </td>
+                            <td className="px-4 py-3">
+                              {risk && <RiskLevelBadge level={risk.riskLevel} />}
+                            </td>
+                            <td className="px-4 py-3">
+                              <span className={`text-sm font-medium ${sat.is_orbit_raising ? 'text-amber-400' : 'text-green-400'}`}>
+                                {sat.is_orbit_raising ? 'Raising' : 'Nominal'}
+                              </span>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
               </div>
             </div>
 
@@ -263,9 +273,15 @@ export default function SatelliteDashboardPage() {
                 </div>
               ) : (
                 <div className="bg-[#0d1424] border border-solar-border rounded-lg p-4">
-                  <div className="text-center py-8">
+                  <h3 className="text-sm font-semibold text-solar-text mb-4">Satellite Details</h3>
+                  <div className="text-center py-6">
                     <Satellite className="w-10 h-10 text-solar-muted mx-auto mb-3" />
-                    <p className="text-sm text-solar-muted">Select a satellite to view details</p>
+                    <p className="text-sm text-solar-text mb-1">No satellite selected</p>
+                    <p className="text-xs text-solar-muted">
+                      {satellites.length > 0
+                        ? 'Click a satellite from the fleet table to view details and log anomalies'
+                        : 'Add satellites to your fleet to get started'}
+                    </p>
                   </div>
                 </div>
               )}

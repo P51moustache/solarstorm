@@ -16,24 +16,24 @@ export default function GlobePage() {
     grid: true,
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setIsLoading(true);
-        const ovation = await getOvation();
-        const cells: AuroraCell[] = ovation.cells.map(c => ({
-          lat: c.lat,
-          lng: c.lon,
-          probability: c.prob,
-        }));
-        setAuroraData(cells);
-      } catch (error) {
-        console.error('Failed to fetch aurora data:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+  const fetchData = async () => {
+    try {
+      setIsLoading(true);
+      const ovation = await getOvation();
+      const cells: AuroraCell[] = ovation.cells.map(c => ({
+        lat: c.lat,
+        lng: c.lon,
+        probability: c.prob,
+      }));
+      setAuroraData(cells);
+    } catch (error) {
+      console.error('Failed to fetch aurora data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
+  useEffect(() => {
     fetchData();
   }, []);
 
@@ -42,6 +42,7 @@ export default function GlobePage() {
       <TopBar
         title="Aurora Globe"
         subtitle="Real-time 3D aurora visualization"
+        onRefresh={fetchData}
       />
 
       <div className="p-6 h-[calc(100vh-4rem)]">
@@ -138,9 +139,9 @@ export default function GlobePage() {
                     <span className="text-solar-muted">Visibility</span>
                     <span className="text-green-400">Good</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-solar-muted">Coverage</span>
-                    <span className="text-solar-text">Northern Hemisphere</span>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-solar-muted shrink-0">Coverage</span>
+                    <span className="text-solar-text text-right">Northern Hemisphere</span>
                   </div>
                 </div>
               </div>
