@@ -69,6 +69,17 @@ CREATE TABLE public.alert_log (
   sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- Push notification subscriptions (for browser push)
+CREATE TABLE public.push_subscriptions (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL,
+  p256dh TEXT NOT NULL,
+  auth TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE(user_id, endpoint)
+);
+
 -- Space weather history (for historical features)
 CREATE TABLE public.kp_history (
   id BIGSERIAL PRIMARY KEY,
@@ -205,6 +216,7 @@ CREATE INDEX idx_alert_configs_user_id ON public.alert_configs(user_id);
 CREATE INDEX idx_user_locations_user_id ON public.user_locations(user_id);
 CREATE INDEX idx_alert_log_user_id ON public.alert_log(user_id);
 CREATE INDEX idx_alert_log_sent_at ON public.alert_log(sent_at);
+CREATE INDEX idx_push_subscriptions_user_id ON public.push_subscriptions(user_id);
 CREATE INDEX idx_kp_history_timestamp ON public.kp_history(timestamp);
 CREATE INDEX idx_solar_wind_history_timestamp ON public.solar_wind_history(timestamp);
 
@@ -232,6 +244,7 @@ ALTER TABLE public.org_members ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alert_configs ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.user_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.alert_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.push_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.satellites ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.satellite_anomalies ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.gnss_regions ENABLE ROW LEVEL SECURITY;
@@ -282,6 +295,19 @@ CREATE POLICY "Users can delete own locations"
 -- Alert log policies
 CREATE POLICY "Users can view own alert log"
   ON public.alert_log FOR SELECT
+  USING (auth.uid() = user_id);
+
+-- Push subscriptions policies
+CREATE POLICY "Users can view own push subscriptions"
+  ON public.push_subscriptions FOR SELECT
+  USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert own push subscriptions"
+  ON public.push_subscriptions FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own push subscriptions"
+  ON public.push_subscriptions FOR DELETE
   USING (auth.uid() = user_id);
 
 -- Satellite policies
