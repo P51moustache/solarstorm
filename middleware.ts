@@ -12,7 +12,6 @@ const protectedRoutes = [
   '/globe',
   '/locations',
   '/history',
-  '/satellites',
   '/satellite-dashboard',
   '/gnss-dashboard',
   '/settings',
