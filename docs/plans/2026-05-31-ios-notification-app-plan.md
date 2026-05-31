@@ -163,8 +163,8 @@ closed — the single biggest functional gap today.
 
 | Phase | Deliverable | Notes |
 |-------|-------------|-------|
-| 0 | This plan approved | ✅ you are here |
-| 1 | **Backend engine** (frontend-agnostic) | New migration (§3.1), `poll-and-notify` function + pg_cron (§3.2), seed presets. Buildable now, testable via SQL + manual invoke. |
+| 0 | This plan approved | ✅ |
+| 1 | **Backend engine** (frontend-agnostic) | ✅ Implemented: migration `20260531120000_event_engine.sql` (§3.1) + `supabase/functions/poll-and-notify` (§3.2, schedule via its README). Defaults used: 2 free preset rules, custom rules/trends/export paid. |
 | 2 | **Expo app scaffold** | New Expo project, port `lib/api` + parsers + utils, Supabase auth, AsyncStorage session. Dashboard + alert-rule CRUD screens. |
 | 3 | **Push wiring** | Register `device_tokens`, request iOS push permission, end-to-end alert delivery. |
 | 4 | **Subscription** | RevenueCat + StoreKit, paywall, entitlement webhook, server-side gating. |
