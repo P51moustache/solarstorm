@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "SolarStorm",
+    "slug": "solarstorm",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "solarstorm",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": false,
+    "splash": {
+      "resizeMode": "contain",
+      "backgroundColor": "#0B0F1A"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.solarstorm.app"
+    },
+    "android": {
+      "package": "com.solarstorm.app"
+    },
+    "extra": {}
+  }
+}
