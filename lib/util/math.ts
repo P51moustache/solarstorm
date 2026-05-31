@@ -7,6 +7,7 @@ export function lerp(a: number, b: number, t: number): number {
 }
 
 export function normalizeValue(value: number, min: number, max: number): number {
+  if (max === min) return 0;
   return clamp((value - min) / (max - min), 0, 1);
 }
 
@@ -62,9 +63,11 @@ export function geoToCanvasBounds(
   lonMin: number,
   lonMax: number
 ): { x: number; y: number } {
-  // Map longitude to x coordinate
-  const x = ((lon - lonMin) / (lonMax - lonMin)) * width;
+  // Map longitude to x coordinate (guard against division by zero)
+  const lonRange = lonMax - lonMin;
+  const x = lonRange !== 0 ? ((lon - lonMin) / lonRange) * width : width / 2;
   // Map latitude to y coordinate (inverted because canvas y increases downward)
-  const y = ((latMax - lat) / (latMax - latMin)) * height;
+  const latRange = latMax - latMin;
+  const y = latRange !== 0 ? ((latMax - lat) / latRange) * height : height / 2;
   return { x: clamp(x, 0, width), y: clamp(y, 0, height) };
 }

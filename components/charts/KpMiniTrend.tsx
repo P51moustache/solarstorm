@@ -22,10 +22,11 @@ export function KpMiniTrend({
   className = '',
 }: KpMiniTrendProps) {
   const chartData = useMemo(() => {
-    if (!data || data.length === 0) return null;
+    if (!data || data.length < 2) return null;
 
     // Take last 12 data points for a compact trend
     const recentData = data.slice(-12);
+    if (recentData.length < 2) return null;
     const padding = 8;
     const chartWidth = width - padding * 2;
     const chartHeight = height - padding * 2 - 20; // Leave room for label

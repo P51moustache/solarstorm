@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { LogOut, User, Bell, Shield, Moon, Sun, CreditCard, ExternalLink, Settings2, Database, HelpCircle } from 'lucide-react';
 import { AppLayout, TopBar } from '@/components/layout';
+import { FeatureGate } from '@/components/dashboard/FeatureGate';
+import { AlertThresholdSettings } from '@/components/settings/AlertThresholdSettings';
+import { ApiKeySettings } from '@/components/settings/ApiKeySettings';
 import { useAuthStore } from '@/lib/state/useAuthStore';
 
 function SettingCard({ children }: { children: React.ReactNode }) {
@@ -109,7 +112,6 @@ export default function SettingsPage() {
     free: { name: 'Free', color: 'text-solar-muted' },
     plus: { name: 'Plus', color: 'text-blue-400' },
     pro: { name: 'Pro', color: 'text-purple-400' },
-    enterprise: { name: 'Enterprise', color: 'text-amber-400' },
   };
 
   const currentTier = tierLabels[tier || 'free'];
@@ -171,6 +173,16 @@ export default function SettingsPage() {
               border={false}
             />
           </SettingCard>
+
+          {/* Alert Thresholds - Plus+ feature */}
+          <FeatureGate feature="alertConfig" showUpgrade>
+            <AlertThresholdSettings />
+          </FeatureGate>
+
+          {/* API Access - Pro+ feature */}
+          <FeatureGate feature="apiAccess" showUpgrade>
+            <ApiKeySettings />
+          </FeatureGate>
 
           {/* Data & Privacy */}
           <SettingCard>

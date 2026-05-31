@@ -1,0 +1,17 @@
+# robots.txt for SolarStorm
+User-agent: *
+Allow: /
+
+# Disallow private routes
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /settings
+Disallow: /satellites
+Disallow: /satellite-dashboard
+Disallow: /gnss-dashboard
+Disallow: /locations
+Disallow: /history
+Disallow: /globe
+
+# Sitemap
+Sitemap: https://solarstorm.app/sitemap.xml

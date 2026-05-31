@@ -113,6 +113,7 @@ export function downsampleSparklineData(
   data: SparklineData[],
   maxPoints: number
 ): SparklineData[] {
+  if (maxPoints <= 0) return [];
   if (data.length <= maxPoints) return data;
 
   const step = data.length / maxPoints;

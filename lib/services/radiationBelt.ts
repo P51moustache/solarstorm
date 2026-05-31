@@ -78,6 +78,8 @@ export function assessRadiationBeltRisk(
     } else if (electronFlux > 1e3) {
       level = 'moderate';
       recommendations.push('Normal outer belt conditions');
+    } else {
+      recommendations.push('Outer belt conditions nominal');
     }
   } else if (location.inSlotRegion) {
     // Slot region normally safe but fills during storms
@@ -144,7 +146,7 @@ export function assessOrbitRaisingRadiationRisk(
     const innerRisk = assessRadiationBeltRisk(3500, protonFlux, electronFlux, kp);
     if (innerRisk.level === 'severe' || innerRisk.level === 'high') {
       maxRiskLevel = innerRisk.level;
-      recommendations.push('Inner belt transit: ' + innerRisk.recommendations[0]);
+      recommendations.push('Inner belt transit: ' + (innerRisk.recommendations[0] || 'Elevated radiation'));
     }
   }
 
@@ -154,7 +156,7 @@ export function assessOrbitRaisingRadiationRisk(
     if (riskOrder.indexOf(outerRisk.level) > riskOrder.indexOf(maxRiskLevel)) {
       maxRiskLevel = outerRisk.level;
     }
-    recommendations.push('Outer belt transit: ' + outerRisk.recommendations[0]);
+    recommendations.push('Outer belt transit: ' + (outerRisk.recommendations[0] || 'Monitor conditions'));
   }
 
   if (!transitsInnerBelt && !transitsOuterBelt) {

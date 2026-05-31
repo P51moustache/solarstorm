@@ -4,7 +4,7 @@
 CREATE TABLE public.profiles (
   id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   email TEXT NOT NULL,
-  tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'plus', 'pro', 'enterprise')),
+  tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'plus', 'pro')),
   stripe_customer_id TEXT,
   org_id UUID,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
@@ -15,7 +15,7 @@ CREATE TABLE public.profiles (
 CREATE TABLE public.organizations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name TEXT NOT NULL,
-  tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'plus', 'pro', 'enterprise')),
+  tier TEXT NOT NULL DEFAULT 'free' CHECK (tier IN ('free', 'plus', 'pro')),
   stripe_customer_id TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
@@ -25,7 +25,7 @@ ALTER TABLE public.profiles
 ADD CONSTRAINT fk_profiles_org
 FOREIGN KEY (org_id) REFERENCES public.organizations(id) ON DELETE SET NULL;
 
--- Organization members (for enterprise teams)
+-- Organization members (for team collaboration)
 CREATE TABLE public.org_members (
   org_id UUID NOT NULL REFERENCES public.organizations(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES public.profiles(id) ON DELETE CASCADE,

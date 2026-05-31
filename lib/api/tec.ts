@@ -54,7 +54,7 @@ export async function getTecMap(): Promise<TecMapData> {
       timestamp: response.timestamp,
       readings,
       globalMax: response.globalMax,
-      globalMin: Math.min(...readings.map((r) => r.tec)),
+      globalMin: readings.length > 0 ? Math.min(...readings.map((r) => r.tec)) : 0,
       globalMean: response.globalMean,
     };
 

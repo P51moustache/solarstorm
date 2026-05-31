@@ -2,13 +2,18 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Zap, Mail, Lock, ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/lib/state/useAuthStore';
+
+// Check if dev bypass is enabled (don't redirect in this case)
+const DEV_BYPASS_AUTH = process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
 
 export default function LoginPage() {
   const router = useRouter();
   const { signInWithEmail, signInWithMagicLink, isLoading, error, clearError, isAuthenticated, initialize } = useAuthStore();
+  const hasRedirected = useRef(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -20,7 +25,11 @@ export default function LoginPage() {
   }, [initialize]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    // Don't redirect in dev bypass mode - let developers test the login UI
+    if (DEV_BYPASS_AUTH) return;
+
+    if (isAuthenticated && !hasRedirected.current) {
+      hasRedirected.current = true;
       router.push('/dashboard');
     }
   }, [isAuthenticated, router]);

@@ -13,6 +13,7 @@ interface AuthState {
   profile: Profile | null;
   isLoading: boolean;
   error: string | null;
+  _initialized: boolean; // Track if we've already initialized
 
   // Derived
   tier: SubscriptionTier;
@@ -34,10 +35,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   profile: null,
   isLoading: true,
   error: null,
+  _initialized: false,
   tier: 'free',
   isAuthenticated: false,
 
   initialize: async () => {
+    // Prevent double initialization
+    if (get()._initialized) return;
+    set({ _initialized: true });
+
     try {
       set({ isLoading: true, error: null });
 
@@ -114,6 +120,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
             profile: null,
             tier: 'free',
             isAuthenticated: false,
+            _initialized: false, // Allow re-initialization on next sign in
           });
         }
       });
@@ -147,12 +154,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       set({ isLoading: true, error: null });
 
-      const { error } = await supabase.auth.signUp({
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: typeof window !== 'undefined'
+            ? `${window.location.origin}/dashboard`
+            : undefined,
+        },
       });
 
       if (error) throw error;
+
+      // Supabase returns success but null/fake user when email already exists
+      // (security feature to prevent email enumeration)
+      if (!data.user || data.user.identities?.length === 0) {
+        throw new Error('Unable to create account. This email may already be registered.');
+      }
     } catch (error) {
       set({ error: error instanceof Error ? error.message : 'Failed to sign up' });
       throw error;

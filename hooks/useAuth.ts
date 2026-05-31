@@ -23,15 +23,10 @@ export function useTier() {
 
 export function useIsPro() {
   const tier = useTier();
-  return tier === 'pro' || tier === 'enterprise';
+  return tier === 'pro';
 }
 
 export function useIsPlus() {
   const tier = useTier();
-  return tier === 'plus' || tier === 'pro' || tier === 'enterprise';
-}
-
-export function useIsEnterprise() {
-  const tier = useTier();
-  return tier === 'enterprise';
+  return tier === 'plus' || tier === 'pro';
 }

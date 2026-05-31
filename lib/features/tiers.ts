@@ -40,7 +40,7 @@ export const TIER_FEATURES = {
   pro: {
     alertsPerDay: Infinity,
     historyDays: 730, // 2 years
-    locations: 20,
+    locations: 50,
     globe3d: true,
     locationPredictions: true,
     hfPropagation: true,
@@ -51,24 +51,7 @@ export const TIER_FEATURES = {
     dataExport: true,
     alertConfig: true,
     advancedCharts: true,
-    satellites: 10,
-    gnssMonitoring: false,
-  },
-  enterprise: {
-    alertsPerDay: Infinity,
-    historyDays: 730,
-    locations: Infinity,
-    globe3d: true,
-    locationPredictions: true,
-    hfPropagation: true,
-    photoPlanning: true,
-    historicalData: true,
-    satelliteRisk: true,
-    apiAccess: true,
-    dataExport: true,
-    alertConfig: true,
-    advancedCharts: true,
-    satellites: Infinity,
+    satellites: 50,
     gnssMonitoring: true,
   },
 } as const;
@@ -85,7 +68,7 @@ export function getFeatureLimit(tier: SubscriptionTier, feature: FeatureKey): nu
 }
 
 export function getUpgradeTier(currentTier: SubscriptionTier, feature: FeatureKey): SubscriptionTier | null {
-  const tiers: SubscriptionTier[] = ['free', 'plus', 'pro', 'enterprise'];
+  const tiers: SubscriptionTier[] = ['free', 'plus', 'pro'];
   const currentIndex = tiers.indexOf(currentTier);
 
   for (let i = currentIndex + 1; i < tiers.length; i++) {

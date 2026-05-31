@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { checkRateLimit, getClientIdentifier, RATE_LIMITS } from '@/lib/util/rateLimit';
 
 const GLOTEC_INDEX_URL = 'https://services.swpc.noaa.gov/products/glotec/geojson_2d_urt/';
 
@@ -41,7 +42,25 @@ async function getLatestTecFile(): Promise<string | null> {
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request.headers);
+  const rateLimit = checkRateLimit(`tec:${clientId}`, RATE_LIMITS.standard);
+
+  if (!rateLimit.success) {
+    return NextResponse.json(
+      { error: 'Too many requests. Please try again later.' },
+      {
+        status: 429,
+        headers: {
+          'X-RateLimit-Remaining': String(rateLimit.remaining),
+          'X-RateLimit-Reset': String(rateLimit.resetTime),
+          'Retry-After': String(Math.ceil((rateLimit.resetTime - Date.now()) / 1000)),
+        },
+      }
+    );
+  }
+
   try {
     const latestUrl = await getLatestTecFile();
     if (!latestUrl) {

@@ -22,9 +22,10 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Aurora Globe', href: '/globe', icon: Globe },
   { name: 'Locations', href: '/locations', icon: MapPin },
+  { name: 'HF Propagation', href: '/hf-propagation', icon: Radio },
   { name: 'Historical Data', href: '/history', icon: BarChart3 },
   { name: 'Satellite Fleet', href: '/satellites', icon: Satellite },
-  { name: 'Satellite Ops', href: '/satellite-dashboard', icon: Radio },
+  { name: 'Satellite Ops', href: '/satellite-dashboard', icon: Satellite },
   { name: 'GNSS Monitor', href: '/gnss-dashboard', icon: Radio },
 ];
 

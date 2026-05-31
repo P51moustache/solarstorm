@@ -1,8 +1,7 @@
 import { dayjs } from '../util/time';
 import { fetchJson } from './fetchJson';
-import { getNextCmeArrival, parseCmeData, type CmeCountdownData } from './parsers/cme';
+import { getNextCmeArrival, parseCmeDataFromProxy, type CmeCountdownData } from './parsers/cme';
 
-const NASA_API_KEY = process.env.NEXT_PUBLIC_NASA_API_KEY || 'DEMO_KEY';
 const CACHE_KEY = 'cme:countdown';
 const CACHE_TTL = 30; // 30 minutes
 
@@ -23,14 +22,10 @@ export async function getCmeCountdown(): Promise<CmeCountdownData> {
     }
   }
 
-  // Fetch last 30 days of CME data
-  const startDate = dayjs().subtract(30, 'day').format('YYYY-MM-DD');
-  const endDate = dayjs().format('YYYY-MM-DD');
-
   try {
-    const url = `https://api.nasa.gov/DONKI/CME?startDate=${startDate}&endDate=${endDate}&api_key=${NASA_API_KEY}`;
-    const raw = await fetchJson(url);
-    const cmes = parseCmeData(raw);
+    // Use server-side proxy to hide NASA API key
+    const raw = await fetchJson('/api/cme');
+    const cmes = parseCmeDataFromProxy(raw);
     const countdown = getNextCmeArrival(cmes);
 
     if (isClient) {

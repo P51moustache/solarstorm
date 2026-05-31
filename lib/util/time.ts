@@ -72,8 +72,9 @@ export function downsampleTimeSeries<T extends { time_tag: string }>(
   data: T[],
   maxPoints: number
 ): T[] {
+  if (maxPoints <= 0) return [];
   if (data.length <= maxPoints) return data;
-  
+
   const step = Math.floor(data.length / maxPoints);
   const result: T[] = [];
   

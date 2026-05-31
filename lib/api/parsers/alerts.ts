@@ -54,9 +54,10 @@ export function parseAlertsData(data: unknown[]): SwpcAlert[] {
 
 export function getAlertLevel(message: string): string | null {
   const upperMessage = message.toUpperCase();
-  
+
   // Check for G-scale storm levels first (highest priority)
-  for (const level of GEOMAGNETIC_STORM_LEVELS.reverse()) { // Check highest first
+  // Use spread to avoid mutating the original array with reverse()
+  for (const level of [...GEOMAGNETIC_STORM_LEVELS].reverse()) { // Check highest first
     if (upperMessage.includes(level)) {
       return level;
     }

@@ -8,9 +8,14 @@ import { ParticleFluxWidget } from '@/components/satellite/ParticleFluxWidget';
 import { SatelliteCard } from '@/components/satellite/SatelliteCard';
 import { AnomalyLogger } from '@/components/satellite/AnomalyLogger';
 import { AnomalyList } from '@/components/satellite/AnomalyList';
+import { LaunchAssessmentWidget } from '@/components/satellite/LaunchAssessmentWidget';
+import { SafeModeWidget } from '@/components/satellite/SafeModeWidget';
 import { useSatelliteStore } from '@/lib/state/useSatelliteStore';
 import { useSolarStormStore } from '@/lib/state/useStore';
 import { calculateFleetDragRisk, type DragRiskAssessment } from '@/lib/services/dragRisk';
+import { assessManeuverConditions, getQualityColor, type ManeuverAssessment } from '@/lib/services/maneuverPlanner';
+import { isInRadiationBelt, assessRadiationBeltRisk } from '@/lib/services/radiationBelt';
+import { getParticleFluxStatus, type ParticleFluxStatus } from '@/lib/api/particleFlux';
 
 function StatCard({ icon: Icon, label, value, color }: {
   icon: React.ElementType;
@@ -64,9 +69,13 @@ export default function SatelliteDashboardPage() {
 
   const [showAnomalyLogger, setShowAnomalyLogger] = useState(false);
   const [dragRisks, setDragRisks] = useState<DragRiskAssessment[]>([]);
+  const [particleFlux, setParticleFlux] = useState<ParticleFluxStatus | null>(null);
+  const [maneuverAssessment, setManeuverAssessment] = useState<ManeuverAssessment | null>(null);
 
   useEffect(() => {
     fetchSatellites();
+    // Fetch particle flux for maneuver assessment
+    getParticleFluxStatus().then(setParticleFlux).catch(console.error);
   }, [fetchSatellites]);
 
   useEffect(() => {
@@ -74,6 +83,24 @@ export default function SatelliteDashboardPage() {
       setDragRisks(calculateFleetDragRisk(satellites, kp));
     }
   }, [satellites, kp]);
+
+  // Calculate maneuver assessment when satellite is selected
+  useEffect(() => {
+    if (selectedSatellite && kp !== null && particleFlux) {
+      const protonFlux = particleFlux.proton.latest?.flux_10mev ?? 0;
+      const electronFlux = particleFlux.electron.latest?.flux_2mev ?? 0;
+      const assessment = assessManeuverConditions(
+        selectedSatellite.orbit_type,
+        selectedSatellite.is_orbit_raising,
+        kp,
+        protonFlux,
+        electronFlux
+      );
+      setManeuverAssessment(assessment);
+    } else {
+      setManeuverAssessment(null);
+    }
+  }, [selectedSatellite, kp, particleFlux]);
 
   const criticalRisks = dragRisks.filter(
     (r) => r.riskLevel === 'critical' || r.riskLevel === 'high'
@@ -113,6 +140,9 @@ export default function SatelliteDashboardPage() {
                 </h3>
                 <ParticleFluxWidget />
               </div>
+
+              {/* Safe Mode Recommendations */}
+              <SafeModeWidget />
 
               {/* Critical Alerts */}
               {criticalRisks.length > 0 && (
@@ -261,7 +291,83 @@ export default function SatelliteDashboardPage() {
                       <span className="text-solar-muted">Inclination</span>
                       <span className="text-solar-text font-mono">{selectedSatellite.inclination_deg}°</span>
                     </div>
+                    {/* Radiation Belt Location */}
+                    {(() => {
+                      const beltLocation = isInRadiationBelt(selectedSatellite.altitude_km);
+                      if (beltLocation.inInnerBelt || beltLocation.inSlotRegion || beltLocation.inOuterBelt) {
+                        return (
+                          <div className="flex justify-between text-sm">
+                            <span className="text-solar-muted">Radiation Zone</span>
+                            <span className="text-orange-400 font-medium">{beltLocation.regionName}</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
+
+                  {/* Maneuver Conditions */}
+                  {maneuverAssessment && (
+                    <div className="mb-4 p-3 bg-[#0a0f1a] rounded-lg border border-solar-border">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-xs font-semibold text-solar-muted uppercase">Maneuver Conditions</span>
+                        <span
+                          className="px-2 py-0.5 text-xs font-bold rounded"
+                          style={{
+                            backgroundColor: getQualityColor(maneuverAssessment.quality) + '20',
+                            color: getQualityColor(maneuverAssessment.quality),
+                          }}
+                        >
+                          {maneuverAssessment.quality.toUpperCase()}
+                        </span>
+                      </div>
+                      {maneuverAssessment.risks.length > 0 ? (
+                        <div className="space-y-1 mb-2">
+                          {maneuverAssessment.risks.map((risk, i) => (
+                            <p key={i} className="text-xs text-orange-400">{risk}</p>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-green-400 mb-2">No significant risks identified</p>
+                      )}
+                      {maneuverAssessment.recommendations.slice(0, 2).map((rec, i) => (
+                        <p key={i} className="text-xs text-solar-muted">{rec}</p>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Radiation Belt Risk for MEO satellites */}
+                  {selectedSatellite.orbit_type === 'MEO' && kp !== null && particleFlux && (
+                    <div className="mb-4 p-3 bg-[#0a0f1a] rounded-lg border border-solar-border">
+                      {(() => {
+                        const beltRisk = assessRadiationBeltRisk(
+                          selectedSatellite.altitude_km,
+                          particleFlux.proton.latest?.flux_10mev ?? 0,
+                          particleFlux.electron.latest?.flux_2mev ?? 0,
+                          kp
+                        );
+                        return (
+                          <>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-xs font-semibold text-solar-muted uppercase">Radiation Belt Risk</span>
+                              <span
+                                className="px-2 py-0.5 text-xs font-bold rounded uppercase"
+                                style={{
+                                  backgroundColor: beltRisk.color + '20',
+                                  color: beltRisk.color,
+                                }}
+                              >
+                                {beltRisk.level}
+                              </span>
+                            </div>
+                            {beltRisk.recommendations.map((rec, i) => (
+                              <p key={i} className="text-xs text-solar-muted">{rec}</p>
+                            ))}
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
 
                   <button
                     onClick={() => setShowAnomalyLogger(true)}
@@ -300,6 +406,9 @@ export default function SatelliteDashboardPage() {
                   <p className="text-sm text-solar-muted text-center py-4">No anomalies logged</p>
                 )}
               </div>
+
+              {/* Launch Window Assessment */}
+              <LaunchAssessmentWidget targetAltitude={550} />
 
               {/* Drag Risk Reference */}
               <div className="bg-[#0d1424] border border-solar-border rounded-lg p-4">

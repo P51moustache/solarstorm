@@ -22,24 +22,17 @@ const PLANS: Array<{
   {
     tier: 'plus',
     name: 'Plus',
-    price: '$5',
+    price: '$9.99',
     period: '/month',
-    description: 'Advanced features for aurora enthusiasts',
+    description: 'Advanced features for aurora enthusiasts and ham radio operators',
     featured: true,
   },
   {
     tier: 'pro',
     name: 'Pro',
-    price: '$15',
+    price: '$49',
     period: '/month',
-    description: 'Professional tools for satellite operators',
-  },
-  {
-    tier: 'enterprise',
-    name: 'Enterprise',
-    price: 'Custom',
-    period: '',
-    description: 'Custom solutions for organizations',
+    description: 'Professional tools for satellite operators and GNSS professionals',
   },
 ];
 
@@ -78,8 +71,8 @@ export default function PricingPage() {
       </section>
 
       {/* Pricing cards */}
-      <section className="px-6 pb-20 max-w-7xl mx-auto">
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <section className="px-6 pb-20 max-w-5xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-6">
           {PLANS.map((plan) => (
             <div
               key={plan.tier}
@@ -110,7 +103,7 @@ export default function PricingPage() {
                     : 'bg-solar-border text-solar-text hover:bg-opacity-80'
                 }`}
               >
-                {plan.tier === 'enterprise' ? 'Contact Us' : 'Get Started'}
+                Get Started
               </Link>
 
               <ul className="mt-6 space-y-3">
@@ -136,17 +129,21 @@ function getFeatureList(tier: SubscriptionTier): string[] {
   if (tierFeatures.locations > 0) {
     features.push(`${tierFeatures.locations === Infinity ? 'Unlimited' : tierFeatures.locations} saved location${tierFeatures.locations > 1 ? 's' : ''}`);
   }
-  if (tierFeatures.historicalData) features.push('30-day historical data');
+  if (tierFeatures.historyDays > 7) {
+    features.push(`${tierFeatures.historyDays === 730 ? '2-year' : `${tierFeatures.historyDays}-day`} historical data`);
+  }
   if (tierFeatures.globe3d) features.push('3D Aurora Globe');
   if (tierFeatures.alertConfig) features.push('Custom alert thresholds');
   if (tierFeatures.advancedCharts) features.push('Advanced charts');
   if (tierFeatures.photoPlanning) features.push('Photo planning tools');
   if (tierFeatures.hfPropagation) features.push('HF propagation maps');
+  if (tierFeatures.satelliteRisk) features.push('Satellite risk analysis');
   if (tierFeatures.satellites > 0) {
-    features.push(`${tierFeatures.satellites === Infinity ? 'Unlimited' : tierFeatures.satellites} satellite${tierFeatures.satellites > 1 ? 's' : ''}`);
+    features.push(`${tierFeatures.satellites} satellite fleet tracking`);
   }
-  if (tierFeatures.gnssMonitoring) features.push('GNSS monitoring');
-  if (tierFeatures.apiAccess) features.push('API access');
+  if (tierFeatures.gnssMonitoring) features.push('GNSS monitoring & TEC data');
+  if (tierFeatures.dataExport) features.push('Data export (CSV, JSON, RINEX)');
+  if (tierFeatures.apiAccess) features.push('API access (1000 req/day)');
 
   return features;
 }

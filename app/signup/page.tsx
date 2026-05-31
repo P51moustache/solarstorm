@@ -2,25 +2,37 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { Zap, Mail, Lock, ArrowLeft, Check } from 'lucide-react';
 import { useAuthStore } from '@/lib/state/useAuthStore';
+import { validatePassword } from '@/lib/util/validation';
+
+// Check if dev bypass is enabled (don't redirect in this case)
+const DEV_BYPASS_AUTH = process.env.NODE_ENV === 'development' &&
+  process.env.NEXT_PUBLIC_DEV_BYPASS_AUTH === 'true';
 
 export default function SignupPage() {
   const router = useRouter();
   const { signUpWithEmail, isLoading, error, clearError, isAuthenticated, initialize } = useAuthStore();
+  const hasRedirected = useRef(false);
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [signupComplete, setSignupComplete] = useState(false);
 
+  const passwordValidation = useMemo(() => validatePassword(password), [password]);
+
   useEffect(() => {
     initialize();
   }, [initialize]);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    // Don't redirect in dev bypass mode - let developers test the signup UI
+    if (DEV_BYPASS_AUTH) return;
+
+    if (isAuthenticated && !hasRedirected.current) {
+      hasRedirected.current = true;
       router.push('/dashboard');
     }
   }, [isAuthenticated, router]);
@@ -29,7 +41,7 @@ export default function SignupPage() {
     e.preventDefault();
     clearError();
 
-    if (password !== confirmPassword) {
+    if (password !== confirmPassword || !passwordValidation.isValid) {
       return;
     }
 
@@ -132,6 +144,41 @@ export default function SignupPage() {
                   placeholder="At least 8 characters"
                 />
               </div>
+              {/* Password strength indicator */}
+              {password && (
+                <div className="mt-2">
+                  <div className="flex gap-1 mb-1">
+                    {['weak', 'fair', 'good', 'strong'].map((level, i) => (
+                      <div
+                        key={level}
+                        className={`h-1 flex-1 rounded ${
+                          i < ['weak', 'fair', 'good', 'strong'].indexOf(passwordValidation.strength) + 1
+                            ? passwordValidation.strength === 'weak' ? 'bg-red-500'
+                            : passwordValidation.strength === 'fair' ? 'bg-orange-500'
+                            : passwordValidation.strength === 'good' ? 'bg-yellow-500'
+                            : 'bg-green-500'
+                            : 'bg-solar-border'
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <p className={`text-xs ${
+                    passwordValidation.strength === 'weak' ? 'text-red-400'
+                    : passwordValidation.strength === 'fair' ? 'text-orange-400'
+                    : passwordValidation.strength === 'good' ? 'text-yellow-400'
+                    : 'text-green-400'
+                  }`}>
+                    Password strength: {passwordValidation.strength}
+                  </p>
+                  {passwordValidation.errors.length > 0 && (
+                    <ul className="text-xs text-solar-muted mt-1 space-y-0.5">
+                      {passwordValidation.errors.map((err) => (
+                        <li key={err} className="text-red-400">• {err}</li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              )}
             </div>
 
             <div>
@@ -157,7 +204,7 @@ export default function SignupPage() {
 
             <button
               type="submit"
-              disabled={isLoading || password !== confirmPassword}
+              disabled={isLoading || password !== confirmPassword || !passwordValidation.isValid}
               className="w-full bg-solar-emerald text-solar-bg py-3 rounded-xl font-semibold hover:bg-opacity-90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isLoading ? 'Creating account...' : 'Create Account'}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { X } from 'lucide-react';
 
 interface AddRegionModalProps {
@@ -15,6 +15,38 @@ interface AddRegionModalProps {
   }) => void;
 }
 
+// Input validation
+function validateLabel(label: string): string | null {
+  if (!label.trim()) return 'Label is required';
+  if (label.length > 100) return 'Label must be 100 characters or less';
+  // Only allow alphanumeric, spaces, hyphens, and basic punctuation
+  if (!/^[a-zA-Z0-9\s\-.,()]+$/.test(label)) return 'Label contains invalid characters';
+  return null;
+}
+
+function validateLatitude(lat: string): string | null {
+  if (!lat) return 'Latitude is required';
+  const num = parseFloat(lat);
+  if (isNaN(num)) return 'Invalid latitude';
+  if (num < -90 || num > 90) return 'Latitude must be between -90 and 90';
+  return null;
+}
+
+function validateLongitude(lng: string): string | null {
+  if (!lng) return 'Longitude is required';
+  const num = parseFloat(lng);
+  if (isNaN(num)) return 'Invalid longitude';
+  if (num < -180 || num > 180) return 'Longitude must be between -180 and 180';
+  return null;
+}
+
+function validateRadius(radius: string): string | null {
+  const num = parseFloat(radius);
+  if (isNaN(num) || num <= 0) return 'Radius must be a positive number';
+  if (num > 10000) return 'Radius must be 10,000 km or less';
+  return null;
+}
+
 export function AddRegionModal({ visible, onClose, onAdd }: AddRegionModalProps) {
   const [label, setLabel] = useState('');
   const [lat, setLat] = useState('');
@@ -22,11 +54,21 @@ export function AddRegionModal({ visible, onClose, onAdd }: AddRegionModalProps)
   const [radius, setRadius] = useState('500');
   const [isPrimary, setIsPrimary] = useState(false);
 
+  const validation = useMemo(() => ({
+    label: label ? validateLabel(label) : null,
+    lat: lat ? validateLatitude(lat) : null,
+    lng: lng ? validateLongitude(lng) : null,
+    radius: radius ? validateRadius(radius) : null,
+  }), [label, lat, lng, radius]);
+
+  const isValid = label && lat && lng &&
+    !validation.label && !validation.lat && !validation.lng && !validation.radius;
+
   const handleAdd = () => {
-    if (!label || !lat || !lng) return;
+    if (!isValid) return;
 
     onAdd({
-      label,
+      label: label.trim(),
       center_lat: parseFloat(lat),
       center_lng: parseFloat(lng),
       radius_km: parseFloat(radius) || 500,
@@ -42,8 +84,6 @@ export function AddRegionModal({ visible, onClose, onAdd }: AddRegionModalProps)
   };
 
   if (!visible) return null;
-
-  const isValid = label && lat && lng;
 
   return (
     <div className="fixed inset-0 bg-black/70 flex items-end justify-center z-50">
@@ -65,8 +105,14 @@ export function AddRegionModal({ visible, onClose, onAdd }: AddRegionModalProps)
               value={label}
               onChange={(e) => setLabel(e.target.value)}
               placeholder="e.g., Denver Metro"
-              className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
+              maxLength={100}
+              className={`w-full bg-solar-card border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald ${
+                validation.label ? 'border-red-500' : 'border-solar-border'
+              }`}
             />
+            {validation.label && (
+              <p className="text-xs text-red-400 mt-1">{validation.label}</p>
+            )}
           </div>
 
           <div className="flex gap-3">
@@ -77,11 +123,18 @@ export function AddRegionModal({ visible, onClose, onAdd }: AddRegionModalProps)
               <input
                 type="number"
                 step="any"
+                min="-90"
+                max="90"
                 value={lat}
                 onChange={(e) => setLat(e.target.value)}
                 placeholder="39.7392"
-                className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
+                className={`w-full bg-solar-card border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald ${
+                  validation.lat ? 'border-red-500' : 'border-solar-border'
+                }`}
               />
+              {validation.lat && (
+                <p className="text-xs text-red-400 mt-1">{validation.lat}</p>
+              )}
             </div>
             <div className="flex-1">
               <label className="block text-sm font-medium text-solar-text mb-2">
@@ -90,11 +143,18 @@ export function AddRegionModal({ visible, onClose, onAdd }: AddRegionModalProps)
               <input
                 type="number"
                 step="any"
+                min="-180"
+                max="180"
                 value={lng}
                 onChange={(e) => setLng(e.target.value)}
                 placeholder="-104.9903"
-                className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
+                className={`w-full bg-solar-card border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald ${
+                  validation.lng ? 'border-red-500' : 'border-solar-border'
+                }`}
               />
+              {validation.lng && (
+                <p className="text-xs text-red-400 mt-1">{validation.lng}</p>
+              )}
             </div>
           </div>
 
@@ -104,14 +164,22 @@ export function AddRegionModal({ visible, onClose, onAdd }: AddRegionModalProps)
             </label>
             <input
               type="number"
+              min="1"
+              max="10000"
               value={radius}
               onChange={(e) => setRadius(e.target.value)}
               placeholder="500"
-              className="w-full bg-solar-card border border-solar-border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald"
+              className={`w-full bg-solar-card border rounded-lg px-3 py-2.5 text-solar-text placeholder:text-solar-muted focus:outline-none focus:border-solar-emerald ${
+                validation.radius ? 'border-red-500' : 'border-solar-border'
+              }`}
             />
-            <p className="text-xs text-solar-muted mt-1">
-              Area to monitor for localized TEC and scintillation
-            </p>
+            {validation.radius ? (
+              <p className="text-xs text-red-400 mt-1">{validation.radius}</p>
+            ) : (
+              <p className="text-xs text-solar-muted mt-1">
+                Area to monitor for localized TEC and scintillation
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-between">

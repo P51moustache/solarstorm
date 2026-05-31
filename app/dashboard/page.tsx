@@ -3,14 +3,16 @@
 import { useEffect, useState } from 'react';
 import { Activity, Wind, Gauge, Zap, AlertTriangle, TrendingUp, TrendingDown, Minus } from 'lucide-react';
 import { AppLayout, TopBar } from '@/components/layout';
-import { getKpNow, getKpHistory, getSolarWindRecent, getAlerts } from '@/lib/api/swpc';
+import { getKpNow, getKpHistory, getSolarWindRecent, getAlerts, getKpForecast, type KpForecastData } from '@/lib/api/swpc';
 import { getSfiTrend } from '@/lib/api/solarFlux';
 import { getCmeCountdown } from '@/lib/api/cme';
-import { AuroraHeatmap, KpTrendLine } from '@/components/charts';
+import { AuroraHeatmap, KpTrendLine, KpForecastChart } from '@/components/charts';
+import { FeatureGate, PhotoPlanningWidget } from '@/components/dashboard';
 import { COLORS } from '@/lib/util/colors';
 import { type SwpcAlert, getAlertLevel } from '@/lib/api/parsers/alerts';
 import type { SfiTrend } from '@/lib/api/parsers/solarFlux';
 import type { CmeCountdownData } from '@/lib/api/parsers/cme';
+import { classifyGeomagneticStorm } from '@/lib/services/stormCorrelation';
 
 interface SolarData {
   kp: number | null;
@@ -23,6 +25,7 @@ interface SolarData {
   alerts: SwpcAlert[];
   sfiTrend: SfiTrend | null;
   cmeData: CmeCountdownData | null;
+  kpForecast: KpForecastData | null;
 }
 
 function StatusIndicator({ status }: { status: 'nominal' | 'elevated' | 'warning' | 'critical' }) {
@@ -86,6 +89,7 @@ function formatRelativeTime(dateStr: string): string {
   const diffHours = Math.floor(diffMs / 3600000);
   const diffDays = Math.floor(diffMs / 86400000);
 
+  if (diffMins < 0) return 'Just now';
   if (diffMins < 60) return `${diffMins}m ago`;
   if (diffHours < 24) return `${diffHours}h ago`;
   if (diffDays === 1) return 'Yesterday';
@@ -180,6 +184,19 @@ function KpGauge({ kp }: { kp: number | null }) {
     return 'nominal';
   };
 
+  const gScale = classifyGeomagneticStorm(value);
+  const gScaleColor = gScale === 'G5' ? 'bg-red-600 text-white' :
+                      gScale === 'G4' ? 'bg-red-500 text-white' :
+                      gScale === 'G3' ? 'bg-orange-500 text-white' :
+                      gScale === 'G2' ? 'bg-yellow-500 text-black' :
+                      gScale === 'G1' ? 'bg-yellow-400 text-black' :
+                      'bg-green-500/20 text-green-400';
+  const gScaleLabel = gScale === 'G0' ? 'No Storm' :
+                      gScale === 'G1' ? 'Minor Storm' :
+                      gScale === 'G2' ? 'Moderate Storm' :
+                      gScale === 'G3' ? 'Strong Storm' :
+                      gScale === 'G4' ? 'Severe Storm' : 'Extreme Storm';
+
   return (
     <div className="bg-[#0d1424] border border-solar-border rounded-lg p-6">
       <div className="flex items-center justify-between mb-4">
@@ -187,7 +204,13 @@ function KpGauge({ kp }: { kp: number | null }) {
           <Activity className="w-4 h-4" />
           Planetary Kp Index
         </h3>
-        <StatusIndicator status={getStatus(value)} />
+        <div className="flex items-center gap-3">
+          {/* G-Scale Badge */}
+          <div className={`px-2.5 py-1 rounded-lg text-xs font-bold ${gScaleColor}`}>
+            {gScale}
+          </div>
+          <StatusIndicator status={getStatus(value)} />
+        </div>
       </div>
 
       <div className="flex items-center gap-6">
@@ -212,14 +235,20 @@ function KpGauge({ kp }: { kp: number | null }) {
               strokeLinecap="round"
             />
           </svg>
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center flex-col">
             <span className="text-4xl font-bold font-mono" style={{ color: getColor(value) }}>
               {kp?.toFixed(1) ?? '--'}
             </span>
           </div>
         </div>
 
-        <div className="flex-1">
+        <div className="flex-1 space-y-3">
+          {/* G-Scale status text */}
+          <div className="text-sm">
+            <span className="text-solar-muted">Storm Level: </span>
+            <span className="font-medium text-solar-text">{gScaleLabel}</span>
+          </div>
+
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="text-center p-2 bg-[#0a0f1a] rounded">
               <div className="text-green-400 font-semibold">0-3</div>
@@ -299,19 +328,21 @@ export default function DashboardPage() {
     alerts: [],
     sfiTrend: null,
     cmeData: null,
+    kpForecast: null,
   });
   const [isLoading, setIsLoading] = useState(true);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
   const fetchAllData = async () => {
     try {
-      const [kpData, solarWind, history, alerts, sfiTrend, cmeData] = await Promise.all([
+      const [kpData, solarWind, history, alerts, sfiTrend, cmeData, kpForecast] = await Promise.all([
         getKpNow(),
         getSolarWindRecent(),
         getKpHistory(),
         getAlerts(),
         getSfiTrend(),
         getCmeCountdown(),
+        getKpForecast(),
       ]);
 
       // Get latest non-null solar wind values (mag and plasma may have different timestamps)
@@ -341,6 +372,7 @@ export default function DashboardPage() {
         alerts,
         sfiTrend,
         cmeData,
+        kpForecast,
       });
       setLastUpdated(new Date().toLocaleTimeString());
     } catch (error) {
@@ -389,7 +421,7 @@ export default function DashboardPage() {
         ) : (
           <div className="space-y-6">
             {/* Top metrics row */}
-            <div className="grid grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               <DataCard
                 title="Solar Wind Speed"
                 value={data.speed != null ? Math.round(data.speed) : null}
@@ -428,32 +460,39 @@ export default function DashboardPage() {
             </div>
 
             {/* Main content grid */}
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
               {/* Left column - Kp and chart */}
-              <div className="col-span-2 space-y-6">
+              <div className="xl:col-span-2 space-y-6">
                 <KpGauge kp={data.kp} />
 
                 {data.kpHistory.length > 0 && (
-                  <div className="bg-[#0d1424] border border-solar-border rounded-lg p-4">
-                    <h3 className="text-sm font-semibold text-solar-text mb-4">
-                      Kp Index History (24h)
-                    </h3>
-                    <KpTrendLine data={data.kpHistory} width={700} height={200} />
+                  <div className="w-full overflow-hidden">
+                    <KpTrendLine data={data.kpHistory} />
                   </div>
                 )}
 
-                <div className="bg-[#0d1424] border border-solar-border rounded-lg p-4">
-                  <h3 className="text-sm font-semibold text-solar-text mb-4">
-                    Aurora Probability Map
-                  </h3>
-                  <AuroraHeatmap width={700} height={400} />
+                <div className="w-full" style={{ minHeight: 280 }}>
+                  <AuroraHeatmap />
                 </div>
               </div>
 
               {/* Right column - Alerts and status */}
               <div className="space-y-6">
                 <CmePanel data={data.cmeData} />
+
+                {/* 3-Day Kp Forecast */}
+                {data.kpForecast && (
+                  <div className="w-full">
+                    <KpForecastChart data={data.kpForecast} />
+                  </div>
+                )}
+
                 <AlertsPanel alerts={data.alerts} />
+
+                {/* Photo Planning - Plus+ feature */}
+                <FeatureGate feature="photoPlanning">
+                  <PhotoPlanningWidget />
+                </FeatureGate>
 
                 {/* Quick status table */}
                 <div className="bg-[#0d1424] border border-solar-border rounded-lg p-4">

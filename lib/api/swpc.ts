@@ -2,6 +2,7 @@ import { dayjs } from '../util/time';
 import { fetchJson } from './fetchJson';
 import { parseAlertsData, type SwpcAlert } from './parsers/alerts';
 import { parseKpData, parseKpHistory } from './parsers/kp';
+import { parseKpForecast, type KpForecastData } from './parsers/kpForecast';
 import { parseMagData } from './parsers/mag';
 import { generateTestOvationData, parseOvationData, type OvationPayload } from './parsers/ovation';
 import { parsePlasmaData } from './parsers/plasma';
@@ -13,6 +14,7 @@ const ENDPOINTS = {
   MAG_2HOUR: 'https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json',
   PLASMA_2HOUR: 'https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json',
   ALERTS: 'https://services.swpc.noaa.gov/products/alerts.json',
+  KP_FORECAST_3DAY: 'https://services.swpc.noaa.gov/text/3-day-geomag-forecast.txt',
 };
 
 // Cache keys and TTLs (in minutes)
@@ -21,6 +23,7 @@ const CACHE = {
   SW: { key: 'sw:recent', ttl: 5 },
   OVATION: { key: 'ovation:latest', ttl: 10 },
   ALERTS: { key: 'alerts:latest', ttl: 15 },
+  KP_FORECAST: { key: 'kp:forecast', ttl: 60 }, // Updated every few hours
 };
 
 interface CachedData<T> {
@@ -256,6 +259,48 @@ export async function getAlerts(): Promise<SwpcAlert[]> {
   }
 }
 
+export async function getKpForecast(): Promise<KpForecastData | null> {
+  if (isDev) console.log('[SWPC] Fetching Kp forecast...');
+
+  // Try cache first
+  const cached = getCachedData<KpForecastData>(
+    CACHE.KP_FORECAST.key,
+    CACHE.KP_FORECAST.ttl
+  );
+  if (cached) {
+    if (isDev) console.log('[SWPC] Using cached Kp forecast data');
+    return cached;
+  }
+
+  try {
+    // Fetch as text (not JSON)
+    if (isDev) console.log('[SWPC] Fetching fresh Kp forecast from:', ENDPOINTS.KP_FORECAST_3DAY);
+    const response = await fetch(ENDPOINTS.KP_FORECAST_3DAY);
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    const text = await response.text();
+    if (isDev) console.log('[SWPC] Raw forecast text length:', text.length);
+
+    const parsed = parseKpForecast(text);
+    if (!parsed) {
+      throw new Error('Failed to parse Kp forecast data');
+    }
+
+    if (isDev) console.log('[SWPC] Parsed Kp forecast, points:', parsed.hourlyForecast.length);
+
+    // Cache the result
+    setCachedData(CACHE.KP_FORECAST.key, parsed);
+    return parsed;
+  } catch (error) {
+    console.error('Failed to fetch Kp forecast:', error);
+    return null;
+  }
+}
+
+// Re-export types for convenience
+export type { KpForecastData };
+
 // Clear all caches
 export function clearCache(): void {
   if (!isClient) return;
@@ -265,6 +310,7 @@ export function clearCache(): void {
     localStorage.removeItem(CACHE.SW.key);
     localStorage.removeItem(CACHE.OVATION.key);
     localStorage.removeItem(CACHE.ALERTS.key);
+    localStorage.removeItem(CACHE.KP_FORECAST.key);
     console.log('Cache cleared successfully');
   } catch (error) {
     console.error('Failed to clear cache:', error);

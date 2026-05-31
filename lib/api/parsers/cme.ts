@@ -47,6 +47,38 @@ export function parseCmeData(data: unknown): CmeEvent[] {
     .filter((cme) => cme.id && cme.startTime);
 }
 
+// Parser for the server-side proxy response format
+export function parseCmeDataFromProxy(data: unknown): CmeEvent[] {
+  if (!data || typeof data !== 'object' || !('cmes' in data)) return [];
+
+  const cmes = (data as { cmes: unknown[] }).cmes;
+  if (!Array.isArray(cmes)) return [];
+
+  return cmes
+    .filter((item): item is Record<string, unknown> =>
+      item !== null && typeof item === 'object'
+    )
+    .map((item) => {
+      const analyses = Array.isArray(item.analyses) ? item.analyses : [];
+      const earthAnalysis = analyses.find(
+        (a: Record<string, unknown>) => a.isMostAccurate
+      ) as Record<string, unknown> | undefined;
+
+      // For now, proxy doesn't include arrival time predictions
+      // (would need to call DONKI CMEAnalysis endpoint separately)
+      return {
+        id: String(item.id || ''),
+        startTime: String(item.startTime || ''),
+        arrivalTime: null, // Would need additional API call
+        speed: (earthAnalysis?.speed as number) || 0,
+        halfAngle: (earthAnalysis?.halfAngle as number) || 0,
+        isEarthDirected: false, // Would need additional analysis
+        note: '',
+      };
+    })
+    .filter((cme) => cme.id && cme.startTime);
+}
+
 export function getNextCmeArrival(cmes: CmeEvent[]): CmeCountdownData {
   const now = new Date();
 
