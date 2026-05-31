@@ -1,10 +1,13 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { NavigationContainer, DefaultTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as Notifications from 'expo-notifications';
 import { useAuth } from './src/state/useAuth';
 import { theme } from './src/lib/theme';
+import { configureNotificationHandler, registerForPushNotifications } from './src/lib/push';
+import { navigationRef } from './src/navigation/ref';
 import type { RootStackParamList } from './src/navigation/types';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { DashboardScreen } from './src/screens/DashboardScreen';
@@ -12,6 +15,9 @@ import { RulesScreen } from './src/screens/RulesScreen';
 import { RuleEditScreen } from './src/screens/RuleEditScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
+
+// Foreground notification behaviour, set once at module load.
+configureNotificationHandler();
 
 const navTheme = {
   ...DefaultTheme,
@@ -34,10 +40,33 @@ const screenOptions = {
 
 export default function App() {
   const { session, initializing, initialize } = useAuth();
+  const userId = session?.user.id;
+  const registeredFor = useRef<string | null>(null);
 
   useEffect(() => {
     initialize();
   }, [initialize]);
+
+  // Register this device for push once we have a signed-in user.
+  useEffect(() => {
+    if (userId && registeredFor.current !== userId) {
+      registeredFor.current = userId;
+      registerForPushNotifications(userId);
+    }
+    if (!userId) {
+      registeredFor.current = null;
+    }
+  }, [userId]);
+
+  // Tapping a notification opens the alerts screen.
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener(() => {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('Rules');
+      }
+    });
+    return () => sub.remove();
+  }, []);
 
   if (initializing) {
     return (
@@ -48,7 +77,7 @@ export default function App() {
   }
 
   return (
-    <NavigationContainer theme={navTheme}>
+    <NavigationContainer ref={navigationRef} theme={navTheme}>
       <StatusBar style="light" />
       {session ? (
         <Stack.Navigator screenOptions={screenOptions}>
