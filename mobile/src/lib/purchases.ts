@@ -49,23 +49,26 @@ function entitlementActive(info: CustomerInfo): boolean {
   return Boolean(info.entitlements.active[ENTITLEMENT_ID]);
 }
 
-// The single monthly package from the current offering (with its 7-day trial).
-export async function getMonthlyPackage(): Promise<PurchasesPackage | null> {
-  if (!configured) return null;
+export interface OfferingPackages {
+  monthly: PurchasesPackage | null;
+  annual: PurchasesPackage | null;
+}
+
+// The monthly + annual packages from the current offering (with the trial).
+export async function getOfferingPackages(): Promise<OfferingPackages> {
+  if (!configured) return { monthly: null, annual: null };
   try {
     const offerings = await Purchases.getOfferings();
     const current = offerings.current;
-    if (!current) return null;
-    return current.monthly ?? current.availablePackages[0] ?? null;
+    if (!current) return { monthly: null, annual: null };
+    return { monthly: current.monthly ?? null, annual: current.annual ?? null };
   } catch (err) {
     console.warn('[purchases] getOfferings failed:', err);
-    return null;
+    return { monthly: null, annual: null };
   }
 }
 
-export async function purchaseMonthly(): Promise<boolean> {
-  const pkg = await getMonthlyPackage();
-  if (!pkg) throw new Error('No subscription is available right now.');
+export async function purchasePackage(pkg: PurchasesPackage): Promise<boolean> {
   const { customerInfo } = await Purchases.purchasePackage(pkg);
   return entitlementActive(customerInfo);
 }

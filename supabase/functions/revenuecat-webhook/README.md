@@ -32,8 +32,9 @@ Edge runtime.
 
 ## Product / offer setup (App Store Connect + RevenueCat)
 
-- One auto-renewing subscription, **$6.99/month**, with a **7-day free trial**
-  (introductory offer) in App Store Connect.
-- In RevenueCat: add the product to the **current Offering** as the `monthly`
-  package, and create an entitlement with identifier **`active`** (matches
-  `ENTITLEMENT_ID` in `mobile/src/lib/purchases.ts`).
+- Two auto-renewing products in one subscription group: **$4.99/month** and an
+  **annual** plan (suggested ~$39.99/year), each with a **7-day free trial**
+  introductory offer, in App Store Connect.
+- In RevenueCat: add them to the **current Offering** as the `monthly` and
+  `annual` packages, and create an entitlement with identifier **`active`**
+  (matches `ENTITLEMENT_ID` in `mobile/src/lib/purchases.ts`).
