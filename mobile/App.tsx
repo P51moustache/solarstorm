@@ -7,17 +7,20 @@ import * as Notifications from 'expo-notifications';
 import { useAuth } from './src/state/useAuth';
 import { theme } from './src/lib/theme';
 import { configureNotificationHandler, registerForPushNotifications } from './src/lib/push';
+import { configurePurchases, deidentifyUser, identifyUser } from './src/lib/purchases';
 import { navigationRef } from './src/navigation/ref';
 import type { RootStackParamList } from './src/navigation/types';
 import { SignInScreen } from './src/screens/SignInScreen';
 import { DashboardScreen } from './src/screens/DashboardScreen';
 import { RulesScreen } from './src/screens/RulesScreen';
 import { RuleEditScreen } from './src/screens/RuleEditScreen';
+import { PaywallScreen } from './src/screens/PaywallScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-// Foreground notification behaviour, set once at module load.
+// One-time setup at module load.
 configureNotificationHandler();
+configurePurchases();
 
 const navTheme = {
   ...DefaultTheme,
@@ -47,14 +50,16 @@ export default function App() {
     initialize();
   }, [initialize]);
 
-  // Register this device for push once we have a signed-in user.
+  // Register this device for push and tie RevenueCat to the user once signed in.
   useEffect(() => {
     if (userId && registeredFor.current !== userId) {
       registeredFor.current = userId;
       registerForPushNotifications(userId);
+      identifyUser(userId);
     }
-    if (!userId) {
+    if (!userId && registeredFor.current !== null) {
       registeredFor.current = null;
+      deidentifyUser();
     }
   }, [userId]);
 
@@ -84,6 +89,11 @@ export default function App() {
           <Stack.Screen name="Dashboard" component={DashboardScreen} options={{ headerShown: false }} />
           <Stack.Screen name="Rules" component={RulesScreen} options={{ title: 'My alerts' }} />
           <Stack.Screen name="RuleEdit" component={RuleEditScreen} options={{ title: 'Alert' }} />
+          <Stack.Screen
+            name="Paywall"
+            component={PaywallScreen}
+            options={{ title: 'Premium', presentation: 'modal' }}
+          />
         </Stack.Navigator>
       ) : (
         <Stack.Navigator screenOptions={{ headerShown: false }}>

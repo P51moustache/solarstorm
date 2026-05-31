@@ -11,6 +11,8 @@ interface AuthState {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  setTier: (tier: string) => void;
+  refreshTier: () => Promise<void>;
   clearError: () => void;
 }
 
@@ -64,6 +66,16 @@ export const useAuth = create<AuthState>((set, get) => ({
   signOut: async () => {
     await supabase.auth.signOut();
     set({ session: null, tier: 'free' });
+  },
+
+  // Optimistic local update after a successful purchase; the RevenueCat
+  // webhook makes it durable in the profiles table.
+  setTier: (tier) => set({ tier }),
+
+  refreshTier: async () => {
+    const { session } = get();
+    if (!session) return;
+    set({ tier: await fetchTier(session.user.id) });
   },
 
   clearError: () => set({ error: null }),

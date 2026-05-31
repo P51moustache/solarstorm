@@ -167,7 +167,7 @@ closed — the single biggest functional gap today.
 | 1 | **Backend engine** (frontend-agnostic) | ✅ Implemented: migration `20260531120000_event_engine.sql` (§3.1) + `supabase/functions/poll-and-notify` (§3.2, schedule via its README). Defaults used: 2 free preset rules, custom rules/trends/export paid. |
 | 2 | **Expo app scaffold** | ✅ Implemented in `mobile/`: Expo + React Navigation, Supabase auth (AsyncStorage session), dashboard (reads poller-filled history), alert-rule CRUD screens. Kept self-contained (not yet a shared `lib/` package — see mobile/README). |
 | 3 | **Push wiring** | ✅ Implemented in `mobile/`: `expo-notifications` permission + Expo push-token registration into `device_tokens`, foreground handler, and notification-tap navigation. Requires an EAS project + dev build to issue tokens (see mobile/README). |
-| 4 | **Subscription** | RevenueCat + StoreKit, paywall, entitlement webhook, server-side gating. |
+| 4 | **Subscription** | ✅ Implemented: `react-native-purchases` + `mobile/src/lib/purchases.ts`, `PaywallScreen`, paywall entry points, and `supabase/functions/revenuecat-webhook` syncing `profiles.tier`. Decisions: monthly only, $6.99/mo, 7-day free trial, entitlement id `active`. Server-side gating already in the poller. |
 | 5 | **Trends + export** | Charts from history tables; CSV/JSON export for subscribers. |
 | 6 | **App Store submission** | See §7. |
 

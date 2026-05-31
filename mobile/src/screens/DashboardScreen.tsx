@@ -98,9 +98,11 @@ export function DashboardScreen({ navigation }: Props) {
       </TouchableOpacity>
 
       {tier === 'free' ? (
-        <Text style={styles.tierNote}>
-          Free plan: preset alerts only. Subscribe to create custom alerts, see full trends, and export data.
-        </Text>
+        <TouchableOpacity style={styles.subscribe} onPress={() => navigation.navigate('Paywall')}>
+          <Text style={styles.subscribeText}>
+            Free plan: preset alerts only. Tap to unlock custom alerts, full trends, and export →
+          </Text>
+        </TouchableOpacity>
       ) : null}
 
       <Text style={[styles.title, { marginTop: 24 }]}>Recent alerts</Text>
@@ -133,7 +135,15 @@ const styles = StyleSheet.create({
   badge: { marginTop: 4, fontWeight: '600' },
   cta: { backgroundColor: theme.emerald, borderRadius: 12, padding: 16, alignItems: 'center', marginTop: 4 },
   ctaText: { color: theme.bg, fontWeight: '700', fontSize: 16 },
-  tierNote: { color: theme.muted, fontSize: 13, marginTop: 12, lineHeight: 18 },
+  subscribe: {
+    marginTop: 12,
+    backgroundColor: theme.card,
+    borderColor: theme.emerald,
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: 14,
+  },
+  subscribeText: { color: theme.emerald, fontSize: 13, lineHeight: 18, fontWeight: '600' },
   empty: { color: theme.muted, marginTop: 8 },
   logRow: { borderBottomColor: theme.border, borderBottomWidth: 1, paddingVertical: 12 },
   logTitle: { color: theme.text, fontWeight: '600' },

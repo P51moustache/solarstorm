@@ -75,9 +75,12 @@ export function RuleEditScreen({ navigation, route }: Props) {
   return (
     <ScrollView style={styles.container} contentContainerStyle={{ padding: 16 }}>
       {tier === 'free' ? (
-        <Text style={styles.note}>
-          Heads up: on the free plan only preset alerts are delivered. Subscribe to receive custom alerts like this one.
-        </Text>
+        <TouchableOpacity onPress={() => navigation.navigate('Paywall')}>
+          <Text style={styles.note}>
+            Heads up: on the free plan only preset alerts are delivered. Tap here to subscribe and receive custom
+            alerts like this one. →
+          </Text>
+        </TouchableOpacity>
       ) : null}
 
       <Text style={styles.label}>Name</Text>

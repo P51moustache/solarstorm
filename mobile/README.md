@@ -16,9 +16,13 @@ React Native, talking to the same Supabase backend as the event engine.
 - **Push** — on sign-in the app requests notification permission, registers an
   Expo push token into `device_tokens`, and opens "My alerts" when a
   notification is tapped. `poll-and-notify` delivers to these tokens.
+- **Subscription** — RevenueCat/StoreKit via `react-native-purchases`. The
+  paywall (`PaywallScreen`) sells one plan: 7-day free trial, then $6.99/month.
+  `Purchases.logIn(userId)` ties entitlements to the Supabase user; the
+  `revenuecat-webhook` function flips `profiles.tier`.
 
-The free/subscriber paywall is enforced server-side in the poller; the UI just
-nudges free users toward subscribing. The subscription paywall UI is Phase 4.
+The free/subscriber paywall is enforced server-side in the poller; the app's
+paywall drives conversion. See the subscription setup notes below.
 
 ## Run it
 
@@ -47,6 +51,18 @@ eas build --profile development --platform ios
 For delivery to iOS devices, upload an APNs key in the Expo dashboard (or via
 `eas credentials`). Until `expo.extra.eas.projectId` is set, `registerForPushNotifications`
 logs a warning and no-ops — the rest of the app still works.
+
+### Subscription setup (RevenueCat + StoreKit)
+
+1. App Store Connect: create one auto-renewing subscription, **$6.99/month**,
+   with a **7-day free trial** introductory offer.
+2. RevenueCat: add it to the current Offering as the `monthly` package and
+   create an entitlement with id **`active`**.
+3. Set `EXPO_PUBLIC_REVENUECAT_IOS_KEY` in `.env`.
+4. Deploy and configure `supabase/functions/revenuecat-webhook` (see its README).
+
+`react-native-purchases` needs a dev/production build (not Expo Go). Until the
+key is set, the paywall shows a fallback price and purchases are disabled.
 
 ## Notes / follow-ups
 
