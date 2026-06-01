@@ -104,6 +104,18 @@ export const GLOSSARY: Record<string, { title: string; body: string }> = {
     title: 'The auroral oval',
     body: 'Aurora forms in a ring around each magnetic pole. During storms that ring widens toward the equator. If the ring reaches your latitude, the lights can be directly overhead.',
   },
+  scales: {
+    title: 'The NOAA space-weather scales',
+    body: 'NOAA rates three hazards 0–5. R = Radio Blackouts (from solar flares, hits HF comms & GPS). S = Solar Radiation Storms (energetic protons, a risk to satellites, astronauts, and polar flights). G = Geomagnetic Storms (the aurora driver, and a grid/satellite-drag concern).',
+  },
+  flares: {
+    title: 'Solar flare classes',
+    body: 'X-ray flares are graded A, B, C, M, X — each letter is 10× stronger than the last. C-class is minor; M-class can cause brief radio blackouts; X-class is major and can disrupt HF comms, GPS, and satellites on Earth’s dayside.',
+  },
+  radiation: {
+    title: 'Radiation storms (S-scale)',
+    body: 'After big flares/CMEs the Sun floods near-Earth space with high-energy protons. These can degrade satellite electronics and solar panels, raise radiation on polar flights, and force spacecraft into safe mode.',
+  },
   aurora: {
     title: 'Your aurora chance',
     body: 'We combine the storm strength (Kp), the magnetic field direction (Bz), the wind speed, and how far north you are into a single estimate of your odds tonight. Dark, clear skies still matter!',
@@ -147,6 +159,25 @@ export function auroraLikelihood(kp: number | null, bz: number | null): {
   if (score >= 4) return { label: 'Moderate', color: '#F1C40F' };
   if (score >= 2.5) return { label: 'Low', color: '#7FD17F' };
   return { label: 'Minimal', color: '#2ECC71' };
+}
+
+/** Color for a NOAA 0-5 scale (R/S/G). */
+export function noaaScaleColor(scale: number): string {
+  if (scale >= 5) return '#C03A2B';
+  if (scale >= 4) return '#E74C3C';
+  if (scale >= 3) return '#FF6B5B';
+  if (scale >= 2) return '#FF9F43';
+  if (scale >= 1) return '#F1C40F';
+  return '#2ECC71';
+}
+
+/** Color for a solar flare class string like "C1.5", "M2.0", "X1". */
+export function flareColor(cls: string): string {
+  const c = (cls || '').trim().toUpperCase()[0];
+  if (c === 'X') return '#E74C3C';
+  if (c === 'M') return '#FF9F43';
+  if (c === 'C') return '#F1C40F';
+  return '#2ECC71'; // A/B = quiet
 }
 
 export function relativeTime(iso: string | null): string {

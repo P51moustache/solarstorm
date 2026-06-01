@@ -17,6 +17,9 @@ const NOAA = {
   MAG_2HOUR: 'https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json',
   PLASMA_2HOUR: 'https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json',
   FORECAST_3DAY: 'https://services.swpc.noaa.gov/text/3-day-geomag-forecast.txt',
+  SCALES: 'https://services.swpc.noaa.gov/products/noaa-scales.json',
+  XRAY_FLARE: 'https://services.swpc.noaa.gov/json/goes/primary/xray-flares-latest.json',
+  ALERTS: 'https://services.swpc.noaa.gov/products/alerts.json',
 };
 
 export type Range = '1d' | '3d' | '7d';
@@ -273,6 +276,64 @@ export async function getKpSeries(): Promise<KpReading[]> {
   return (data as any[])
     .map((r) => ({ kp: Number(r.Kp), at: String(r.time_tag) }))
     .filter((r) => Number.isFinite(r.kp) && r.at && r.at !== 'undefined');
+}
+
+// ---- Operator-grade activity: NOAA scales, flares, alerts ----
+
+export interface NoaaScale {
+  scale: number; // 0-5
+  text: string; // e.g. "none", "Moderate"
+}
+export interface Scales {
+  R: NoaaScale; // radio blackouts (flares)
+  S: NoaaScale; // solar radiation storm (protons)
+  G: NoaaScale; // geomagnetic storm
+}
+
+export async function getScales(): Promise<Scales | null> {
+  const j = await fetchJson<any>(NOAA.SCALES).catch(() => null);
+  const c = j?.['0'];
+  if (!c) return null;
+  const m = (x: any): NoaaScale => ({ scale: parseInt(x?.Scale ?? '0', 10) || 0, text: x?.Text ?? 'none' });
+  return { R: m(c.R), S: m(c.S), G: m(c.G) };
+}
+
+export interface Flare {
+  currentClass: string;
+  maxClass: string;
+  maxTime: string | null;
+}
+
+export async function getLatestFlare(): Promise<Flare | null> {
+  const j = await fetchJson<any>(NOAA.XRAY_FLARE).catch(() => null);
+  const o = Array.isArray(j) ? j[0] : j;
+  if (!o) return null;
+  return {
+    currentClass: o.current_class ?? '—',
+    maxClass: o.max_class ?? o.current_class ?? '—',
+    maxTime: o.max_time ?? null,
+  };
+}
+
+export interface SpaceAlert {
+  title: string;
+  issued: string | null;
+}
+
+export async function getSpaceAlerts(limit = 8): Promise<SpaceAlert[]> {
+  const j = await fetchJson<any[]>(NOAA.ALERTS).catch(() => null);
+  if (!Array.isArray(j)) return [];
+  const sorted = [...j].sort(
+    (a, b) => Date.parse(b.issue_datetime ?? 0) - Date.parse(a.issue_datetime ?? 0)
+  );
+  return sorted.slice(0, limit).map((a) => {
+    const msg: string = a.message ?? '';
+    const m = msg.match(/\b(ALERT|WARNING|WATCH|SUMMARY)\b:?\s*([^\r\n]+)/i);
+    const title = m
+      ? `${m[1][0].toUpperCase()}${m[1].slice(1).toLowerCase()}: ${m[2].trim()}`
+      : msg.split(/\r?\n/).find((l) => l.trim()) ?? 'Space weather alert';
+    return { title: title.slice(0, 130), issued: a.issue_datetime ?? null };
+  });
 }
 
 export async function getKpHistory(): Promise<KpReading[]> {
