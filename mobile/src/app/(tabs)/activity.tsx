@@ -1,15 +1,18 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearnMore } from '@/components/explainer';
 import { Glass, ScreenTitle } from '@/components/ui-kit';
-import { flareColor, Fonts, noaaScaleColor, Palette, relativeTime } from '@/constants/solar';
+import { flareColor, Fonts, kpScale, noaaScaleColor, Palette, relativeTime } from '@/constants/solar';
 import {
   Flare,
   getLatestFlare,
+  getOutlook,
   getScales,
   getSpaceAlerts,
+  OutlookDay,
   Scales,
   SpaceAlert,
 } from '@/lib/spaceWeather';
@@ -20,18 +23,69 @@ const SCALE_DEFS = [
   { key: 'G', name: 'Geomagnetic', pick: (s: Scales) => s.G },
 ] as const;
 
+interface Status {
+  tone: 'good' | 'mixed' | 'poor';
+  icon: any;
+  title: string;
+  detail: string;
+}
+
+function computeStatus(scales: Scales | null, outlook: OutlookDay[]): Status {
+  const active = scales
+    ? SCALE_DEFS.map((d) => ({ name: d.name, s: d.pick(scales) })).filter((x) => x.s.scale >= 1)
+    : [];
+  if (active.length) {
+    const top = active.reduce((a, b) => (b.s.scale > a.s.scale ? b : a));
+    const tone = top.s.scale >= 3 ? 'poor' : 'mixed';
+    return {
+      tone,
+      icon: 'alert-circle',
+      title: 'Space weather is active now',
+      detail: active
+        .map((x) => `${x.name === 'Radio Blackout' ? 'R' : x.name === 'Radiation' ? 'S' : 'G'}${x.s.scale} ${x.s.text}`)
+        .join(' · '),
+    };
+  }
+  const peak = outlook.reduce<OutlookDay | null>((a, b) => (!a || b.kp > a.kp ? b : a), null);
+  if (peak && peak.kp >= 5) {
+    return {
+      tone: 'mixed',
+      icon: 'calendar',
+      title: 'Heads-up this fortnight',
+      detail: `Elevated activity likely — up to Kp ${peak.kp} around ${peak.label}. Worth watching your systems.`,
+    };
+  }
+  return {
+    tone: 'good',
+    icon: 'shield-checkmark',
+    title: 'All quiet',
+    detail: 'Nothing significant now or expected in the next two weeks.',
+  };
+}
+
+function toneColor(tone: 'good' | 'mixed' | 'poor'): string {
+  return tone === 'good' ? Palette.good : tone === 'mixed' ? Palette.warn : Palette.danger;
+}
+
 export default function ActivityScreen() {
   const [scales, setScales] = useState<Scales | null>(null);
   const [flare, setFlare] = useState<Flare | null>(null);
   const [alerts, setAlerts] = useState<SpaceAlert[]>([]);
+  const [outlook, setOutlook] = useState<OutlookDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const load = useCallback(async () => {
-    const [s, f, a] = await Promise.all([getScales(), getLatestFlare(), getSpaceAlerts()]);
+    const [s, f, a, o] = await Promise.all([
+      getScales(),
+      getLatestFlare(),
+      getSpaceAlerts(),
+      getOutlook(14),
+    ]);
     setScales(s);
     setFlare(f);
     setAlerts(a);
+    setOutlook(o);
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -45,6 +99,8 @@ export default function ActivityScreen() {
     load();
   }, [load]);
 
+  const status = computeStatus(scales, outlook);
+
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <ScrollView
@@ -53,7 +109,7 @@ export default function ActivityScreen() {
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Palette.textDim} />
         }>
-        <ScreenTitle title="Activity" subtitle="Flares, radiation & operational hazards" />
+        <ScreenTitle title="Activity" subtitle="Big events — now and the next two weeks" />
 
         {loading ? (
           <View style={styles.center}>
@@ -61,6 +117,40 @@ export default function ActivityScreen() {
           </View>
         ) : (
           <>
+            {/* Headline status */}
+            <Glass style={{ borderColor: toneColor(status.tone) }}>
+              <View style={styles.statusRow}>
+                <Ionicons name={status.icon} size={28} color={toneColor(status.tone)} />
+                <View style={styles.flex}>
+                  <Text style={[styles.statusTitle, { color: toneColor(status.tone) }]}>{status.title}</Text>
+                  <Text style={styles.statusDetail}>{status.detail}</Text>
+                </View>
+              </View>
+            </Glass>
+
+            {/* 2-week outlook */}
+            {outlook.length > 0 ? (
+              <Glass>
+                <Text style={styles.cardLabel}>Next 2 weeks · predicted Kp</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.outlookScroll}>
+                  {outlook.map((d) => {
+                    const c = kpScale(d.kp);
+                    const hot = d.kp >= 5;
+                    return (
+                      <View key={d.label} style={[styles.day, hot && { borderColor: c.color, borderWidth: 1 }]}>
+                        <Text style={styles.dayLabel}>{d.label}</Text>
+                        <Text style={[styles.dayKp, { color: c.color }]}>{d.kp}</Text>
+                        <View style={[styles.dayBarTrack]}>
+                          <View style={[styles.dayBar, { height: `${(d.kp / 9) * 100}%`, backgroundColor: c.color }]} />
+                        </View>
+                      </View>
+                    );
+                  })}
+                </ScrollView>
+                <Text style={styles.dim}>Tap-free glance: taller/brighter = more active. Kp 5+ = storm.</Text>
+              </Glass>
+            ) : null}
+
             {/* NOAA R/S/G scales */}
             <Glass>
               <View style={styles.cardHead}>
@@ -135,9 +225,19 @@ const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
   content: { padding: 16, gap: 12, paddingTop: 8, paddingBottom: 130 },
   center: { paddingVertical: 60, alignItems: 'center' },
+  flex: { flex: 1 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  statusTitle: { fontSize: 18, fontFamily: Fonts.bold },
+  statusDetail: { color: Palette.textDim, fontSize: 14, fontFamily: Fonts.regular, marginTop: 2, lineHeight: 19 },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
   cardLabel: { color: Palette.textDim, fontSize: 12, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 1 },
   sectionHeader: { color: Palette.text, fontSize: 18, fontFamily: Fonts.bold },
+  outlookScroll: { marginTop: 12, marginBottom: 8 },
+  day: { width: 46, alignItems: 'center', gap: 4, marginRight: 8, paddingVertical: 6, borderRadius: 10, borderColor: 'transparent', borderWidth: 1 },
+  dayLabel: { color: Palette.textDim, fontSize: 11, fontFamily: Fonts.medium },
+  dayKp: { fontSize: 18, fontFamily: Fonts.bold },
+  dayBarTrack: { width: 6, height: 40, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, justifyContent: 'flex-end', overflow: 'hidden' },
+  dayBar: { width: 6, borderRadius: 3 },
   scaleRow: { flexDirection: 'row', gap: 10 },
   scaleBlock: { flex: 1, alignItems: 'center', gap: 3 },
   scaleVal: { fontSize: 34, fontFamily: Fonts.bold, letterSpacing: -1 },

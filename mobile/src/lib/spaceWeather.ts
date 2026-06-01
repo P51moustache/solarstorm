@@ -17,6 +17,7 @@ const NOAA = {
   MAG_2HOUR: 'https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json',
   PLASMA_2HOUR: 'https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json',
   FORECAST_3DAY: 'https://services.swpc.noaa.gov/text/3-day-geomag-forecast.txt',
+  OUTLOOK_27DAY: 'https://services.swpc.noaa.gov/text/27-day-outlook.txt',
   SCALES: 'https://services.swpc.noaa.gov/products/noaa-scales.json',
   XRAY_FLARE: 'https://services.swpc.noaa.gov/json/goes/primary/xray-flares-latest.json',
   ALERTS: 'https://services.swpc.noaa.gov/products/alerts.json',
@@ -276,6 +277,27 @@ export async function getKpSeries(): Promise<KpReading[]> {
   return (data as any[])
     .map((r) => ({ kp: Number(r.Kp), at: String(r.time_tag) }))
     .filter((r) => Number.isFinite(r.kp) && r.at && r.at !== 'undefined');
+}
+
+// ---- Look-ahead: NOAA 27-day outlook ----
+
+export interface OutlookDay {
+  label: string; // e.g. "Jun 02"
+  kp: number; // largest predicted Kp
+  ap: number; // planetary A index
+  flux: number; // F10.7 radio flux
+}
+
+/** Predicted daily activity for the coming weeks (default next 14 days). */
+export async function getOutlook(days = 14): Promise<OutlookDay[]> {
+  const text = await fetchText(NOAA.OUTLOOK_27DAY).catch(() => null);
+  if (!text) return [];
+  const out: OutlookDay[] = [];
+  for (const line of text.split('\n')) {
+    const m = line.match(/^(\d{4})\s+(\w{3})\s+(\d{2})\s+(\d+)\s+(\d+)\s+(\d+)/);
+    if (m) out.push({ label: `${m[2]} ${m[3]}`, flux: +m[4], ap: +m[5], kp: +m[6] });
+  }
+  return out.slice(0, days);
 }
 
 // ---- Operator-grade activity: NOAA scales, flares, alerts ----
