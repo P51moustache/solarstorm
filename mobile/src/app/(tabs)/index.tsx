@@ -1,9 +1,12 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Pressable,
   RefreshControl,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   View,
@@ -18,6 +21,7 @@ import { auroraProbability, auroraViewingLatitude, magneticLatitude } from '@/li
 import { DeviceLocation, getDeviceLocation, hasLocationPermission } from '@/lib/location';
 import { useSky } from '@/lib/sky';
 import { Forecast, getForecast } from '@/lib/spaceWeather';
+import { getViewingConditions, ViewingConditions, viewingVerdict } from '@/lib/viewing';
 
 function probabilityColor(p: number): string {
   if (p >= 70) return '#FF6B5B';
@@ -27,10 +31,38 @@ function probabilityColor(p: number): string {
   return Palette.textDim;
 }
 
+function verdictColor(tone: 'good' | 'mixed' | 'poor'): string {
+  return tone === 'good' ? Palette.good : tone === 'mixed' ? Palette.warn : Palette.danger;
+}
+
+function ViewFactor({
+  icon,
+  label,
+  value,
+  sub,
+  color,
+}: {
+  icon: any;
+  label: string;
+  value: string;
+  sub: string;
+  color: string;
+}) {
+  return (
+    <View style={styles.factor}>
+      <Ionicons name={icon} size={20} color={color} />
+      <Text style={styles.factorLabel}>{label}</Text>
+      <Text style={[styles.factorValue, { color }]}>{value}</Text>
+      <Text style={styles.factorSub} numberOfLines={1}>{sub}</Text>
+    </View>
+  );
+}
+
 export default function DashboardScreen() {
   const { conditions, mood, loading, refresh } = useSky();
   const [forecast, setForecast] = useState<Forecast | null>(null);
   const [location, setLocation] = useState<DeviceLocation | null>(null);
+  const [viewing, setViewing] = useState<ViewingConditions | null>(null);
   const [locating, setLocating] = useState(false);
   const [locDenied, setLocDenied] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -44,8 +76,10 @@ export default function DashboardScreen() {
     const loc = await getDeviceLocation();
     setLocating(false);
     if (loc) {
+      Haptics.selectionAsync();
       setLocation(loc);
       setLocDenied(false);
+      getViewingConditions(loc.lat, loc.lng).then(setViewing);
     } else setLocDenied(true);
   }, []);
 
@@ -58,9 +92,13 @@ export default function DashboardScreen() {
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([refresh(), loadForecast()]);
+    await Promise.all([
+      refresh(),
+      loadForecast(),
+      location ? getViewingConditions(location.lat, location.lng).then(setViewing) : Promise.resolve(),
+    ]);
     setRefreshing(false);
-  }, [refresh, loadForecast]);
+  }, [refresh, loadForecast, location]);
 
   const kp = conditions?.kp ?? null;
   const scale = kpScale(kp);
@@ -69,6 +107,18 @@ export default function DashboardScreen() {
     location && kp !== null
       ? auroraProbability(location.lat, location.lng, kp, sw?.bz ?? null, sw?.speed ?? null)
       : null;
+  const verdict = prediction && viewing ? viewingVerdict(prediction.probability, viewing) : null;
+
+  async function onShare() {
+    if (!prediction) return;
+    Haptics.selectionAsync();
+    const where = location?.label ? ` at ${location.label}` : '';
+    await Share.share({
+      message:
+        `Aurora tonight${where}: ${prediction.probability}% chance (Kp ${kp?.toFixed(1)}). ` +
+        `${verdict?.text ?? prediction.description} — via SolarStorm`,
+    }).catch(() => {});
+  }
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -95,10 +145,16 @@ export default function DashboardScreen() {
                 <Text style={styles.pctMark}>% chance you'll see it</Text>
               </View>
               <Text style={styles.desc}>{prediction.description}</Text>
-              <Text style={styles.dim}>
-                📍 {location?.label}
-                {prediction.bestViewingTime ? ` · best ${prediction.bestViewingTime}` : ''}
-              </Text>
+              <View style={styles.locRow}>
+                <Text style={styles.dim}>
+                  📍 {location?.label}
+                  {prediction.bestViewingTime ? ` · best ${prediction.bestViewingTime}` : ''}
+                </Text>
+                <Pressable onPress={onShare} style={({ pressed }) => [styles.shareBtn, pressed && styles.pressed]} hitSlop={8}>
+                  <Ionicons name="share-outline" size={16} color={Palette.accent} />
+                  <Text style={styles.shareText}>Share</Text>
+                </Pressable>
+              </View>
             </View>
           ) : (
             <View style={styles.predict}>
@@ -131,6 +187,39 @@ export default function DashboardScreen() {
               boundaryLat={auroraViewingLatitude(kp)}
               inside={Math.abs(magneticLatitude(location.lat, location.lng)) >= auroraViewingLatitude(kp)}
             />
+          </Glass>
+        ) : null}
+
+        {/* Tonight's viewing conditions */}
+        {prediction && viewing ? (
+          <Glass style={verdict ? { borderColor: verdictColor(verdict.tone) } : undefined}>
+            <Text style={styles.cardLabel}>Tonight&apos;s viewing</Text>
+            {verdict ? (
+              <Text style={[styles.verdict, { color: verdictColor(verdict.tone) }]}>{verdict.text}</Text>
+            ) : null}
+            <View style={styles.viewRow}>
+              <ViewFactor
+                icon="cloud"
+                label="Cloud"
+                value={`${viewing.cloudCover}%`}
+                sub={viewing.clarity}
+                color={viewing.cloudCover <= 25 ? Palette.good : viewing.cloudCover <= 65 ? Palette.warn : Palette.danger}
+              />
+              <ViewFactor
+                icon="moon"
+                label="Moon"
+                value={`${Math.round(viewing.moonIllum * 100)}%`}
+                sub={viewing.moonName}
+                color={viewing.moonIllum > 0.6 ? Palette.warn : Palette.good}
+              />
+              <ViewFactor
+                icon="moon-outline"
+                label="Dark"
+                value={viewing.sunset}
+                sub={`to ${viewing.sunrise}`}
+                color={Palette.textDim}
+              />
+            </View>
           </Glass>
         ) : null}
 
@@ -223,6 +312,15 @@ const styles = StyleSheet.create({
   },
   locBtnText: { color: '#fff', fontSize: 16, fontFamily: Fonts.bold },
   pressed: { opacity: 0.7 },
+  locRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 6 },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  shareText: { color: Palette.accent, fontSize: 14, fontFamily: Fonts.semibold },
+  verdict: { fontSize: 16, fontFamily: Fonts.medium, marginTop: 8, marginBottom: 4, lineHeight: 22 },
+  viewRow: { flexDirection: 'row', gap: 10, marginTop: 10 },
+  factor: { flex: 1, alignItems: 'center', gap: 3 },
+  factorLabel: { color: Palette.textFaint, fontSize: 11, fontFamily: Fonts.semibold, textTransform: 'uppercase', letterSpacing: 0.5 },
+  factorValue: { fontSize: 18, fontFamily: Fonts.bold },
+  factorSub: { color: Palette.textDim, fontSize: 11, fontFamily: Fonts.regular },
   cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
   cardFoot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
   cardLabel: {
