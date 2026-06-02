@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Card, Pill, ScreenTitle } from '@/components/ui-kit';
+import { MONETIZATION_ENABLED } from '@/constants/flags';
 import { Palette } from '@/constants/solar';
 import { useAuth } from '@/lib/auth';
 
@@ -68,25 +69,29 @@ export default function AccountScreen() {
               <Card>
                 <Text style={styles.label}>Signed in as</Text>
                 <Text style={styles.email}>{user.email}</Text>
-                <View style={styles.tierRow}>
-                  <Text style={styles.dim}>Subscription</Text>
-                  <Pill text={TIER_LABEL[tier].label} color={TIER_LABEL[tier].color} />
-                </View>
+                {MONETIZATION_ENABLED ? (
+                  <View style={styles.tierRow}>
+                    <Text style={styles.dim}>Subscription</Text>
+                    <Pill text={TIER_LABEL[tier].label} color={TIER_LABEL[tier].color} />
+                  </View>
+                ) : null}
               </Card>
 
-              {tier === 'free' ? (
-                <Pressable
-                  style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-                  onPress={() => router.push('/paywall')}>
-                  <Text style={styles.primaryBtnText}>Upgrade to Plus or Pro</Text>
-                </Pressable>
-              ) : (
-                <Pressable
-                  style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
-                  onPress={() => router.push('/paywall')}>
-                  <Text style={styles.secondaryBtnText}>Manage subscription</Text>
-                </Pressable>
-              )}
+              {MONETIZATION_ENABLED ? (
+                tier === 'free' ? (
+                  <Pressable
+                    style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+                    onPress={() => router.push('/paywall')}>
+                    <Text style={styles.primaryBtnText}>Upgrade to Plus or Pro</Text>
+                  </Pressable>
+                ) : (
+                  <Pressable
+                    style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
+                    onPress={() => router.push('/paywall')}>
+                    <Text style={styles.secondaryBtnText}>Manage subscription</Text>
+                  </Pressable>
+                )
+              ) : null}
 
               <Pressable
                 style={({ pressed }) => [styles.ghostBtn, pressed && styles.pressed]}

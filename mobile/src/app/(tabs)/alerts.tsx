@@ -104,9 +104,8 @@ export default function AlertsScreen() {
         </Card>
 
         <Text style={styles.note}>
-          Your preferences are saved. Background push delivery (even when the app is closed)
-          activates with the App Store build — it needs APNs + a server job, which Expo Go
-          can&apos;t run.
+          Your preferences are saved and checked whenever you open the app. Push notifications
+          that reach you even when the app is closed are coming in a future update.
         </Text>
       </ScrollView>
     </SafeAreaView>
