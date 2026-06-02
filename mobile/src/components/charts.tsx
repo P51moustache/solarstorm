@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { GestureResponderEvent, LayoutChangeEvent, StyleSheet, Text, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
 import { Fonts, Palette } from '@/constants/solar';
@@ -8,6 +8,36 @@ export interface Bar {
   value: number;
   color: string;
   faded?: boolean; // e.g. forecast bars
+}
+
+/**
+ * Touch-scrubbing that only claims HORIZONTAL drags, so vertical scrolling on
+ * the parent ScrollView is never hijacked. `getIndex` maps an x offset (within
+ * the chart) to a data index; kept in a ref so it always sees current layout.
+ */
+function useScrub(getIndex: (x: number) => number) {
+  const [active, setActive] = useState<number | null>(null);
+  const getRef = useRef(getIndex);
+  getRef.current = getIndex;
+
+  const isHorizontal = (_e: unknown, g: { dx: number; dy: number }) =>
+    Math.abs(g.dx) > 6 && Math.abs(g.dx) > Math.abs(g.dy);
+
+  const responder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: isHorizontal,
+      onMoveShouldSetPanResponderCapture: isHorizontal,
+      onPanResponderGrant: (e) => setActive(getRef.current(e.nativeEvent.locationX)),
+      onPanResponderMove: (e) => setActive(getRef.current(e.nativeEvent.locationX)),
+      onPanResponderRelease: () => setActive(null),
+      onPanResponderTerminate: () => setActive(null),
+      // Once we're scrubbing horizontally, don't let the ScrollView reclaim it.
+      onPanResponderTerminationRequest: () => false,
+    })
+  ).current;
+
+  return { active, panHandlers: responder.panHandlers };
 }
 
 // Pinned to the top-center of the chart so a dragging finger never covers it.
@@ -32,7 +62,7 @@ interface BarChartProps {
   formatValue?: (v: number) => string;
 }
 
-/** Colored bar chart with touch-scrubbing. */
+/** Colored bar chart with horizontal-only touch-scrubbing. */
 export function BarChart({
   bars,
   height = 150,
@@ -43,7 +73,6 @@ export function BarChart({
   formatValue = (v) => v.toFixed(2),
 }: BarChartProps) {
   const [width, setWidth] = useState(0);
-  const [active, setActive] = useState<number | null>(null);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
   const [min, max] = domain;
@@ -54,24 +83,13 @@ export function BarChart({
   const bw = width > 0 ? Math.max(1, (width - gap * (bars.length - 1)) / bars.length) : 0;
   const y = (v: number) => pad + h - ((Math.min(max, Math.max(min, v)) - min) / span) * h;
 
-  const idxFromX = (e: GestureResponderEvent) => {
-    const lx = e.nativeEvent.locationX;
-    const i = Math.floor(lx / (bw + gap));
-    return Math.min(bars.length - 1, Math.max(0, i));
-  };
-
+  const { active, panHandlers } = useScrub((x) =>
+    Math.min(bars.length - 1, Math.max(0, Math.floor(x / (bw + gap))))
+  );
   const activeX = active != null ? active * (bw + gap) + bw / 2 : 0;
 
   return (
-    <View
-      onLayout={onLayout}
-      style={{ height }}
-      onStartShouldSetResponder={() => true}
-      onMoveShouldSetResponder={() => true}
-      onResponderGrant={(e) => setActive(idxFromX(e))}
-      onResponderMove={(e) => setActive(idxFromX(e))}
-      onResponderRelease={() => setActive(null)}
-      onResponderTerminate={() => setActive(null)}>
+    <View onLayout={onLayout} style={{ height }} {...panHandlers}>
       {width > 0 && bars.length > 0 ? (
         <Svg width={width} height={height}>
           {threshold != null ? (
@@ -118,7 +136,7 @@ interface LineChartProps {
   formatValue?: (v: number) => string;
 }
 
-/** Responsive line/area chart with touch-scrubbing. Nulls are skipped. */
+/** Responsive line/area chart with horizontal-only touch-scrubbing. Nulls are skipped. */
 export function LineChart({
   values,
   color = Palette.accent,
@@ -130,7 +148,6 @@ export function LineChart({
   formatValue = (v) => v.toFixed(1),
 }: LineChartProps) {
   const [width, setWidth] = useState(0);
-  const [active, setActive] = useState<number | null>(null);
   const onLayout = (e: LayoutChangeEvent) => setWidth(e.nativeEvent.layout.width);
 
   const points = values
@@ -152,21 +169,19 @@ export function LineChart({
   const x = (i: number) => (i / n) * width;
   const y = (v: number) => (geom ? pad + h - ((v - geom.min) / geom.span) * h : 0);
 
-  const idxFromX = (e: GestureResponderEvent) => {
-    const lx = e.nativeEvent.locationX;
-    const i = Math.round((lx / width) * n);
-    return Math.min(values.length - 1, Math.max(0, i));
-  };
-
   // Nearest non-null point to the touched index, for the tooltip.
   const nearest = (i: number) => {
     if (values[i] != null) return i;
     for (let d = 1; d < values.length; d++) {
-      if (values[i - d] != null) return i - d;
-      if (values[i + d] != null) return i + d;
+      if (i - d >= 0 && values[i - d] != null) return i - d;
+      if (i + d < values.length && values[i + d] != null) return i + d;
     }
     return null;
   };
+
+  const { active, panHandlers } = useScrub((lx) =>
+    Math.min(values.length - 1, Math.max(0, Math.round((lx / (width || 1)) * n)))
+  );
   const activeIdx = active != null ? nearest(active) : null;
 
   let body = null;
@@ -198,15 +213,7 @@ export function LineChart({
   }
 
   return (
-    <View
-      onLayout={onLayout}
-      style={{ height, justifyContent: 'center' }}
-      onStartShouldSetResponder={() => true}
-      onMoveShouldSetResponder={() => true}
-      onResponderGrant={(e) => setActive(idxFromX(e))}
-      onResponderMove={(e) => setActive(idxFromX(e))}
-      onResponderRelease={() => setActive(null)}
-      onResponderTerminate={() => setActive(null)}>
+    <View onLayout={onLayout} style={{ height, justifyContent: 'center' }} {...panHandlers}>
       {body}
       {activeIdx != null && values[activeIdx] != null ? (
         <Tooltip label={labels?.[activeIdx]} value={formatValue(values[activeIdx] as number)} />
