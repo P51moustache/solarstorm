@@ -1,9 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearnMore } from '@/components/explainer';
+import { SunCam } from '@/components/SunCam';
 import { Glass, ScreenTitle } from '@/components/ui-kit';
 import { flareColor, Fonts, kpScale, noaaScaleColor, Palette, relativeTime } from '@/constants/solar';
 import {
@@ -74,6 +76,8 @@ export default function ActivityScreen() {
   const [outlook, setOutlook] = useState<OutlookDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [bust, setBust] = useState(1);
+  const router = useRouter();
 
   const load = useCallback(async () => {
     const [s, f, a, o] = await Promise.all([
@@ -96,6 +100,7 @@ export default function ActivityScreen() {
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
+    setBust((b) => b + 1);
     load();
   }, [load]);
 
@@ -125,6 +130,14 @@ export default function ActivityScreen() {
                   <Text style={[styles.statusTitle, { color: toneColor(status.tone) }]}>{status.title}</Text>
                   <Text style={styles.statusDetail}>{status.detail}</Text>
                 </View>
+              </View>
+            </Glass>
+
+            {/* Live Sun imagery */}
+            <Glass>
+              <Text style={styles.cardLabel}>The Sun right now</Text>
+              <View style={{ marginTop: 12 }}>
+                <SunCam bust={bust} />
               </View>
             </Glass>
 
@@ -213,7 +226,18 @@ export default function ActivityScreen() {
               ))
             )}
 
-            <Text style={styles.note}>Source: NOAA SWPC · GOES X-ray · pull to refresh</Text>
+            <Pressable onPress={() => router.push('/learn')}>
+              <Glass style={styles.learnCard}>
+                <Ionicons name="book-outline" size={22} color={Palette.accent} />
+                <View style={styles.flex}>
+                  <Text style={styles.learnTitle}>New to space weather?</Text>
+                  <Text style={styles.dim}>Start with the basics — a 2-minute primer.</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={20} color={Palette.textFaint} />
+              </Glass>
+            </Pressable>
+
+            <Text style={styles.note}>Source: NOAA SWPC · NASA SDO/SOHO · pull to refresh</Text>
           </>
         )}
       </ScrollView>
@@ -246,6 +270,8 @@ const styles = StyleSheet.create({
   flareRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
   flareClass: { fontSize: 44, fontFamily: Fonts.bold, letterSpacing: -1.5 },
   flareSub: { color: Palette.textFaint, fontSize: 14, fontFamily: Fonts.medium },
+  learnCard: { flexDirection: 'row', alignItems: 'center', gap: 14 },
+  learnTitle: { color: Palette.text, fontSize: 16, fontFamily: Fonts.bold },
   alertCard: { paddingVertical: 14 },
   alertTitle: { color: Palette.text, fontSize: 14, fontFamily: Fonts.medium, lineHeight: 20, marginBottom: 4 },
   dim: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.regular },
