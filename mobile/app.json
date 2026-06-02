@@ -48,6 +48,13 @@
         {
           "locationWhenInUsePermission": "SolarStorm uses your location to show the aurora visibility forecast where you are."
         }
+      ],
+      "expo-background-task",
+      [
+        "expo-notifications",
+        {
+          "color": "#05060A"
+        }
       ]
     ],
     "experiments": {

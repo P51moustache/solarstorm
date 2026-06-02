@@ -15,7 +15,9 @@ import { AuroraBackground } from '@/components/AuroraBackground';
 import { ExplainerProvider } from '@/components/explainer';
 import { Onboarding } from '@/components/Onboarding';
 import { Palette } from '@/constants/solar';
+import { getAlertPrefs } from '@/lib/alertPrefs';
 import { AuthProvider, useAuth } from '@/lib/auth';
+import { registerAlertTask } from '@/lib/backgroundAlerts';
 import { hasOnboarded, setOnboarded } from '@/lib/onboarding';
 import { configurePurchases } from '@/lib/purchases';
 import { SkyProvider, useSky } from '@/lib/sky';
@@ -47,6 +49,10 @@ function RootNavigator() {
 
   useEffect(() => {
     hasOnboarded().then(setDone);
+    // Re-arm the background alert check if the user has enabled notifications.
+    getAlertPrefs().then((p) => {
+      if (p.notificationsEnabled) registerAlertTask();
+    });
   }, []);
 
   if (onboarded === null) return null; // brief gate while we read the flag
