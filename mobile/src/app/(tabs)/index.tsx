@@ -13,11 +13,10 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { AuroraOval } from '@/components/aurora-oval';
 import { LearnMore } from '@/components/explainer';
 import { Glass, Metric, Pill } from '@/components/ui-kit';
 import { Fonts, kpScale, Palette, relativeTime } from '@/constants/solar';
-import { auroraProbability, auroraViewingLatitude, magneticLatitude } from '@/lib/aurora';
+import { auroraProbability } from '@/lib/aurora';
 import { DeviceLocation, getDeviceLocation, hasLocationPermission } from '@/lib/location';
 import { useSky } from '@/lib/sky';
 import { Forecast, getForecast } from '@/lib/spaceWeather';
@@ -174,13 +173,6 @@ export default function DashboardScreen() {
               </View>
               <Text style={styles.desc}>{prediction.description}</Text>
               {verdict ? <Text style={[styles.verdict, { color: verdictColor(verdict.tone) }]}>{verdict.text}</Text> : null}
-              {kp !== null && location ? (
-                <AuroraOval
-                  userMagLat={magneticLatitude(location.lat, location.lng)}
-                  boundaryLat={auroraViewingLatitude(kp)}
-                  inside={Math.abs(magneticLatitude(location.lat, location.lng)) >= auroraViewingLatitude(kp)}
-                />
-              ) : null}
               {viewing ? (
                 <View style={styles.viewRow}>
                   <ViewFactor icon="cloud" label="Cloud" value={`${viewing.cloudCover}%`} sub={viewing.clarity} color={viewing.cloudCover <= 25 ? Palette.good : viewing.cloudCover <= 65 ? Palette.warn : Palette.danger} />
