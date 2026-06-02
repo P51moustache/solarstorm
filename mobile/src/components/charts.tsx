@@ -10,13 +10,14 @@ export interface Bar {
   faded?: boolean; // e.g. forecast bars
 }
 
-function Tooltip({ x, width, label, value }: { x: number; width: number; label?: string; value: string }) {
-  const TW = 120;
-  const left = Math.min(width - TW, Math.max(0, x - TW / 2));
+// Pinned to the top-center of the chart so a dragging finger never covers it.
+function Tooltip({ label, value }: { label?: string; value: string }) {
   return (
-    <View style={[styles.tooltip, { left, width: TW }]} pointerEvents="none">
-      <Text style={styles.tipValue}>{value}</Text>
-      {label ? <Text style={styles.tipLabel}>{label}</Text> : null}
+    <View style={styles.tooltipWrap} pointerEvents="none">
+      <View style={styles.tooltip}>
+        <Text style={styles.tipValue}>{value}</Text>
+        {label ? <Text style={styles.tipLabel}>{label}</Text> : null}
+      </View>
     </View>
   );
 }
@@ -100,7 +101,7 @@ export function BarChart({
         </Svg>
       ) : null}
       {active != null && bars[active] ? (
-        <Tooltip x={activeX} width={width} label={labels?.[active]} value={formatValue(bars[active].value)} />
+        <Tooltip label={labels?.[active]} value={formatValue(bars[active].value)} />
       ) : null}
     </View>
   );
@@ -208,20 +209,19 @@ export function LineChart({
       onResponderTerminate={() => setActive(null)}>
       {body}
       {activeIdx != null && values[activeIdx] != null ? (
-        <Tooltip x={x(activeIdx)} width={width} label={labels?.[activeIdx]} value={formatValue(values[activeIdx] as number)} />
+        <Tooltip label={labels?.[activeIdx]} value={formatValue(values[activeIdx] as number)} />
       ) : null}
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  tooltipWrap: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' },
   tooltip: {
-    position: 'absolute',
-    top: 0,
-    backgroundColor: 'rgba(17,21,31,0.95)',
+    backgroundColor: 'rgba(17,21,31,0.96)',
     borderRadius: 10,
     paddingVertical: 6,
-    paddingHorizontal: 10,
+    paddingHorizontal: 12,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.18)',
     alignItems: 'center',

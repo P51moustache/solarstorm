@@ -18,20 +18,20 @@ const SLIDES = [
   {
     icon: 'sparkles' as const,
     color: '#19D98A',
-    title: 'The sky, read for you',
-    body: 'SolarStorm turns live NASA & NOAA space-weather data into a simple answer: will the aurora be out tonight?',
+    title: 'Space weather, decoded',
+    body: 'The Sun is always active. SolarStorm turns live NASA & NOAA data into a simple read on what it’s doing — and whether it matters to you right now.',
   },
   {
-    icon: 'planet' as const,
+    icon: 'flash' as const,
+    color: '#FF9F43',
+    title: 'When the Sun acts up',
+    body: 'Flares, radiation storms, and CMEs can disrupt GPS, radio, satellites, and power grids — and, if you’re far enough north, light the sky with aurora.',
+  },
+  {
+    icon: 'notifications' as const,
     color: '#5C8CFF',
-    title: 'What is the aurora?',
-    body: 'When the Sun flings charged particles at Earth, they crash into our atmosphere near the poles and glow. Bigger storms push that glow toward you.',
-  },
-  {
-    icon: 'location' as const,
-    color: '#A86BFF',
-    title: 'Made for your spot',
-    body: 'See tonight’s chance for your exact location, track the storm’s trend, and set an alert so you never miss the lights.',
+    title: 'Stay ahead of it',
+    body: 'See if something big is happening now or building over the next couple of weeks — so you can check your systems, plan ahead, or just look up.',
   },
 ];
 
