@@ -212,7 +212,8 @@ export default function TrendsScreen() {
 
 const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 function fmtTime(iso: string): string {
-  const d = new Date(iso.replace(' ', 'T'));
+  // NOAA time_tags are naive UTC — append Z so they aren't read as device-local.
+  const d = new Date(iso.replace(' ', 'T') + (iso.includes('Z') ? '' : 'Z'));
   if (Number.isNaN(d.getTime())) return '';
   const hh = String(d.getHours()).padStart(2, '0');
   const mm = String(d.getMinutes()).padStart(2, '0');

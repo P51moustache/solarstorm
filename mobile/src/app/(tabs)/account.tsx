@@ -72,7 +72,10 @@ export default function AccountScreen() {
                 {MONETIZATION_ENABLED ? (
                   <View style={styles.tierRow}>
                     <Text style={styles.dim}>Subscription</Text>
-                    <Pill text={TIER_LABEL[tier].label} color={TIER_LABEL[tier].color} />
+                    <Pill
+                      text={(TIER_LABEL[tier] ?? TIER_LABEL.free).label}
+                      color={(TIER_LABEL[tier] ?? TIER_LABEL.free).color}
+                    />
                   </View>
                 ) : null}
               </Card>

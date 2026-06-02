@@ -3,6 +3,7 @@ import { BlurView } from 'expo-blur';
 import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
+import { ACCOUNTS_ENABLED } from '@/constants/flags';
 import { Fonts, Palette } from '@/constants/solar';
 
 export default function TabLayout() {
@@ -62,6 +63,7 @@ export default function TabLayout() {
         name="account"
         options={{
           title: 'Account',
+          href: ACCOUNTS_ENABLED ? undefined : null, // hidden from tab bar for v1
           tabBarIcon: ({ color, size }) => <Ionicons name="person-circle" size={size} color={color} />,
         }}
       />
