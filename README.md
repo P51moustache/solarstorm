@@ -1,121 +1,92 @@
-# SolarStorm
+# SolarStorm ☀️🌍
 
-A Next.js web app for real-time space weather monitoring and aurora forecasting. SolarStorm surfaces live geomagnetic activity, solar wind conditions, and aurora probability forecasts in the browser, backed by Supabase for auth and user data.
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Expo SDK 54](https://img.shields.io/badge/Expo-SDK_54-000020?logo=expo&logoColor=white)
+![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react&logoColor=black)
+![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)
+![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
-## Features
+**Real-time space weather, made legible.** SolarStorm turns live data from NOAA, NASA, and
+Open-Meteo into a clear read on what the Sun is doing _right now_ — geomagnetic storms, solar
+flares, radiation storms, and aurora forecasts — across a polished native iOS app and a web
+dashboard.
 
-- **Real-time Kp Index**: Live geomagnetic activity monitoring with NOAA color coding
-- **Solar Wind Data**: Track magnetic field (Bz), speed, and plasma density
-- **Aurora Forecasting**: Interactive heatmap showing aurora probability by location
-- **Smart Alerts**: Configurable thresholds with Bz confirmation logic
-- **Trend Charts**: Historical Kp trends over recent hours
-- **Specialized Dashboards**: GNSS and satellite views for operators and power users
-- **Dark UI**: Astronomy-friendly interface
+This monorepo contains two clients built on a shared set of public space-weather data sources:
 
-## Getting Started
+| Path | What it is |
+| --- | --- |
+| [`mobile/`](mobile/) | **Native iOS app** — Expo · React Native · TypeScript. The flagship. |
+| repo root | **Web app + JSON API** — Next.js 14 · Supabase · Three.js. |
 
-### Prerequisites
+---
 
-- Node.js 18+ and npm
-- A Supabase project (URL + anon key) for auth and data features
+## 📱 iOS app (`mobile/`)
 
-### Installation
+A native space-weather companion with a custom **"Aurora Sky"** design — a living aurora
+backdrop whose color and motion are driven by the real-time Kp index and solar-wind data, so the
+app literally looks different depending on what the Sun is doing.
 
+**Five focused tabs:**
+
+- **Now** — the overall state at a glance: a plain-language headline ("the sky is asleep / awake /
+  on fire"), the live Kp index, solar wind, and (for high latitudes) tonight's aurora odds with
+  cloud, moon, and darkness factors.
+- **Activity** — _is anything big happening, or coming?_ A headline status, the NOAA R/S/G hazard
+  scales, the largest recent solar flare, a live SWPC alerts feed, a **2-week outlook**, and a
+  live **Sun cam** (NASA SDO wavelengths + SOHO coronagraph).
+- **Trends** — Kp history merged with the forecast on one scrubbable timeline, plus solar-wind
+  charts, over 24h / 3-day / 7-day ranges.
+- **Places** — save locations (with typeahead search) and see each one's live aurora outlook.
+- **Alerts** — on-device notifications (no server) for storms, flares/radiation, a daily digest,
+  and a weekly heads-up, via a background task.
+
+Plus first-run onboarding, a **Space Weather 101** primer, and tap-to-learn explainers throughout
+for newcomers. Built with **Expo SDK 54, expo-router, React Native 0.81, TypeScript, Reanimated,
+react-native-svg, expo-notifications + expo-background-task, Supabase,** and **EAS Build**.
+
+→ See **[`mobile/README.md`](mobile/README.md)** for setup and the build/release process.
+
+## 🌐 Web app (repo root)
+
+A Next.js dashboard for browser-based monitoring, plus a small public JSON API that proxies NOAA
+data (keeping API keys server-side).
+
+- Real-time Kp index, solar wind, particle flux, and solar activity
+- Interactive 3D globe and aurora probability views (Three.js / react-three-fiber)
+- Specialized GNSS, satellite, and HF-propagation dashboards
+- Supabase auth + user data; public API at `/api/v1/current`
+
+Built with **Next.js 14, React 18, TypeScript, Supabase, Three.js, Tailwind CSS.**
+
+## 🛰️ Data sources
+
+| Source | Used for |
+| --- | --- |
+| **NOAA SWPC** | Kp index, solar wind (mag/plasma), R/S/G scales, X-ray flares, alerts, 3-day & 27-day forecasts |
+| **NASA SDO / SOHO** | Live solar imagery (multiple wavelengths, coronagraph) |
+| **Open-Meteo** | Cloud cover, sunrise/sunset, place geocoding |
+
+## 🚀 Getting started
+
+### Web app
 ```bash
-# Install dependencies
 npm install
-
-# Copy the example environment file and fill in your values
-cp .env.local.example .env.local
-
-# Start the dev server (http://localhost:3000)
-npm run dev
+cp .env.local.example .env.local   # add Supabase URL + anon key
+npm run dev                         # http://localhost:3000
 ```
 
-### Environment Variables
-
-Client-exposed variables must be prefixed with `NEXT_PUBLIC_` so Next.js inlines them into the browser bundle. Server-only secrets (such as `NASA_API_KEY`) must NOT use that prefix. See `.env.local.example` for the full list. The two required values are:
-
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-
-The app is designed to build and render without these set — data-dependent pages simply show an empty state and a warning is logged — so `npm run build` and `npm run dev` work on a fresh clone before secrets are configured.
-
-### Scripts
-
+### iOS app
 ```bash
-npm run dev     # Start the Next.js dev server
-npm run build   # Production build
-npm run start   # Serve the production build
-npm run lint    # Lint with next lint
+cd mobile
+npm install
+npx expo start                      # open in Expo Go (SDK 54)
 ```
 
-## Data Sources
+## 📈 Status
 
-All space weather data is sourced from the **NOAA Space Weather Prediction Center** (services.swpc.noaa.gov):
-
-- **Planetary K-index** (1-minute): Real-time geomagnetic activity
-- **Solar Wind Magnetic Field**: Bz component crucial for aurora forecasting
-- **Solar Wind Plasma**: Speed and density measurements
-- **OVATION Aurora Model**: Probabilistic aurora forecasts
-- **Geomagnetic Alerts**: G1-G5 storm warnings
-
-## Architecture
-
-### Tech Stack
-
-- **Framework**: Next.js 14 (App Router)
-- **Language**: TypeScript
-- **UI**: React 18, Tailwind CSS, lucide-react icons
-- **State Management**: Zustand with persistence
-- **Backend / Auth**: Supabase (Postgres, Auth)
-- **Payments**: Stripe
-- **Validation**: Zod schemas for API data
-- **Data / Visualization**: D3 and Three.js (`@react-three/fiber`, `@react-three/drei`)
-- **Time**: Day.js for date/time handling
-
-### Project Structure
-
-```
-app/                  # Next.js App Router pages, layouts, and API routes
-  dashboard/          # Main space-weather dashboard
-  gnss-dashboard/     # GNSS-focused view
-  satellite-dashboard/# Satellite operations view
-  api/                # Route handlers (SWPC/TEC/CME proxies, health, etc.)
-
-components/           # React UI components (charts, dashboard, layout, ...)
-
-lib/
-  api/                # SWPC/NASA API clients and Zod parsers
-  services/           # Domain logic (radiation belt, HF propagation, ...)
-  state/              # Zustand stores
-  stripe/             # Stripe config and client
-  supabase/           # Supabase client and generated types
-  util/               # Time, math, env, logging, validation helpers
-
-supabase/             # SQL migrations and edge functions
-```
-
-## Alert Logic
-
-Alerts trigger when:
-
-1. **Kp Threshold**: Current Kp >= user setting (4, 5, or 6)
-2. **Bz Confirmation** (optional): Sustained Bz <= -5 nT for >= 10 minutes
-3. **Debounce**: No alert in past 90 minutes unless Kp increased
-
-## Aurora Chance Algorithm
-
-Aurora likelihood is estimated from current conditions:
-
-- **High chance** (mid-latitudes): Kp >= 5 AND Bz <= -5 AND speed >= 500 km/s
-- **Possible** (higher latitudes): Kp >= 4 AND Bz <= -3
-- **Low likelihood**: Other conditions
+- **Web** — live.
+- **iOS** — feature-complete; in pre-release (TestFlight / App Store submission prep).
 
 ## License
 
-Proprietary - All rights reserved
-
-## Support
-
-For questions, feedback, or support, contact: [support email to be added]
+[MIT](LICENSE)

@@ -1,56 +1,84 @@
-# Welcome to your Expo app 👋
+# SolarStorm — iOS app
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+![Expo SDK 54](https://img.shields.io/badge/Expo-SDK_54-000020?logo=expo&logoColor=white)
+![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react&logoColor=black)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![Platform: iOS](https://img.shields.io/badge/Platform-iOS-lightgrey?logo=apple&logoColor=white)
 
-## Get started
+A native iPhone app that turns live NOAA / NASA / Open-Meteo data into a clear, beautiful read
+on space weather — geomagnetic storms, solar flares, radiation, and aurora forecasts.
 
-1. Install dependencies
+Part of the [SolarStorm](../) project. This is the Expo / React Native client.
 
-   ```bash
-   npm install
-   ```
+## Design — "Aurora Sky"
 
-2. Start the app
+The whole app sits on a **living aurora backdrop** (animated SVG ribbons + starfield) whose
+color, brightness, and motion are driven by the real-time Kp index and IMF Bz — calm indigo on a
+quiet night, rippling green-violet during a storm. Frosted-glass cards, the Space Grotesk
+typeface, and tap-to-learn explainers throughout keep it legible for newcomers and enthusiasts
+alike.
 
-   ```bash
-   npx expo start
-   ```
+## Features
 
-In the output, you'll find options to open the app in a
+| Tab | What it does |
+| --- | --- |
+| **Now** | Plain-language state ("the sky is awake"), live Kp + storm scale, solar wind, and a location-aware aurora card (chance + cloud / moon / darkness factors). |
+| **Activity** | Headline "is anything happening?" status, NOAA **R/S/G** scales, largest 24h solar flare, live SWPC alerts, a **2-week outlook**, and a live **Sun cam** (NASA SDO + SOHO coronagraph). |
+| **Trends** | Kp history + forecast on one scrubbable timeline, plus solar-wind charts; 24h / 3-day / 7-day ranges. |
+| **Places** | Saved locations with typeahead search and per-location aurora outlook. |
+| **Alerts** | On-device notifications (storms, flares/radiation, daily digest, weekly heads-up) via a background task — no server required. |
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+Plus first-run onboarding and a **Space Weather 101** primer.
 
-You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
+## Tech
 
-## Get a fresh project
+- **Expo SDK 54**, **expo-router** (typed routes), **React Native 0.81**, **TypeScript**
+- **react-native-reanimated** + **react-native-svg** — the aurora backdrop, charts, and viz
+- **expo-notifications** + **expo-background-task** + **expo-task-manager** — on-device alerts
+- **expo-location**, **expo-blur**, **expo-linear-gradient**, **expo-haptics**
+- **@supabase/supabase-js** — auth (feature-flagged off for v1)
+- **EAS Build / Submit** — CI builds and App Store delivery
 
-When you're ready, run:
+## Architecture notes
 
-```bash
-npm run reset-project
+- The data layer (`src/lib/spaceWeather.ts`) fetches NOAA SWPC directly by default, or routes
+  through the project's Next.js backend when `EXPO_PUBLIC_API_BASE_URL` is set.
+- Forecast / aurora / viewing math (`src/lib/aurora.ts`, `viewing.ts`) is pure and dependency-free.
+- Alerts run from an `expo-background-task` worker (`src/lib/backgroundAlerts.ts`) that evaluates
+  conditions and fires deduplicated local notifications — no backend.
+- Subscriptions (RevenueCat) and accounts are behind flags in `src/constants/flags.ts`, off for
+  the v1 launch.
+
+## Project structure
+
+```
+src/
+  app/                 # expo-router routes
+    (tabs)/            # Now · Activity · Trends · Places · Alerts
+    learn.tsx          # Space Weather 101 (modal)
+    _layout.tsx        # providers, fonts, aurora backdrop, onboarding gate
+  components/          # AuroraBackground, charts, SunCam, ui-kit, explainer …
+  lib/                 # spaceWeather, aurora, viewing, location, notifications …
+  constants/           # theme / palette, glossary, feature flags
 ```
 
-This command will move the starter code to the **app-example** directory and create a blank **app** directory where you can start developing.
+## Getting started
 
-### Other setup steps
+```bash
+npm install
+npx expo start          # press i for the iOS simulator, or scan the QR with Expo Go
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+> Notifications, background tasks, and in-app purchases require a **development / standalone build**
+> (not Expo Go, not the simulator). Everything else runs in Expo Go.
 
-## Learn more
+## Build & release (EAS)
 
-To learn more about developing your project with Expo, look at the following resources:
+```bash
+eas build --profile development --platform ios   # on-device test build
+eas build --profile production  --platform ios   # store build
+eas submit --profile production --platform ios   # upload to App Store Connect
+```
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
-
-## Join the community
-
-Join our community of developers creating universal apps.
-
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+See [`SHIP.md`](SHIP.md) for the full submission checklist and [`PRIVACY.md`](PRIVACY.md) for the
+privacy policy. Data courtesy of NOAA SWPC and NASA.
