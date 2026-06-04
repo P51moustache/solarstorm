@@ -14,7 +14,7 @@ cd mobile
 eas init            # links this project to your Expo account (writes extra.eas.projectId)
 ```
 - `eas.json` is already committed with `development`, `preview`, and `production` profiles. **[code]**
-- `app.json` already has `ios.bundleIdentifier = com.solarstorm.app`. Change it if you want a different ID **before** the first build. **[you]**
+- `app.json` uses `ios.bundleIdentifier = com.zlceapps.solarstorm`, matching the existing App Store Connect record (app ID `6752530275`).
 
 ## 2. App icon & splash **[you]**
 - Replace `assets/images/icon.png` with a 1024×1024 PNG (no transparency for iOS).

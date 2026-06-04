@@ -8,7 +8,7 @@
     "scheme": "solarstorm",
     "userInterfaceStyle": "dark",
     "ios": {
-      "bundleIdentifier": "com.solarstorm.app",
+      "bundleIdentifier": "com.zlceapps.solarstorm",
       "supportsTablet": false,
       "config": {
         "usesNonExemptEncryption": false
