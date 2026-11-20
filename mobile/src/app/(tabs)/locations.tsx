@@ -269,7 +269,7 @@ const styles = StyleSheet.create({
     right: 0,
     marginTop: 6,
     zIndex: 20,
-    backgroundColor: '#161A24',
+    backgroundColor: Palette.surfaceAlt,
     borderRadius: 14,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'rgba(255,255,255,0.14)',
