@@ -9,13 +9,26 @@
  * API keys server-side. See getCurrentConditions().
  */
 
+import { headlineKp } from '@/lib/kpEstimate';
+import {
+  fillMissing,
+  isIncomplete,
+  latestSolarWind,
+  RTSW_FEEDS,
+  solarWindSeries,
+  SUMMARY_FEEDS,
+  summarySolarWind,
+  type SolarWind,
+  type SolarWindPoint,
+} from '@/lib/solarWindFeed';
+
+export type { SolarWind, SolarWindPoint };
+
 const API_BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL?.replace(/\/$/, '') ?? null;
 
 const NOAA = {
   KP_1MIN: 'https://services.swpc.noaa.gov/json/planetary_k_index_1m.json',
   KP_PLANETARY: 'https://services.swpc.noaa.gov/products/noaa-planetary-k-index.json',
-  MAG_2HOUR: 'https://services.swpc.noaa.gov/products/solar-wind/mag-2-hour.json',
-  PLASMA_2HOUR: 'https://services.swpc.noaa.gov/products/solar-wind/plasma-2-hour.json',
   FORECAST_3DAY: 'https://services.swpc.noaa.gov/text/3-day-geomag-forecast.txt',
   OUTLOOK_27DAY: 'https://services.swpc.noaa.gov/text/27-day-outlook.txt',
   SCALES: 'https://services.swpc.noaa.gov/products/noaa-scales.json',
@@ -23,22 +36,8 @@ const NOAA = {
   ALERTS: 'https://services.swpc.noaa.gov/products/alerts.json',
 };
 
+/** Chart window on the Trends screen. */
 export type Range = '1d' | '3d' | '7d';
-
-const SW_PRODUCTS: Record<Range, { mag: string; plasma: string }> = {
-  '1d': { mag: 'mag-1-day', plasma: 'plasma-1-day' },
-  '3d': { mag: 'mag-3-day', plasma: 'plasma-3-day' },
-  '7d': { mag: 'mag-7-day', plasma: 'plasma-7-day' },
-};
-const SW_BASE = 'https://services.swpc.noaa.gov/products/solar-wind/';
-
-export interface SolarWind {
-  speed: number | null; // km/s
-  density: number | null; // p/cm^3
-  bz: number | null; // nT
-  bt: number | null; // nT
-  at: string | null;
-}
 
 export interface CurrentConditions {
   kp: number | null;
@@ -67,61 +66,6 @@ async function fetchJson<T = unknown>(url: string, timeoutMs = 10000): Promise<T
   }
 }
 
-// ---- NOAA parsers (mirror the web app's lib/api/parsers) ----
-
-function parseKp(data: unknown): KpReading | null {
-  if (!Array.isArray(data)) return null;
-  for (let i = data.length - 1; i >= 0; i--) {
-    const row = data[i] as { time_tag?: string; kp_index?: number; estimated_kp?: number };
-    const kp = row?.estimated_kp ?? row?.kp_index;
-    if (typeof kp === 'number' && row.time_tag) return { kp: Number(kp), at: row.time_tag };
-  }
-  return null;
-}
-
-function columnIndex(headers: string[], ...needles: string[]): number {
-  return headers.findIndex((h) => needles.some((n) => h.toLowerCase().includes(n)));
-}
-
-function parseLatestMag(data: unknown): { bz: number | null; bt: number | null; at: string | null } {
-  if (!Array.isArray(data) || data.length < 2) return { bz: null, bt: null, at: null };
-  const headers = data[0] as string[];
-  const ti = columnIndex(headers, 'time_tag');
-  const bzi = columnIndex(headers, 'bz_gsm', 'bz');
-  const bti = columnIndex(headers, 'bt');
-  for (let i = data.length - 1; i >= 1; i--) {
-    const row = data[i] as string[];
-    const bz = num(row?.[bzi]);
-    if (bz !== null) {
-      return { bz, bt: num(row?.[bti]), at: row?.[ti] ?? null };
-    }
-  }
-  return { bz: null, bt: null, at: null };
-}
-
-function parseLatestPlasma(data: unknown): { speed: number | null; density: number | null; at: string | null } {
-  if (!Array.isArray(data) || data.length < 2) return { speed: null, density: null, at: null };
-  const headers = data[0] as string[];
-  const ti = columnIndex(headers, 'time_tag');
-  const si = columnIndex(headers, 'speed');
-  const di = columnIndex(headers, 'density');
-  for (let i = data.length - 1; i >= 1; i--) {
-    const row = data[i] as string[];
-    const speed = num(row?.[si]);
-    const density = num(row?.[di]);
-    if (speed !== null || density !== null) {
-      return { speed, density, at: row?.[ti] ?? null };
-    }
-  }
-  return { speed: null, density: null, at: null };
-}
-
-function num(v: unknown): number | null {
-  if (v === null || v === undefined || v === '' || v === 'null') return null;
-  const n = parseFloat(String(v));
-  return Number.isNaN(n) ? null : n;
-}
-
 // ---- Public API ----
 
 export async function getCurrentConditions(): Promise<CurrentConditions> {
@@ -144,29 +88,31 @@ export async function getCurrentConditions(): Promise<CurrentConditions> {
     };
   }
 
-  // Dev path: NOAA directly.
-  const [kpData, magData, plasmaData] = await Promise.all([
+  // No backend configured (the shipped app): read NOAA directly.
+  const [kpData, magData, windData] = await Promise.all([
     fetchJson(NOAA.KP_1MIN).catch(() => null),
-    fetchJson(NOAA.MAG_2HOUR).catch(() => null),
-    fetchJson(NOAA.PLASMA_2HOUR).catch(() => null),
+    fetchJson(RTSW_FEEDS.MAG).catch(() => null),
+    fetchJson(RTSW_FEEDS.WIND).catch(() => null),
   ]);
 
-  const kp = parseKp(kpData);
-  const mag = parseLatestMag(magData);
-  const plasma = parseLatestPlasma(plasmaData);
+  const kp = headlineKp(kpData);
 
   return {
     kp: kp?.kp ?? null,
     kpAt: kp?.at ?? null,
-    solarWind: {
-      speed: plasma.speed,
-      density: plasma.density,
-      bz: mag.bz,
-      bt: mag.bt,
-      at: plasma.at ?? mag.at,
-    },
+    solarWind: await withSummaryFallback(latestSolarWind(magData, windData)),
     fetchedAt,
   };
+}
+
+/** Fill a reading the one-minute files left incomplete from NOAA's small summary files. */
+async function withSummaryFallback(wind: SolarWind): Promise<SolarWind> {
+  if (!isIncomplete(wind)) return wind;
+  const [magData, speedData] = await Promise.all([
+    fetchJson(SUMMARY_FEEDS.MAG).catch(() => null),
+    fetchJson(SUMMARY_FEEDS.SPEED).catch(() => null),
+  ]);
+  return fillMissing(wind, summarySolarWind(magData, speedData));
 }
 
 // ---- 3-day geomagnetic forecast (NOAA text product) ----
@@ -288,14 +234,22 @@ export interface OutlookDay {
   flux: number; // F10.7 radio flux
 }
 
-/** Predicted daily activity for the coming weeks (default next 14 days). */
-export async function getOutlook(days = 14): Promise<OutlookDay[]> {
+/**
+ * Predicted daily activity from today on (default: the next 14 days).
+ * NOAA issues the table weekly, so its first rows fall behind the calendar; days whose
+ * UTC date has ended are skipped.
+ */
+export async function getOutlook(days = 14, now = new Date()): Promise<OutlookDay[]> {
   const text = await fetchText(NOAA.OUTLOOK_27DAY).catch(() => null);
   if (!text) return [];
+  const today = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
   const out: OutlookDay[] = [];
   for (const line of text.split('\n')) {
     const m = line.match(/^(\d{4})\s+(\w{3})\s+(\d{2})\s+(\d+)\s+(\d+)\s+(\d+)/);
-    if (m) out.push({ label: `${m[2]} ${m[3]}`, flux: +m[4], ap: +m[5], kp: +m[6] });
+    if (!m) continue;
+    // An unreadable month gives NaN, which compares false and keeps the row.
+    if (Date.UTC(+m[1], MONTHS[m[2]], +m[3]) < today) continue;
+    out.push({ label: `${m[2]} ${m[3]}`, flux: +m[4], ap: +m[5], kp: +m[6] });
   }
   return out.slice(0, days);
 }
@@ -369,54 +323,11 @@ export async function getKpHistory(): Promise<KpReading[]> {
   return out;
 }
 
-export interface SolarWindPoint {
-  at: string;
-  bz: number | null;
-  speed: number | null;
-}
-
-/** Time series of Bz and solar-wind speed over the given range, merged + downsampled. */
-export async function getSolarWindHistory(range: Range = '1d'): Promise<SolarWindPoint[]> {
-  const product = SW_PRODUCTS[range];
-  const [magData, plasmaData] = await Promise.all([
-    fetchJson(`${SW_BASE}${product.mag}.json`).catch(() => null),
-    fetchJson(`${SW_BASE}${product.plasma}.json`).catch(() => null),
+/** Bz and solar-wind speed for the last ~24 hours, the longest window NOAA publishes. */
+export async function getSolarWindHistory(): Promise<SolarWindPoint[]> {
+  const [magData, windData] = await Promise.all([
+    fetchJson(RTSW_FEEDS.MAG).catch(() => null),
+    fetchJson(RTSW_FEEDS.WIND).catch(() => null),
   ]);
-
-  const merged = new Map<string, SolarWindPoint>();
-
-  if (Array.isArray(magData) && magData.length > 1) {
-    const headers = magData[0] as string[];
-    const ti = columnIndex(headers, 'time_tag');
-    const bzi = columnIndex(headers, 'bz_gsm', 'bz');
-    for (let i = 1; i < magData.length; i++) {
-      const row = magData[i] as string[];
-      const at = row?.[ti];
-      if (!at) continue;
-      merged.set(at, { at, bz: num(row[bzi]), speed: merged.get(at)?.speed ?? null });
-    }
-  }
-
-  if (Array.isArray(plasmaData) && plasmaData.length > 1) {
-    const headers = plasmaData[0] as string[];
-    const ti = columnIndex(headers, 'time_tag');
-    const si = columnIndex(headers, 'speed');
-    for (let i = 1; i < plasmaData.length; i++) {
-      const row = plasmaData[i] as string[];
-      const at = row?.[ti];
-      if (!at) continue;
-      const existing = merged.get(at);
-      if (existing) existing.speed = num(row[si]);
-      else merged.set(at, { at, bz: null, speed: num(row[si]) });
-    }
-  }
-
-  const sorted = Array.from(merged.values()).sort(
-    (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime()
-  );
-  // Downsample to keep charts light on the larger windows.
-  const MAX = 150;
-  if (sorted.length <= MAX) return sorted;
-  const step = Math.ceil(sorted.length / MAX);
-  return sorted.filter((_, i) => i % step === 0);
+  return solarWindSeries(magData, windData);
 }

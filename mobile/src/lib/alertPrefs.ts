@@ -6,7 +6,7 @@ export interface AlertPrefs {
   notificationsEnabled: boolean; // master switch (set once permission granted)
   storm: boolean; // geomagnetic storm crosses threshold
   kpThreshold: number;
-  requireBz: boolean; // only when Bz southward
+  requireBz: boolean; // hold the alert while Bz is known to point north
   flares: boolean; // M/X flares + S2+ radiation storms
   dailyDigest: boolean;
   digestHour: number; // 0-23, local
@@ -41,10 +41,14 @@ export async function saveAlertPrefs(prefs: AlertPrefs): Promise<void> {
   }
 }
 
-/** Would current conditions trigger the user's storm alert right now? */
+/**
+ * Would current conditions trigger the user's storm alert right now?
+ * The Bz check applies only when a Bz reading exists. With the solar-wind feed down the
+ * alert goes on Kp alone: an unconfirmed alert beats one that silently never fires.
+ */
 export function alertWouldFire(prefs: AlertPrefs, kp: number | null, bz: number | null): boolean {
   if (!prefs.storm || kp === null) return false;
   if (kp < prefs.kpThreshold) return false;
-  if (prefs.requireBz && !(bz != null && bz < 0)) return false;
+  if (prefs.requireBz && bz != null && bz >= 0) return false;
   return true;
 }

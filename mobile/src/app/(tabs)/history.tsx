@@ -39,11 +39,12 @@ export default function TrendsScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
-  const load = useCallback(async (r: Range) => {
+  // Every series covers its full published window; the range only filters what is drawn.
+  const load = useCallback(async () => {
     const [kp, fc, sw] = await Promise.all([
       getKpSeries(),
       getForecast().catch(() => null),
-      getSolarWindHistory(r),
+      getSolarWindHistory(),
     ]);
     setKpHist(kp);
     setForecast(fc);
@@ -53,13 +54,13 @@ export default function TrendsScreen() {
   }, []);
 
   useEffect(() => {
-    load(range);
-  }, [load, range]);
+    load();
+  }, [load]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    load(range);
-  }, [load, range]);
+    load();
+  }, [load]);
 
   const hours = RANGES.find((r) => r.key === range)!.hours;
   const now = Date.now();
@@ -166,7 +167,7 @@ export default function TrendsScreen() {
             {/* Solar wind speed */}
             <Glass>
               <View style={styles.cardHead}>
-                <Text style={styles.cardLabel}>Solar wind speed</Text>
+                <Text style={styles.cardLabel}>Solar wind · 24h</Text>
                 <Text style={styles.headValue}>
                   {latestSpeed != null ? Math.round(latestSpeed) : '—'}
                   <Text style={styles.headUnit}> km/s</Text>
@@ -185,7 +186,7 @@ export default function TrendsScreen() {
             {/* Bz */}
             <Glass>
               <View style={styles.cardHead}>
-                <Text style={styles.cardLabel}>IMF Bz</Text>
+                <Text style={styles.cardLabel}>IMF Bz · 24h</Text>
                 <Text style={[styles.headValue, latestBz != null && latestBz < 0 ? { color: Palette.warn } : null]}>
                   {latestBz != null ? latestBz.toFixed(1) : '—'}
                   <Text style={styles.headUnit}> nT</Text>
