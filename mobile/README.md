@@ -24,7 +24,7 @@ alike.
 | --- | --- |
 | **Now** | Plain-language state ("the sky is awake"), live Kp + storm scale, solar wind, and a location-aware aurora card (chance + cloud / moon / darkness factors). |
 | **Activity** | Headline "is anything happening?" status, NOAA **R/S/G** scales, largest 24h solar flare, live SWPC alerts, a **2-week outlook**, and a live **Sun cam** (NASA SDO + SOHO coronagraph). |
-| **Trends** | Kp history + forecast on one scrubbable timeline, plus solar-wind charts; 24h / 3-day / 7-day ranges. |
+| **Trends** | Kp history + forecast on one scrubbable timeline, plus solar-wind speed and Bz over the last 24 hours. |
 | **Places** | Saved locations with typeahead search and per-location aurora outlook. |
 | **Alerts** | On-device notifications (storms, flares/radiation, daily digest, weekly heads-up) via a background task — no server required. |
 

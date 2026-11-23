@@ -1,91 +1,59 @@
-# SolarStorm ☀️🌍
+# SolarStorm
 
 ![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
 ![Expo SDK 54](https://img.shields.io/badge/Expo-SDK_54-000020?logo=expo&logoColor=white)
 ![React Native](https://img.shields.io/badge/React_Native-0.81-61DAFB?logo=react&logoColor=black)
-![Next.js](https://img.shields.io/badge/Next.js-14-000000?logo=nextdotjs&logoColor=white)
 ![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)
 
-**Real-time space weather, made legible.** SolarStorm turns live data from NOAA, NASA, and
-Open-Meteo into a clear read on what the Sun is doing _right now_ — geomagnetic storms, solar
-flares, radiation storms, and aurora forecasts — across a polished native iOS app and a web
-dashboard.
+An iPhone app that turns live NOAA, NASA and Open-Meteo data into a plain read on space weather:
+geomagnetic storms, solar flares, radiation storms and the chance of seeing the aurora tonight.
+On the App Store as a paid download.
 
-This monorepo contains two clients built on a shared set of public space-weather data sources:
+## What is where
 
 | Path | What it is |
 | --- | --- |
-| [`mobile/`](mobile/) | **Native iOS app** — Expo · React Native · TypeScript. The flagship. |
-| repo root | **Web app + JSON API** — Next.js 14 · Supabase · Three.js. |
+| [`mobile/`](mobile/) | The iOS app: Expo SDK 54, React Native 0.81, expo-router, TypeScript. Setup and release steps are in [`mobile/README.md`](mobile/README.md) and [`mobile/SHIP.md`](mobile/SHIP.md). |
+| [`docs/`](docs/) | The GitHub Pages site behind the App Store support and privacy links (`index.html`, `privacy.html`), and [`release-audit.md`](docs/release-audit.md), the record of the last release check. |
+| [`supabase/`](supabase/) | Database schema and two edge functions. The app reads only the `profiles` table, and only when accounts are on (they are off). The other tables and both functions date from a retired web app. |
 
----
+The repository root used to hold a Next.js web dashboard and planning docs for a B2B pivot. Both
+were removed in November 2026; they are in the git history before that change.
 
-## 📱 iOS app (`mobile/`)
+## The app
 
-A native space-weather companion with a custom **"Aurora Sky"** design — a living aurora
-backdrop whose color and motion are driven by the real-time Kp index and solar-wind data, so the
-app literally looks different depending on what the Sun is doing.
+- **Now**: a plain-language headline ("the sky is awake"), the live Kp index, solar wind and, for
+  your location, tonight's aurora odds with cloud, moon and darkness factors.
+- **Activity**: the NOAA R/S/G scales, the largest recent flare, live SWPC alerts, a two-week
+  outlook and a live Sun cam (NASA SDO and SOHO).
+- **Trends**: Kp history and forecast on one timeline, and solar-wind speed and Bz over the last
+  24 hours.
+- **Places**: saved locations with their own aurora outlook.
+- **Alerts**: on-device notifications for storms, flares and radiation, plus a daily digest and a
+  weekly heads-up, from a background task (no server).
 
-**Five focused tabs:**
-
-- **Now** — the overall state at a glance: a plain-language headline ("the sky is asleep / awake /
-  on fire"), the live Kp index, solar wind, and (for high latitudes) tonight's aurora odds with
-  cloud, moon, and darkness factors.
-- **Activity** — _is anything big happening, or coming?_ A headline status, the NOAA R/S/G hazard
-  scales, the largest recent solar flare, a live SWPC alerts feed, a **2-week outlook**, and a
-  live **Sun cam** (NASA SDO wavelengths + SOHO coronagraph).
-- **Trends** — Kp history merged with the forecast on one scrubbable timeline, plus solar-wind
-  charts, over 24h / 3-day / 7-day ranges.
-- **Places** — save locations (with typeahead search) and see each one's live aurora outlook.
-- **Alerts** — on-device notifications (no server) for storms, flares/radiation, a daily digest,
-  and a weekly heads-up, via a background task.
-
-Plus first-run onboarding, a **Space Weather 101** primer, and tap-to-learn explainers throughout
-for newcomers. Built with **Expo SDK 54, expo-router, React Native 0.81, TypeScript, Reanimated,
-react-native-svg, expo-notifications + expo-background-task, Supabase,** and **EAS Build**.
-
-→ See **[`mobile/README.md`](mobile/README.md)** for setup and the build/release process.
-
-## 🌐 Web app (repo root)
-
-A Next.js dashboard for browser-based monitoring, plus a small public JSON API that proxies NOAA
-data (keeping API keys server-side).
-
-- Real-time Kp index, solar wind, particle flux, and solar activity
-- Interactive 3D globe and aurora probability views (Three.js / react-three-fiber)
-- Specialized GNSS, satellite, and HF-propagation dashboards
-- Supabase auth + user data; public API at `/api/v1/current`
-
-Built with **Next.js 14, React 18, TypeScript, Supabase, Three.js, Tailwind CSS.**
-
-## 🛰️ Data sources
+## Data sources
 
 | Source | Used for |
 | --- | --- |
-| **NOAA SWPC** | Kp index, solar wind (mag/plasma), R/S/G scales, X-ray flares, alerts, 3-day & 27-day forecasts |
-| **NASA SDO / SOHO** | Live solar imagery (multiple wavelengths, coronagraph) |
-| **Open-Meteo** | Cloud cover, sunrise/sunset, place geocoding |
+| NOAA SWPC | Kp index, solar wind (magnetometer and plasma), R/S/G scales, X-ray flares, alerts, 3-day and 27-day forecasts |
+| NASA SDO / SOHO | Live solar imagery |
+| Open-Meteo | Cloud cover, sunrise and sunset, place search |
 
-## 🚀 Getting started
+## Run it
 
-### Web app
-```bash
-npm install
-cp .env.local.example .env.local   # add Supabase URL + anon key
-npm run dev                         # http://localhost:3000
-```
-
-### iOS app
 ```bash
 cd mobile
 npm install
-npx expo start                      # open in Expo Go (SDK 54)
+npx expo start
 ```
 
-## 📈 Status
+Tests and typecheck, from `mobile/`:
 
-- **Web** — live.
-- **iOS** — feature-complete; in pre-release (TestFlight / App Store submission prep).
+```bash
+npm test
+npx tsc --noEmit
+```
 
 ## License
 
