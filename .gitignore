@@ -3,10 +3,6 @@
 # dependencies
 node_modules/
 
-# Next.js
-.next/
-out/
-
 # Expo (legacy)
 .expo/
 dist/
@@ -42,8 +38,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
-
-app-example
 
 # generated native folders
 /ios

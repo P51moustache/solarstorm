@@ -1,1 +1,0 @@
-export { HistoricalExplorer } from './HistoricalExplorer';
