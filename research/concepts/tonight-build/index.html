@@ -7,4 +7,12 @@
 <figure><img src="tromso-pro-aurora.png"><figcaption>Aurora likely (simulated Kp 7): glow shows</figcaption></figure>
 <figure><img src="tahoe-se.png"><figcaption>iPhone SE</figcaption></figure>
 <figure><img src="long-se.png"><figcaption>iPhone SE, long place name</figcaption></figure>
+<h2>Native iOS check (iPhone 17e simulator, iOS 26.5, 2026-11-24)</h2>
+<p>PR JS built with Hermes into the 1.0.1 simulator app (no native changes in this PR). Fonts, SVG ring, scene and blur tab bar render as on web.
+The ring fills from empty to the score in about 0.8 s after the forecast lands.<br>
+Found and fixed: on launch a plan was drawn before the forecast arrived (no clouds, device time zone), so the score flashed 61 and times read in Central time before settling on 45. Tonight now waits for the first fetch.<br>
+Left as is: while loading, the place reads "Pick a place" for one frame and the date shows the device's day (Tue) until the forecast gives the place's time zone (Mon).</p>
+<figure><img src="ios-tahoe-17e.png"><figcaption>iPhone 17e, Tahoe Vista</figcaption></figure>
+<p><img src="ios-before-fix-flash.png" style="height:auto;width:100%"><br>Before the fix: launch frames, 0.1 s apart (61, then 45)</p>
+<p><img src="ios-ring-fill.png" style="height:auto;width:100%"><br>After the fix: ring frames 0.1 s apart</p>
 <p>Spec: ../tonight-spec.md</p>

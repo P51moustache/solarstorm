@@ -29,6 +29,8 @@ export function useTonight(place: PlaceChoice | null): TonightState {
   const { conditions, refresh: refreshSky } = useSky();
   const [forecast, setForecast] = useState<SkyForecast | null>(null);
   const [loading, setLoading] = useState(false);
+  /** True once the forecast fetch for the current place has finished (or failed). */
+  const [settled, setSettled] = useState(false);
   const [now, setNow] = useState(() => new Date());
 
   const lat = place?.lat;
@@ -38,11 +40,13 @@ export function useTonight(place: PlaceChoice | null): TonightState {
     setLoading(true);
     setForecast(await getSkyForecast(lat, lng));
     setNow(new Date());
+    setSettled(true);
     setLoading(false);
   }, [lat, lng]);
 
   useEffect(() => {
     setForecast(null);
+    setSettled(false);
     load();
   }, [load]);
 
@@ -62,10 +66,12 @@ export function useTonight(place: PlaceChoice | null): TonightState {
 
   const tonight = useMemo(
     () =>
-      lat !== undefined && lng !== undefined
+      // Wait for the first fetch: a plan made before it has no clouds and the device's time zone,
+      // so its score and times would jump when the forecast lands.
+      settled && lat !== undefined && lng !== undefined
         ? planTonight({ place: { lat, lng }, weather: forecast?.hours ?? [], now, aurora, clock })
         : null,
-    [lat, lng, forecast, now, aurora, clock],
+    [settled, lat, lng, forecast, now, aurora, clock],
   );
   const dateLabel = placeDate(tonight?.plan.bounds.sunset ?? now, offset);
 
