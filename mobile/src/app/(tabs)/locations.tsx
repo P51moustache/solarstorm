@@ -13,6 +13,8 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Card, Field, Pill, ScreenTitle, Tappable } from '@/components/ui';
+import { track } from '@/lib/analytics';
+import { AnalyticsEvent } from '@/lib/analyticsConfig';
 import { auroraProbability, kpNeededForVisibility } from '@/lib/aurora';
 import { DeviceLocation, getDeviceLocation, searchPlaces } from '@/lib/location';
 import {
@@ -72,6 +74,7 @@ export default function LocationsScreen() {
       return;
     }
     setLocations(await addSavedLocation({ label: loc.label, lat: loc.lat, lng: loc.lng }));
+    track(AnalyticsEvent.placeSaved, { source: 'device' });
   }
 
   // Debounced live search as the user types.
@@ -96,6 +99,7 @@ export default function LocationsScreen() {
     setQuery('');
     setSuggestions([]);
     setLocations(await addSavedLocation({ label: s.label, lat: s.lat, lng: s.lng }));
+    track(AnalyticsEvent.placeSaved, { source: 'search' });
   }
 
   async function remove(id: string) {

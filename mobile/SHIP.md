@@ -59,3 +59,24 @@ The data layer already supports this (`src/lib/spaceWeather.ts`).
 
 The purchase/restore/entitlement client flow is already wired and guarded
 (`src/lib/purchases.ts`); it activates automatically once a key is set in a dev/production build.
+
+## 8. Analytics and crash reports (PostHog)
+The code is in `src/lib/analytics.ts` (the only file that imports PostHog) and
+`src/lib/analyticsConfig.ts` (event names and the privacy contract, tested). It sends nothing until
+`EXPO_PUBLIC_POSTHOG_KEY` is set, and never from development builds.
+- Create a PostHog project "SolarStorm" and turn on Error tracking → exception autocapture. **[you]**
+- Put its project key (`phc_…`, public) in `eas.json` `production.env.EXPO_PUBLIC_POSTHOG_KEY`; add
+  `EXPO_PUBLIC_POSTHOG_HOST=https://eu.i.posthog.com` only if the project is on the EU cloud. **[code once the key exists]**
+- Native crash capture needs a new native build (`@posthog/react-native-plugin`); an OTA update cannot add it.
+
+### App Store Connect → App Privacy (set before the first build with a key ships)
+Add these data types, each **not linked to the user** and **not used for tracking** (no ATT prompt needed):
+
+| Data type | Purposes |
+| --- | --- |
+| Usage Data → Product Interaction | Analytics |
+| Diagnostics → Crash Data | App Functionality, Analytics |
+| Diagnostics → Other Diagnostic Data | App Functionality, Analytics |
+| Identifiers → Device ID (random install ID, not the IDFA) | Analytics |
+
+Leave the existing Location answers as they are. The privacy page (`docs/privacy.html`) already describes this.
