@@ -2,7 +2,7 @@ import { BlurView } from 'expo-blur';
 import { ReactNode } from 'react';
 import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { colors, radii, space, textStyles } from '@/theme';
+import { colors, radii, shadows, space, textStyles } from '@/theme';
 
 /** Default blur strength of a glass card. */
 const GLASS_BLUR = 24;
@@ -18,16 +18,30 @@ export function ScreenTitle({ title, subtitle }: { title: string; subtitle?: str
   );
 }
 
-/** Frosted-glass panel — lets the aurora backdrop glow through. */
+/**
+ * Frosted-glass panel — lets the aurora backdrop glow through. `tone="night"` is Tonight's luminous
+ * violet glass: a tinted fill, a brighter rim and a soft violet halo around the card.
+ */
 export function Glass({
   children,
   style,
   intensity = GLASS_BLUR,
+  tone = 'default',
 }: {
   children: ReactNode;
   style?: StyleProp<ViewStyle>;
   intensity?: number;
+  tone?: 'default' | 'night';
 }) {
+  if (tone === 'night') {
+    return (
+      <View style={styles.nightHalo}>
+        <BlurView intensity={intensity} tint="dark" style={[styles.glass, styles.nightGlass, style]}>
+          {children}
+        </BlurView>
+      </View>
+    );
+  }
   return (
     <BlurView intensity={intensity} tint="dark" style={[styles.glass, style]}>
       {children}
@@ -38,17 +52,7 @@ export function Glass({
 /** Screens use <Card>; it is the glass panel. */
 export const Card = Glass;
 
-export function Metric({
-  label,
-  value,
-  unit,
-  color,
-}: {
-  label: string;
-  value: string;
-  unit?: string;
-  color?: string;
-}) {
+export function Metric({ label, value, unit, color }: { label: string; value: string; unit?: string; color?: string }) {
   return (
     <View style={styles.metric}>
       <Text style={styles.metricLabel}>{label}</Text>
@@ -81,6 +85,8 @@ const styles = StyleSheet.create({
     backgroundColor: colors.glass,
     overflow: 'hidden',
   },
+  nightHalo: { ...shadows.cardGlow, borderRadius: radii.card },
+  nightGlass: { backgroundColor: colors.night.glass, borderColor: colors.night.glassBorder },
   metric: { flex: 1, gap: space[1.5] },
   metricLabel: { ...textStyles.metricLabel, color: colors.textMuted },
   metricValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: space[1] },

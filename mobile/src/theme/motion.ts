@@ -15,7 +15,7 @@ import { Easing } from 'react-native-reanimated';
  * | Tap Share                           | native share sheet           | haptics.select  |
  * | Aurora backdrop (ambient, no input) | ambient.drift + breathe      | none            |
  * | Tonight's score arrives             | duration.reveal, easing.reveal (ring fills) | none |
- * | Aurora likely (Tonight horizon)     | glow breathes (duration.breathe)            | none |
+ * | Aurora likely (Tonight horizon)     | aurora plate fades in (duration.reveal)     | none |
  * | Pick a place on Tonight             | instant state change         | haptics.select  |
  */
 

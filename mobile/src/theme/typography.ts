@@ -6,6 +6,8 @@ export const fonts = {
   medium: 'SpaceGrotesk_500Medium',
   semibold: 'SpaceGrotesk_600SemiBold',
   bold: 'SpaceGrotesk_700Bold',
+  /** Serif display face for a screen's one plain-words answer (Tonight's headline). */
+  display: 'DMSerifDisplay_400Regular',
 } as const;
 
 /** Type size ladder, small to large. Prefer a named `textStyles` entry over a raw size. */
@@ -67,14 +69,24 @@ export const textStyles = style({
   /** A panel's own heading ("What's up tonight"). */
   panelTitle: { fontSize: fontSize.title3, fontFamily: fonts.bold },
   /** The plain answer at the top of a screen ("Clear and dark from 22:10 to 03:40"). */
-  heroHeadline: { fontSize: fontSize.stat, fontFamily: fonts.bold, lineHeight: lineHeight.display, letterSpacing: tracking.title },
+  heroHeadline: { fontSize: fontSize.statLarge, fontFamily: fonts.display, lineHeight: lineHeight.display },
   /** A big score inside a dial. */
   scoreValue: { fontSize: fontSize.hero2, fontFamily: fonts.bold, letterSpacing: tracking.displaySmall },
   sectionTitle: { fontSize: fontSize.title4, fontFamily: fonts.bold },
   cardTitle: { fontSize: fontSize.headline, fontFamily: fonts.bold },
   /** Small-caps section label above a card's content ("SOLAR WIND"). */
-  overline: { fontSize: fontSize.caption, fontFamily: fonts.bold, textTransform: 'uppercase', letterSpacing: tracking.overline },
-  metricLabel: { fontSize: fontSize.caption, fontFamily: fonts.semibold, textTransform: 'uppercase', letterSpacing: tracking.label },
+  overline: {
+    fontSize: fontSize.caption,
+    fontFamily: fonts.bold,
+    textTransform: 'uppercase',
+    letterSpacing: tracking.overline,
+  },
+  metricLabel: {
+    fontSize: fontSize.caption,
+    fontFamily: fonts.semibold,
+    textTransform: 'uppercase',
+    letterSpacing: tracking.label,
+  },
   metric: { fontSize: fontSize.metric, fontFamily: fonts.bold },
   bodyLarge: { fontSize: fontSize.callout, fontFamily: fonts.regular, lineHeight: lineHeight.relaxed },
   body: { fontSize: fontSize.body, fontFamily: fonts.regular },

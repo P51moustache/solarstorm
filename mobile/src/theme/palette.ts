@@ -22,16 +22,24 @@ export const palette = {
   },
   blue: { 300: '#5C8CFF', 400: '#4C8DFF', 600: '#3E6FD0', 800: '#274B86', 900: '#1B2A4A', 950: '#16324F' },
   navy: { 900: '#0A1430', 950: '#070A1A' },
-  green: { 200: '#7CEFC0', 300: '#7FD17F', 400: '#00E08A', 450: '#19D98A', 500: '#2ECC71', 550: '#27C77A', 600: '#27AE60', 700: '#2E9E66', 800: '#1F8A5B' },
+  green: {
+    200: '#7CEFC0',
+    300: '#7FD17F',
+    400: '#00E08A',
+    450: '#19D98A',
+    500: '#2ECC71',
+    550: '#27C77A',
+    600: '#27AE60',
+    700: '#2E9E66',
+    800: '#1F8A5B',
+  },
   yellow: { 400: '#F1C40F' },
   orange: { 400: '#FF9F43' },
   red: { 300: '#FF6B5B', 500: '#E74C3C', 700: '#C03A2B' },
   violet: { 400: '#A86BFF', 500: '#7A5CFF' },
   pink: { 400: '#FF4D8D' },
-  /** Horizon glow after sunset, brightest first. */
-  dusk: { 300: '#E58BB8', 500: '#9A63B0', 700: '#4A3470', 900: '#221B45' },
-  /** Mountain and shoreline greys under a night sky, lightest first. */
-  slate: { 100: '#D9DFEE', 400: '#6E7494', 700: '#2C2F4C', 800: '#1E2038', 900: '#12142A', 950: '#0A0B1C' },
+  /** Violet night haze behind Tonight's glass. */
+  dusk: { 900: '#221B45' },
   teal: { 300: '#5FE6CF' },
 } as const;
 

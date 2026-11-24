@@ -12,7 +12,7 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: 'transparent' },
-        tabBarActiveTintColor: colors.text,
+        tabBarActiveTintColor: colors.tabActive,
         tabBarInactiveTintColor: colors.textFaint,
         tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: fontSize.micro },
         tabBarStyle: {

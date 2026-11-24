@@ -1,27 +1,13 @@
-import Ionicons from '@expo/vector-icons/Ionicons';
-import type { ComponentProps } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Image, StyleSheet, Text } from 'react-native';
 
 import { Glass, ListRow } from '@/components/ui';
 import type { SkyEvent, SkyEventKind } from '@/lib/sky/events/types';
-import { colors, componentSize, iconSize, radii, space, textStyles } from '@/theme';
+import { colors, componentSize, radii, space, textStyles } from '@/theme';
 
-type IconName = ComponentProps<typeof Ionicons>['name'];
+import { eventArt } from './skyArt';
 
-/** How each kind of event looks in its tile. A new kind adds one entry here. */
-const TILE: Record<SkyEventKind, { icon: IconName; color: string }> = {
-  milkyWay: { icon: 'sparkles', color: colors.aurora.violet },
-  planet: { icon: 'planet', color: colors.warn },
-  aurora: { icon: 'pulse', color: colors.aurora.greenBright },
-};
-
-function EventTile({ kind }: { kind: SkyEventKind }) {
-  const { icon, color } = TILE[kind];
-  return (
-    <View style={styles.tile}>
-      <Ionicons name={icon} size={iconSize.xxl} color={color} />
-    </View>
-  );
+function EventThumb({ event }: { event: SkyEvent }) {
+  return <Image source={eventArt(event)} style={styles.thumb} accessibilityIgnoresInvertColors />;
 }
 
 export interface WhatsUpProps {
@@ -30,10 +16,10 @@ export interface WhatsUpProps {
   onOpen?: Partial<Record<SkyEventKind, () => void>>;
 }
 
-/** "What's up tonight": one row per sky event. */
+/** "What's up tonight": one row per sky event, each with its painted thumbnail. */
 export function WhatsUp({ events, onOpen = {} }: WhatsUpProps) {
   return (
-    <Glass>
+    <Glass tone="night">
       <Text style={styles.title} accessibilityRole="header">
         What’s up tonight
       </Text>
@@ -45,7 +31,7 @@ export function WhatsUp({ events, onOpen = {} }: WhatsUpProps) {
             key={e.id}
             title={e.title}
             subtitle={e.detail}
-            leading={<EventTile kind={e.kind} />}
+            leading={<EventThumb event={e} />}
             onPress={onOpen[e.kind]}
             divider={i > 0}
           />
@@ -58,12 +44,11 @@ export function WhatsUp({ events, onOpen = {} }: WhatsUpProps) {
 const styles = StyleSheet.create({
   title: { ...textStyles.panelTitle, color: colors.text, marginBottom: space[1] },
   empty: { ...textStyles.footnote, color: colors.textMuted, marginTop: space[2] },
-  tile: {
-    width: componentSize.eventTile,
-    height: componentSize.eventTile,
+  thumb: {
+    width: componentSize.eventThumbWidth,
+    height: componentSize.eventThumbHeight,
     borderRadius: radii.md,
-    backgroundColor: colors.fill,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.night.glassBorder,
   },
 });

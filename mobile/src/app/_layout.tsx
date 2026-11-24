@@ -1,3 +1,4 @@
+import { DMSerifDisplay_400Regular } from '@expo-google-fonts/dm-serif-display';
 import {
   SpaceGrotesk_400Regular,
   SpaceGrotesk_500Medium,
@@ -82,6 +83,7 @@ export default function RootLayout() {
     SpaceGrotesk_500Medium,
     SpaceGrotesk_600SemiBold,
     SpaceGrotesk_700Bold,
+    DMSerifDisplay_400Regular,
   });
 
   if (!loaded) return <View style={{ flex: 1, backgroundColor: colors.background }} />;

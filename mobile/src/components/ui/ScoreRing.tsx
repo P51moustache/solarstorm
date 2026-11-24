@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Animated, { useAnimatedProps, useSharedValue, withTiming } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient, Stop } from 'react-native-svg';
 
-import { colors, componentSize, motion, textStyles } from '@/theme';
+import { colors, componentSize, motion, shadows, textStyles } from '@/theme';
 
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
@@ -17,7 +17,7 @@ export interface ScoreRingProps {
   label: string;
 }
 
-/** A 0-100 dial: gradient arc that fills once when the score arrives, the number inside. */
+/** A 0-100 dial: a glowing gradient arc that fills once when the score arrives, the number on a dark face. */
 export function ScoreRing({ score, label }: ScoreRingProps) {
   const size = componentSize.scoreRing;
   const stroke = componentSize.scoreRingStroke;
@@ -37,14 +37,21 @@ export function ScoreRing({ score, label }: ScoreRingProps) {
       style={[styles.wrap, { width: size, height: size }]}
       accessible
       accessibilityLabel={`${label}: ${score === null ? 'not known yet' : `${score} out of ${MAX_SCORE}`}`}>
-      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+      <Svg width={size} height={size} style={[StyleSheet.absoluteFill, styles.glow]}>
         <Defs>
           <LinearGradient id="score-ring" x1="0" y1="0" x2="1" y2="1">
             <Stop offset="0" stopColor={colors.night.scoreFrom} />
             <Stop offset="1" stopColor={colors.night.scoreTo} />
           </LinearGradient>
         </Defs>
-        <Circle cx={size / 2} cy={size / 2} r={r} stroke={colors.fill} strokeWidth={stroke} fill="none" />
+        <Circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          stroke={colors.fill}
+          strokeWidth={stroke}
+          fill={colors.night.ringFace}
+        />
         <AnimatedCircle
           cx={size / 2}
           cy={size / 2}
@@ -67,6 +74,7 @@ export function ScoreRing({ score, label }: ScoreRingProps) {
 
 const styles = StyleSheet.create({
   wrap: { alignItems: 'center', justifyContent: 'center' },
+  glow: shadows.tealGlow,
   label: { ...textStyles.caption, color: colors.textMuted },
   value: { ...textStyles.scoreValue, color: colors.text },
   max: { ...textStyles.footnote, color: colors.textMuted },

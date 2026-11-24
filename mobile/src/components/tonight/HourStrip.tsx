@@ -1,12 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
+import Svg, { Polyline } from 'react-native-svg';
 
 import type { Clock } from '@/lib/sky/clock';
 import type { HourColumn } from '@/lib/sky/hourStrip';
 import type { MoonTonight } from '@/lib/sky/moon';
 import type { NightBounds } from '@/lib/sky/darkness';
-import { colors, componentSize, iconSize, radii, space, textStyles } from '@/theme';
+import { colors, componentSize, iconSize, radii, shadows, space, textStyles } from '@/theme';
+
+import { moonArt } from './skyArt';
 
 /** Columns kept in view to the left of the best window when the strip opens. */
 const LEAD_COLUMNS = 1;
@@ -15,7 +18,7 @@ const HOUR_DIGITS = 2;
 
 const ROWS = [
   { key: 'cloud', icon: 'cloud-outline', label: 'Cloud %' },
-  { key: 'darkness', icon: 'contrast-outline', label: 'Dark %' },
+  { key: 'darkness', icon: 'contrast-outline', label: 'Darkness %' },
 ] as const;
 
 export interface HourStripProps {
@@ -73,6 +76,20 @@ export function fittedColumn(viewWidth: number, minColumn = componentSize.hourCo
   return viewWidth / Math.max(1, Math.floor(viewWidth / minColumn));
 }
 
+/** Darkness (0-100) as a line along the bottom of its row: one point per column centre. */
+function DarknessLine({ hours, column }: { hours: readonly HourColumn[]; column: number }) {
+  const width = hours.length * column;
+  const height = ROW_HEIGHT;
+  const points = hours
+    .map((h, i) => `${(i + 0.5) * column},${height - (h.darkness / 100) * (height - LINE_INSET) - LINE_INSET / 2}`)
+    .join(' ');
+  return (
+    <Svg width={width} height={height} style={styles.darknessLine} pointerEvents="none">
+      <Polyline points={points} fill="none" stroke={colors.night.darknessLine} strokeWidth={LINE_WIDTH} />
+    </Svg>
+  );
+}
+
 function moonLine(moon: MoonTonight, clock: Clock): string {
   // The bar shows how much is lit, so the text names the phase only.
   const lit = moon.phaseName;
@@ -126,9 +143,10 @@ export function HourStrip({ hours, bounds, moon, clock, now }: HourStripProps) {
             {box ? <View style={[styles.window, { left: box.left, width: box.width }]} /> : null}
             <View style={styles.row}>
               {hours.map((h) => (
-                <Text key={h.time.getTime()} style={[styles.headCell, styles.hour, width]}>
-                  {clock(h.time).slice(0, HOUR_DIGITS)}
-                </Text>
+                <View key={h.time.getTime()} style={[styles.headCell, styles.hourCell, width]}>
+                  <Text style={styles.hour}>{clock(h.time).slice(0, HOUR_DIGITS)}</Text>
+                  <View style={styles.tick} />
+                </View>
               ))}
             </View>
             <View style={styles.row}>
@@ -139,6 +157,7 @@ export function HourStrip({ hours, bounds, moon, clock, now }: HourStripProps) {
               ))}
             </View>
             <View style={styles.row}>
+              <DarknessLine hours={hours} column={column} />
               {hours.map((h) => (
                 <Text key={h.time.getTime()} style={[styles.cell, width, h.inBest && styles.cellBest]}>
                   {h.darkness}
@@ -154,6 +173,7 @@ export function HourStrip({ hours, bounds, moon, clock, now }: HourStripProps) {
           <Ionicons name="moon-outline" size={iconSize.md} color={colors.textMuted} />
           <Text style={styles.label}>Moon</Text>
         </View>
+        <Image source={moonArt(moon)} style={styles.moonThumb} accessibilityIgnoresInvertColors />
         <View style={styles.moonBody}>
           <Text style={styles.moonText} numberOfLines={2}>
             {moonLine(moon, clock)}
@@ -168,6 +188,9 @@ export function HourStrip({ hours, bounds, moon, clock, now }: HourStripProps) {
 }
 
 const ROW_HEIGHT = space[8];
+/** Darkness line: stroke width, and room kept above and below it inside the row. */
+const LINE_WIDTH = 1.5;
+const LINE_INSET = space[2];
 
 const styles = StyleSheet.create({
   edges: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: space[1] },
@@ -176,7 +199,7 @@ const styles = StyleSheet.create({
   edgeTime: { ...textStyles.footnoteStrong, color: colors.text },
   grid: { flexDirection: 'row' },
   labels: { width: componentSize.stripLabel },
-  headCell: { height: space[6] },
+  headCell: { height: space[8] },
   labelCell: {
     width: componentSize.stripLabel,
     flexDirection: 'row',
@@ -187,7 +210,10 @@ const styles = StyleSheet.create({
   label: { ...textStyles.footnote, color: colors.text, flexShrink: 1 },
   scroll: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center' },
-  hour: { ...textStyles.footnote, color: colors.textMuted, textAlign: 'center', lineHeight: space[6] },
+  hourCell: { alignItems: 'center', justifyContent: 'flex-end', paddingBottom: space[0.5] },
+  hour: { ...textStyles.footnote, color: colors.textMuted, textAlign: 'center' },
+  tick: { width: StyleSheet.hairlineWidth, height: componentSize.hourTick, backgroundColor: colors.borderStrong },
+  darknessLine: { position: 'absolute', left: 0, top: 0 },
   cell: { ...textStyles.footnote, color: colors.text, height: ROW_HEIGHT, lineHeight: ROW_HEIGHT, textAlign: 'center' },
   cellBest: { ...textStyles.footnoteStrong },
   window: {
@@ -198,6 +224,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: colors.night.window,
     backgroundColor: colors.night.windowFill,
+    ...shadows.tealGlow,
   },
   moon: {
     flexDirection: 'row',
@@ -207,8 +234,14 @@ const styles = StyleSheet.create({
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: colors.borderSubtle,
   },
+  moonThumb: {
+    width: componentSize.moonThumb,
+    height: componentSize.moonThumb,
+    borderRadius: radii.pill,
+    marginRight: space[3],
+  },
   moonBody: { flex: 1, gap: space[2] },
   moonText: { ...textStyles.footnote, color: colors.text },
   track: { height: componentSize.track, borderRadius: radii.pill, backgroundColor: colors.fill, overflow: 'hidden' },
-  trackFill: { height: '100%', borderRadius: radii.pill, backgroundColor: colors.night.moon },
+  trackFill: { height: '100%', borderRadius: radii.pill, backgroundColor: colors.night.moon, ...shadows.tealGlow },
 });

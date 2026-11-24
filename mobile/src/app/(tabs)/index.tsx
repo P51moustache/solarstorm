@@ -8,7 +8,7 @@ import { HorizonScene } from '@/components/tonight/HorizonScene';
 import { HourStrip } from '@/components/tonight/HourStrip';
 import { PlaceSwitcher } from '@/components/tonight/PlaceSwitcher';
 import { WhatsUp } from '@/components/tonight/WhatsUp';
-import { Button, Glass, ScoreRing } from '@/components/ui';
+import { BrandMark, Button, Glass, ScoreRing, Tappable } from '@/components/ui';
 import { useTonight } from '@/lib/useTonight';
 import { useTonightPlaces } from '@/lib/tonightPlace';
 import { colors, componentSize, iconSize, layout, motion, space, textStyles } from '@/theme';
@@ -45,8 +45,14 @@ export default function TonightScreen() {
         <HorizonScene aurora={tonight?.auroraGlow ?? false} />
 
         <View style={styles.brand}>
-          <Ionicons name="sparkles" size={iconSize.md} color={colors.aurora.violet} />
-          <Text style={styles.brandText}>SolarStorm</Text>
+          <BrandMark />
+          <Tappable
+            style={styles.settings}
+            onPress={() => router.push('/alerts')}
+            accessibilityLabel="Alert settings"
+            hitSlop={space[3]}>
+            <Ionicons name="settings-outline" size={iconSize.xxl} color={colors.text} />
+          </Tappable>
         </View>
 
         <View style={styles.hero}>
@@ -70,7 +76,7 @@ export default function TonightScreen() {
 
       <View style={styles.cards}>
         {noPlace ? (
-          <Glass>
+          <Glass tone="night">
             <Text style={styles.setupTitle}>Where are you watching from?</Text>
             <Text style={styles.setupText}>
               Tonight plans the sky for one place: your location or a place you saved.
@@ -85,7 +91,7 @@ export default function TonightScreen() {
           <ActivityIndicator color={colors.textMuted} style={styles.loading} />
         ) : (
           <>
-            <Glass>
+            <Glass tone="night">
               <HourStrip
                 hours={tonight.hours}
                 bounds={tonight.plan.bounds}
@@ -108,14 +114,8 @@ const styles = StyleSheet.create({
   content: { paddingBottom: layout.tabBarClearance },
   /** The hero over the horizon art; its bottom padding is where the ridges show. */
   sky: { paddingBottom: componentSize.horizonLand },
-  brand: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: space[1.5],
-    paddingVertical: space[2],
-  },
-  brandText: { ...textStyles.cardTitle, color: colors.text },
+  brand: { justifyContent: 'center', paddingVertical: space[2] },
+  settings: { position: 'absolute', right: layout.screenPadding },
   hero: {
     flexDirection: 'row',
     alignItems: 'flex-start',

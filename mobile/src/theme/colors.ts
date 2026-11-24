@@ -37,6 +37,9 @@ export const colors = {
   backdropVeil: withAlpha(palette.ink[950], 0.55),
   shadow: palette.black,
 
+  /** The selected tab's icon and label. */
+  tabActive: palette.teal[300],
+
   // Text
   text: palette.mist[50],
   textMuted: palette.mist[300],
@@ -88,25 +91,25 @@ export const colors = {
 
   /** Tonight: the horizon art, the sky score and the best window. */
   night: {
+    /** Page colour the painted horizon art fades into. */
     skyTop: palette.navy[950],
-    skyMid: palette.dusk[900],
-    skyLow: palette.dusk[700],
-    horizonGlow: palette.dusk[300],
-    haze: palette.dusk[500],
-    milkyWay: palette.mist[50],
-    ridgeFar: palette.slate[400],
-    ridgeNear: palette.slate[700],
-    snow: palette.slate[100],
-    shore: palette.slate[900],
-    trees: palette.slate[950],
-    lake: palette.slate[800],
-    auroraGlow: palette.green[400],
+    /** The same, fully clear: the top of that fade. */
+    fadeFrom: withAlpha(palette.navy[950], 0),
+    /** Violet-tinted glass of Tonight's cards, its rim and the glow behind it. */
+    glass: withAlpha(palette.dusk[900], 0.55),
+    glassBorder: withAlpha(palette.white, 0.16),
+    glassGlow: palette.violet[400],
+    /** Dark face inside the sky score dial. */
+    ringFace: withAlpha(palette.navy[950], 0.55),
     scoreFrom: palette.teal[300],
     scoreTo: palette.violet[400],
-    /** Outline and fill of the best window in the hour strip. */
+    /** Outline, fill and glow of the best window in the hour strip. */
     window: palette.teal[300],
     windowFill: withAlpha(palette.teal[300], 0.1),
-    /** Lit part of the Moon bar. */
+    /** Lit part of the Moon bar and the darkness line. */
     moon: palette.teal[300],
+    darknessLine: withAlpha(palette.teal[300], 0.6),
+    /** The brand star. */
+    star: palette.violet[400],
   },
 } as const;

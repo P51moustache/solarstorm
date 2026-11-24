@@ -10,3 +10,4 @@ export { Tappable, type TappableProps } from './Tappable';
 export { Toggle, type ToggleProps } from './Toggle';
 export { ListRow, type ListRowProps } from './ListRow';
 export { ScoreRing, type ScoreRingProps } from './ScoreRing';
+export { BrandMark } from './BrandMark';

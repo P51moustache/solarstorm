@@ -71,14 +71,21 @@ export const iconSize = {
 /** Fixed sizes of particular parts, named for the part. */
 export const componentSize = {
   /** Diameter of the sky score dial; holds "100" at `fontSize.hero2`. */
-  scoreRing: 116,
+  scoreRing: 132,
   scoreRingStroke: 6,
   /** Narrowest hour in the hour strip: fits "00" at footnote size with air either side. */
   hourColumn: 30,
   /** Label column of the hour strip ("Darkness %"). */
   stripLabel: 84,
-  /** Leading tile of a list row. */
-  eventTile: 44,
+  /** Photo thumbnail leading a What's up row (3:2, like the art). */
+  eventThumbWidth: 66,
+  eventThumbHeight: 44,
+  /** The Moon's picture in the hour strip. */
+  moonThumb: 28,
+  /** Tick under each hour label in the hour strip. */
+  hourTick: 6,
+  /** The brand star beside "SolarStorm". */
+  brandMark: 20,
   /** Left rule beside tonight's headline. */
   accentBar: 3,
   /** Thin progress track (the Moon bar). */
