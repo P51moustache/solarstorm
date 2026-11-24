@@ -29,3 +29,10 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
   `components/tonight/WhatsUp.tsx`). Times use the place's clock (`offsetClock`), never `Date#getHours`.
 - Horizon art is `components/tonight/HorizonScene.tsx`; its colors are `colors.night.*`. Spec:
   `research/concepts/tonight-spec.md`. The old Now dashboard is `(tabs)/aurora.tsx`, which opens Activity and Trends.
+
+# Preview (where Zach looks at work)
+
+- **http://localhost:8095**: Expo web dev server on branch `preview`, worktree `.claude/worktrees/preview/mobile`.
+  Show work by merging your branch into `preview` there (never push it, never commit original work on it).
+- Down? From that folder: `EXPO_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=placeholder CI=1 BROWSER=none nohup npx expo start --web --port 8095 > /tmp/solarstorm-preview.log 2>&1 &`
+- Native-only behaviour (haptics, blur, notifications) still needs the iOS simulator.
