@@ -36,12 +36,24 @@ type HourlyField = (typeof HOURLY_FIELDS)[number];
 /** The part of an Open-Meteo forecast response this module reads. */
 export interface OpenMeteoHourly {
   hourly: { time: number[] } & Record<HourlyField, (number | null)[]>;
+  /** The place's offset from UTC, with `timezone=auto`. */
+  utc_offset_seconds?: number;
 }
+
+/** A place's forecast and its clock offset, so times can read in the place's own time. */
+export interface SkyForecast {
+  hours: SkyWeather[];
+  utcOffsetSeconds: number | null;
+}
+
+/** Past days fetched too, so a night already under way keeps its first hours. */
+const PAST_DAYS = 1;
 
 export function forecastUrl(lat: number, lng: number): string {
   return (
     `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
-    `&hourly=${HOURLY_FIELDS.join(',')}&timeformat=unixtime&forecast_days=${FORECAST_DAYS}`
+    `&hourly=${HOURLY_FIELDS.join(',')}&timeformat=unixtime&timezone=auto` +
+    `&past_days=${PAST_DAYS}&forecast_days=${FORECAST_DAYS}`
   );
 }
 
@@ -69,16 +81,22 @@ export function parseHourly(json: OpenMeteoHourly): SkyWeather[] {
   return out;
 }
 
-/** Fetches the hourly sky weather; null when the network or the service fails. */
-export async function getSkyWeather(lat: number, lng: number): Promise<SkyWeather[] | null> {
+/** Fetches the hourly sky weather and the place's UTC offset; null when the network or the service fails. */
+export async function getSkyForecast(lat: number, lng: number): Promise<SkyForecast | null> {
   try {
     const res = await fetch(forecastUrl(lat, lng));
     if (!res.ok) return null;
-    const hours = parseHourly((await res.json()) as OpenMeteoHourly);
-    return hours.length ? hours : null;
+    const json = (await res.json()) as OpenMeteoHourly;
+    const hours = parseHourly(json);
+    return hours.length ? { hours, utcOffsetSeconds: json.utc_offset_seconds ?? null } : null;
   } catch {
     return null;
   }
+}
+
+/** Fetches the hourly sky weather; null when the network or the service fails. */
+export async function getSkyWeather(lat: number, lng: number): Promise<SkyWeather[] | null> {
+  return (await getSkyForecast(lat, lng))?.hours ?? null;
 }
 
 const lerp = (a: number, b: number, f: number) => a + (b - a) * f;

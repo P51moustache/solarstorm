@@ -75,13 +75,15 @@ export const componentSize = {
   /** Width of one hour in the hour strip: fits "00:00" at caption size with air either side. */
   hourColumn: 46,
   /** Label column of the hour strip ("Darkness %"). */
-  stripLabel: 92,
+  stripLabel: 104,
   /** Leading tile of a list row. */
   eventTile: 44,
   /** Left rule beside tonight's headline. */
   accentBar: 3,
   /** Thin progress track (the Moon bar). */
   track: 4,
-  /** Height of the horizon art behind Tonight's hero. */
-  horizon: 520,
+  /** Room under Tonight's headline where the ridges of the horizon art show. */
+  horizonLand: 132,
+  /** How far the horizon art (its lake) runs on under the first card. */
+  horizonOverlap: 96,
 } as const;

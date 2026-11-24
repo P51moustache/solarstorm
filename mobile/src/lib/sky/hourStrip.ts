@@ -9,7 +9,7 @@ export interface HourColumn {
   time: Date;
   /** Share of the sky under cloud, 0-100, all layers together; null outside the forecast. */
   cloud: number | null;
-  /** How dark the sky is, 0-100: the Sun's darkness with moonlight taken off. */
+  /** How dark the sky is, 0-100: the score's darkness and moonlight factors together. */
   darkness: number;
   /** The sample's sky score, 0-100. */
   score: number;
@@ -25,8 +25,8 @@ export function totalCloud(w: Pick<SkyWeather, 'cloudLow' | 'cloudMid' | 'cloudH
 }
 
 /** Darkness of one sample, 0-100. */
-export function darknessPercent(s: Pick<NightSample, 'sky'>): number {
-  return Math.round(100 * s.sky.sunDarkness * (1 - s.sky.moonGlow));
+export function darknessPercent(s: Pick<NightSample, 'factors'>): number {
+  return Math.round(100 * s.factors.darkness * s.factors.moon);
 }
 
 function nearestSample(samples: readonly NightSample[], t: number): NightSample {

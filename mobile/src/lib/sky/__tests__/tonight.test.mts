@@ -4,7 +4,7 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 
-import { compassPoint, utcClock } from '@/lib/sky/clock';
+import { compassPoint, offsetClock, placeDate, utcClock } from '@/lib/sky/clock';
 import { auroraChance, isAuroraLikely } from '@/lib/sky/events/aurora';
 import { EXCELLENT_SCORE, mainLimit, nightHeadline } from '@/lib/sky/headline';
 import { totalCloud } from '@/lib/sky/hourStrip';
@@ -58,7 +58,10 @@ test('an overcast night is "Clouded out" and says when it is least bad', () => {
 
 test('without a forecast the headline says the cloud forecast is missing', () => {
   const plan = planTonight({ place: LONDON, weather: [], now: new Date(NOON), aurora: null, clock: utcClock }).plan;
-  assert.match(nightHeadline(plan, utcClock).detail, /Cloud forecast not out yet\./);
+  assert.match(nightHeadline(plan, utcClock).detail, /No cloud forecast yet/);
+  const partial = tonight(LONDON, NOON + 18 * HOUR).plan;
+  assert.equal(partial.hasWeather, false);
+  assert.match(nightHeadline(partial, utcClock).detail, /unknown for part of the night/);
 });
 
 test('the hour strip has one column per whole hour and marks the best window', () => {
@@ -127,6 +130,13 @@ test('the aurora is listed whenever there is a read', () => {
   assert.equal(quiet.title, 'Aurora: unlikely');
   assert.equal(quiet.detail, '5% chance (Kp 1.7) · No significant activity expected');
   assert.ok(!tonight().events.some((e) => e.kind === 'aurora'));
+});
+
+test('times read in the place\'s own clock', () => {
+  const t = new Date('2026-12-09T22:10:00Z');
+  assert.equal(offsetClock(-8 * 3600)(t), '14:10');
+  assert.equal(offsetClock(3600)(t), '23:10');
+  assert.equal(placeDate(new Date('2026-12-10T02:00:00Z'), -8 * 3600), placeDate(new Date('2026-12-09T12:00:00Z'), 0));
 });
 
 test('compass points', () => {

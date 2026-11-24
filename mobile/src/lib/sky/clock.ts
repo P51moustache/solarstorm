@@ -14,6 +14,25 @@ export const localClock: Clock = (d) => `${pad(d.getHours())}:${pad(d.getMinutes
 /** 24-hour "HH:MM" in UTC (tests). */
 export const utcClock: Clock = (d) => `${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}`;
 
+const shift = (d: Date, offsetSeconds: number) => new Date(d.getTime() + offsetSeconds * 1000);
+
+/** 24-hour "HH:MM" at a place `offsetSeconds` ahead of UTC. */
+export function offsetClock(offsetSeconds: number): Clock {
+  return (d) => utcClock(shift(d, offsetSeconds));
+}
+
+/** The device's current offset from UTC, in seconds. */
+export function deviceOffsetSeconds(now = new Date()): number {
+  return -now.getTimezoneOffset() * 60;
+}
+
+const DATE_FORMAT: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric', timeZone: 'UTC' };
+
+/** "Mon, Nov 23" for the calendar day at a place `offsetSeconds` ahead of UTC. */
+export function placeDate(d: Date, offsetSeconds: number): string {
+  return shift(d, offsetSeconds).toLocaleDateString(undefined, DATE_FORMAT);
+}
+
 const COMPASS = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'] as const;
 
 /** Eight-point compass direction for an azimuth in degrees (0 north, 90 east). */

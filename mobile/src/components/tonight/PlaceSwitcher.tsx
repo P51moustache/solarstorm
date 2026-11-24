@@ -42,7 +42,13 @@ export function PlaceSwitcher({ place, choices, onChoose, onAddPlace }: PlaceSwi
               title={c.id === DEVICE_PLACE_ID ? `My location · ${c.label}` : c.label}
               leading={
                 <Ionicons
-                  name={c.id === place?.id ? 'checkmark-circle' : c.id === DEVICE_PLACE_ID ? 'navigate-outline' : 'location-outline'}
+                  name={
+                    c.id === place?.id
+                      ? 'checkmark-circle'
+                      : c.id === DEVICE_PLACE_ID
+                        ? 'navigate-outline'
+                        : 'location-outline'
+                  }
                   size={iconSize.lg}
                   color={c.id === place?.id ? colors.night.window : colors.textMuted}
                 />

@@ -43,22 +43,29 @@ export function mainLimit(plan: Pick<NightPlan, 'samples'>): ScoreFactor | null 
   return worst;
 }
 
-const NO_CLOUD_FORECAST = ' Cloud forecast not out yet.';
+/** Said when clouds are unknown: for the whole night, or for part of it (the forecast ends or starts inside it). */
+const NO_CLOUD_FORECAST = ' No cloud forecast yet: this is the Sun and Moon alone.';
+const PART_CLOUD_FORECAST = ' Clouds are unknown for part of the night.';
+
+function cloudNote(plan: NightPlan): string {
+  if (plan.hasWeather) return '';
+  return plan.samples.some((s) => s.weather) ? PART_CLOUD_FORECAST : NO_CLOUD_FORECAST;
+}
 
 export function nightHeadline(plan: NightPlan, clock: Clock): NightHeadline {
-  const cloudNote = plan.hasWeather ? '' : NO_CLOUD_FORECAST;
+  const note = cloudNote(plan);
   const { best } = plan;
   if (best) {
     const span = `from ${clock(best.start)} to ${clock(best.end)}`;
     if (best.score >= EXCELLENT_SCORE) {
       return {
         title: `Clear and dark ${span}`,
-        detail: `Excellent conditions for stargazing and night photography.${cloudNote}`,
+        detail: `Excellent conditions for stargazing and night photography.${note}`,
       };
     }
     const limit = mainLimit(plan);
     const cost = limit ? ` Worth going out, though ${COSTS_A_LITTLE[limit]}.` : '';
-    return { title: `Good sky ${span}`, detail: `${cost.trim()}${cloudNote}`.trim() };
+    return { title: `Good sky ${span}`, detail: `${cost.trim()}${note}`.trim() };
   }
   const limit = mainLimit(plan);
   const peak = plan.samples.reduce<NightPlan['samples'][number] | null>(
@@ -68,6 +75,6 @@ export function nightHeadline(plan: NightPlan, clock: Clock): NightHeadline {
   const bestMoment = peak && peak.score > 0 ? `Best around ${clock(peak.time)}, scoring ${peak.score}.` : '';
   return {
     title: limit ? SPOILED_BY[limit] : 'No good window tonight',
-    detail: `${bestMoment}${cloudNote}`.trim() || 'No stretch of the night is good enough to go out.',
+    detail: `${bestMoment}${note}`.trim() || 'No stretch of the night is good enough to go out.',
   };
 }

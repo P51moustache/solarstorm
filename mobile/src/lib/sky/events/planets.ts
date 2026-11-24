@@ -3,7 +3,7 @@ import { Body, Equator, Horizon, Illumination, Observer } from 'astronomy-engine
 
 import { SunAltitude } from '../darkness';
 import { compassPoint } from '../clock';
-import { upSpan } from './span';
+import { upSpan, whereAndWhen } from './span';
 import type { SkyEvent, SkyEventSource } from './types';
 
 /** Planets bright enough to find by eye. Mercury is left out: it hugs the twilight horizon. */
@@ -37,7 +37,7 @@ export const planetSource: SkyEventSource = {
         id: `planet-${name.toLowerCase()}`,
         kind: 'planet',
         title: name,
-        detail: `Up ${clock(span.start)} – ${clock(span.end)} · Highest in the ${compassPoint(span.peak.azimuth)} at ${clock(span.peak.time)} (mag ${magnitude(mag)})`,
+        detail: `Up ${clock(span.start)} – ${clock(span.end)} · ${whereAndWhen(span, clock, compassPoint)} (mag ${magnitude(mag)})`,
         mag,
       });
     }

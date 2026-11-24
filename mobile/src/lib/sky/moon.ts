@@ -4,7 +4,7 @@
  */
 import { Body, Illumination, MoonPhase, Observer, SearchRiseSet } from 'astronomy-engine';
 
-import type { NightBounds, Place } from './darkness';
+import { skyAt, type NightBounds, type Place } from './darkness';
 
 export interface MoonTonight {
   /** "Waxing gibbous", "Full moon"... */
@@ -14,10 +14,15 @@ export interface MoonTonight {
   /** Rise and set inside the night (sunset to sunrise); null when it does not happen tonight. */
   rise: Date | null;
   set: Date | null;
+  /** Above the horizon when the night begins. With no rise or set, it is up (or down) all night. */
+  upAtStart: boolean;
 }
 
-/** Degrees either side of new, first quarter, full and last quarter that still read as that exact phase. */
-const PRINCIPAL_PHASE_TOLERANCE = 7;
+/**
+ * Degrees either side of new, first quarter, full and last quarter that still read as that exact phase:
+ * the Moon moves about 12° a day, so this is the night of the phase (98% lit and up reads as full).
+ */
+const PRINCIPAL_PHASE_TOLERANCE = 15;
 
 const PRINCIPAL_PHASES: readonly { angle: number; name: string }[] = [
   { angle: 0, name: 'New moon' },
@@ -55,5 +60,6 @@ export function moonTonight(place: Place, bounds: NightBounds, now: Date): MoonT
     illumination: Illumination(Body.Moon, start).phase_fraction,
     rise: within(+1),
     set: within(-1),
+    upAtStart: skyAt(place, start).moonAltitude > 0,
   };
 }

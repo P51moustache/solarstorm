@@ -6,14 +6,18 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { auroraProbability } from '@/lib/aurora';
 import { useSky } from '@/lib/sky';
-import { localClock } from '@/lib/sky/clock';
+import { deviceOffsetSeconds, offsetClock, placeDate, type Clock } from '@/lib/sky/clock';
 import type { AuroraRead } from '@/lib/sky/events/types';
 import { planTonight, type Tonight } from '@/lib/sky/tonight';
-import { getSkyWeather, type SkyWeather } from '@/lib/sky/weather';
+import { getSkyForecast, type SkyForecast } from '@/lib/sky/weather';
 import type { PlaceChoice } from '@/lib/tonightPlace';
 
 export interface TonightState {
   tonight: Tonight | null;
+  /** Reads times in the place's own time zone (the device's until the forecast says otherwise). */
+  clock: Clock;
+  /** "Mon, Nov 23": the night's date at the place. */
+  dateLabel: string;
   /** True while the forecast for the current place is loading. */
   loading: boolean;
   /** False when the forecast could not be fetched; the plan then has no clouds. */
@@ -23,7 +27,7 @@ export interface TonightState {
 
 export function useTonight(place: PlaceChoice | null): TonightState {
   const { conditions, refresh: refreshSky } = useSky();
-  const [weather, setWeather] = useState<SkyWeather[] | null>(null);
+  const [forecast, setForecast] = useState<SkyForecast | null>(null);
   const [loading, setLoading] = useState(false);
   const [now, setNow] = useState(() => new Date());
 
@@ -32,13 +36,13 @@ export function useTonight(place: PlaceChoice | null): TonightState {
   const load = useCallback(async () => {
     if (lat === undefined || lng === undefined) return;
     setLoading(true);
-    setWeather(await getSkyWeather(lat, lng));
+    setForecast(await getSkyForecast(lat, lng));
     setNow(new Date());
     setLoading(false);
   }, [lat, lng]);
 
   useEffect(() => {
-    setWeather(null);
+    setForecast(null);
     load();
   }, [load]);
 
@@ -50,20 +54,24 @@ export function useTonight(place: PlaceChoice | null): TonightState {
       lat !== undefined && lng !== undefined && kp !== null
         ? { probability: auroraProbability(lat, lng, kp, bz, speed).probability, kp }
         : null,
-    [lat, lng, kp, bz, speed]
+    [lat, lng, kp, bz, speed],
   );
+
+  const offset = forecast?.utcOffsetSeconds ?? deviceOffsetSeconds(now);
+  const clock = useMemo(() => offsetClock(offset), [offset]);
 
   const tonight = useMemo(
     () =>
       lat !== undefined && lng !== undefined
-        ? planTonight({ place: { lat, lng }, weather: weather ?? [], now, aurora, clock: localClock })
+        ? planTonight({ place: { lat, lng }, weather: forecast?.hours ?? [], now, aurora, clock })
         : null,
-    [lat, lng, weather, now, aurora]
+    [lat, lng, forecast, now, aurora, clock],
   );
+  const dateLabel = placeDate(tonight?.plan.bounds.sunset ?? now, offset);
 
   const refresh = useCallback(async () => {
     await Promise.all([load(), refreshSky()]);
   }, [load, refreshSky]);
 
-  return { tonight, loading, hasForecast: weather !== null && weather.length > 0, refresh };
+  return { tonight, clock, dateLabel, loading, hasForecast: forecast !== null, refresh };
 }

@@ -1,7 +1,17 @@
 import { useEffect } from 'react';
-import { StyleSheet, useWindowDimensions, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useSharedValue, withRepeat, withTiming } from 'react-native-reanimated';
-import Svg, { Circle, Defs, Ellipse, LinearGradient, Path, Polygon, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, {
+  Circle,
+  Defs,
+  Ellipse,
+  LinearGradient,
+  Path,
+  Polygon,
+  RadialGradient,
+  Rect,
+  Stop,
+} from 'react-native-svg';
 
 import { colors, componentSize, motion } from '@/theme';
 
@@ -23,7 +33,7 @@ const STAR_FIELD_H = 330;
 const STAR_OPACITY = { min: 0.25, span: 0.65 };
 const STAR_RADIUS = { min: 0.35, span: 1.1 };
 /** The aurora's breathing opacity, quiet to bright. */
-const AURORA_OPACITY = { low: 0.55, high: 0.95 };
+const AURORA_OPACITY = { low: 0.6, high: 1 };
 
 /** Deterministic noise so the sky is the same on every render. */
 function seeded(n: number): number {
@@ -41,40 +51,90 @@ const STARS = Array.from({ length: STAR_COUNT }, (_, i) => ({
 const pts = (list: readonly (readonly [number, number])[]) => list.map(([x, y]) => `${x},${y}`).join(' ');
 
 const FAR_RIDGE = pts([
-  [0, 352], [28, 340], [52, 346], [86, 322], [104, 330], [132, 312], [150, 324], [176, 306], [198, 318],
-  [226, 296], [248, 312], [270, 300], [296, 322], [320, 308], [346, 326], [372, 316], [400, 334], [400, SHORE_Y], [0, SHORE_Y],
+  [0, 352],
+  [28, 340],
+  [52, 346],
+  [86, 322],
+  [104, 330],
+  [132, 312],
+  [150, 324],
+  [176, 306],
+  [198, 318],
+  [226, 296],
+  [248, 312],
+  [270, 300],
+  [296, 322],
+  [320, 308],
+  [346, 326],
+  [372, 316],
+  [400, 334],
+  [400, SHORE_Y],
+  [0, SHORE_Y],
 ]);
 const NEAR_RIDGE = pts([
-  [0, 370], [40, 360], [70, 368], [110, 356], [150, 366], [210, 360], [250, 368], [292, 352], [330, 362],
-  [366, 350], [400, 358], [400, SHORE_Y], [0, SHORE_Y],
+  [0, 370],
+  [40, 360],
+  [70, 368],
+  [110, 356],
+  [150, 366],
+  [210, 360],
+  [250, 368],
+  [292, 352],
+  [330, 362],
+  [366, 350],
+  [400, 358],
+  [400, SHORE_Y],
+  [0, SHORE_Y],
 ]);
 /** The far ridge upside down in the water, squashed. */
 const REFLECTION = pts([
-  [0, SHORE_Y], [86, SHORE_Y + 30], [132, SHORE_Y + 40], [176, SHORE_Y + 46], [226, SHORE_Y + 52], [270, SHORE_Y + 48],
-  [320, SHORE_Y + 42], [400, SHORE_Y + 28], [400, SHORE_Y],
+  [0, SHORE_Y],
+  [86, SHORE_Y + 30],
+  [132, SHORE_Y + 40],
+  [176, SHORE_Y + 46],
+  [226, SHORE_Y + 52],
+  [270, SHORE_Y + 48],
+  [320, SHORE_Y + 42],
+  [400, SHORE_Y + 28],
+  [400, SHORE_Y],
 ]);
 const LEFT_SHORE = 'M0,300 C30,312 54,350 96,392 C110,404 80,420 0,426 Z';
 const RIGHT_SHORE = 'M400,338 C380,350 360,372 336,386 C350,396 380,400 400,402 Z';
 
 /** Fir silhouettes: [x of trunk, base y, height]. */
 const TREES: readonly (readonly [number, number, number])[] = [
-  [6, 330, 70], [20, 345, 58], [34, 352, 46], [48, 368, 38], [62, 380, 28],
-  [352, 372, 34], [366, 362, 46], [380, 352, 58], [394, 346, 66],
+  [6, 330, 70],
+  [20, 345, 58],
+  [34, 352, 46],
+  [48, 368, 38],
+  [62, 380, 28],
+  [352, 372, 34],
+  [366, 362, 46],
+  [380, 352, 58],
+  [394, 346, 66],
 ];
 const firPath = ([x, base, h]: readonly [number, number, number]) => {
   const w = h * 0.22;
   return `M${x},${base - h} L${x + w},${base - h * 0.45} L${x + w * 0.55},${base - h * 0.45} L${x + w * 1.3},${base} L${x - w * 1.3},${base} L${x - w * 0.55},${base - h * 0.45} L${x - w},${base - h * 0.45} Z`;
 };
 
-/** Aurora curtains: fronds rising from behind the ridges, left of centre where the concept has them. */
-const AURORA_CURTAINS = [
-  'M20,300 C80,220 150,170 230,150 C260,146 280,160 300,190 C250,200 180,240 120,320 Z',
-  'M90,320 C150,250 210,215 290,205 C320,205 340,225 350,250 C300,250 230,280 180,330 Z',
+/** Soft aurora glow banks rising from behind the ridges, right of centre as in the concept: [cx, cy, rx, ry, tilt°]. */
+const AURORA_BANKS: readonly (readonly [number, number, number, number, number])[] = [
+  [250, 300, 170, 34, -10],
+  [300, 270, 120, 26, -18],
+  [170, 292, 110, 22, -6],
 ];
+/** A faint violet crown above the green. */
+const AURORA_CROWN = [310, 235, 130, 40, -14] as const;
 
-function Sky({ width, height }: { width: number; height: number }) {
+function Sky() {
   return (
-    <Svg width={width} height={height} viewBox={VIEW_BOX} preserveAspectRatio="xMidYMax slice" style={StyleSheet.absoluteFill}>
+    <Svg
+      width="100%"
+      height="100%"
+      viewBox={VIEW_BOX}
+      preserveAspectRatio="xMidYMax slice"
+      style={StyleSheet.absoluteFill}>
       <Defs>
         <LinearGradient id="hz-sky" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={colors.night.skyTop} />
@@ -96,35 +156,56 @@ function Sky({ width, height }: { width: number; height: number }) {
   );
 }
 
-function AuroraGlow({ width, height }: { width: number; height: number }) {
+function AuroraGlow() {
   const breathe = useSharedValue(0);
   useEffect(() => {
-    breathe.value = withRepeat(withTiming(1, { duration: motion.duration.breathe, easing: motion.easing.breathe }), -1, true);
+    breathe.value = withRepeat(
+      withTiming(1, { duration: motion.duration.breathe, easing: motion.easing.breathe }),
+      -1,
+      true,
+    );
   }, [breathe]);
   const style = useAnimatedStyle(() => ({
     opacity: AURORA_OPACITY.low + breathe.value * (AURORA_OPACITY.high - AURORA_OPACITY.low),
   }));
   return (
     <Animated.View style={[StyleSheet.absoluteFill, style]}>
-      <Svg width={width} height={height} viewBox={VIEW_BOX} preserveAspectRatio="xMidYMax slice">
+      <Svg width="100%" height="100%" viewBox={VIEW_BOX} preserveAspectRatio="xMidYMax slice">
         <Defs>
-          <LinearGradient id="hz-aurora" x1="0" y1="1" x2="0" y2="0">
-            <Stop offset="0" stopColor={colors.night.auroraGlow} stopOpacity={0.75} />
-            <Stop offset="0.55" stopColor={colors.night.auroraGlow} stopOpacity={0.3} />
+          <RadialGradient id="hz-aurora" cx="0.5" cy="0.5" r="0.5">
+            <Stop offset="0" stopColor={colors.night.auroraGlow} stopOpacity={0.55} />
+            <Stop offset="0.6" stopColor={colors.night.auroraGlow} stopOpacity={0.18} />
+            <Stop offset="1" stopColor={colors.night.auroraGlow} stopOpacity={0} />
+          </RadialGradient>
+          <RadialGradient id="hz-crown" cx="0.5" cy="0.5" r="0.5">
+            <Stop offset="0" stopColor={colors.aurora.violet} stopOpacity={0.3} />
             <Stop offset="1" stopColor={colors.aurora.violet} stopOpacity={0} />
-          </LinearGradient>
+          </RadialGradient>
         </Defs>
-        {AURORA_CURTAINS.map((d) => (
-          <Path key={d} d={d} fill="url(#hz-aurora)" />
+        {[AURORA_CROWN, ...AURORA_BANKS].map(([cx, cy, rx, ry, tilt], i) => (
+          <Ellipse
+            key={`${cx}-${cy}`}
+            cx={cx}
+            cy={cy}
+            rx={rx}
+            ry={ry}
+            fill={i === 0 ? 'url(#hz-crown)' : 'url(#hz-aurora)'}
+            transform={`rotate(${tilt} ${cx} ${cy})`}
+          />
         ))}
       </Svg>
     </Animated.View>
   );
 }
 
-function Land({ width, height }: { width: number; height: number }) {
+function Land() {
   return (
-    <Svg width={width} height={height} viewBox={VIEW_BOX} preserveAspectRatio="xMidYMax slice" style={StyleSheet.absoluteFill}>
+    <Svg
+      width="100%"
+      height="100%"
+      viewBox={VIEW_BOX}
+      preserveAspectRatio="xMidYMax slice"
+      style={StyleSheet.absoluteFill}>
       <Defs>
         <LinearGradient id="hz-far" x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor={colors.night.snow} />
@@ -133,8 +214,8 @@ function Land({ width, height }: { width: number; height: number }) {
           <Stop offset="1" stopColor={colors.night.ridgeNear} />
         </LinearGradient>
         <LinearGradient id="hz-lake" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={colors.night.horizonGlow} stopOpacity={0.45} />
-          <Stop offset="0.35" stopColor={colors.night.haze} stopOpacity={0.35} />
+          <Stop offset="0" stopColor={colors.night.haze} />
+          <Stop offset="0.3" stopColor={colors.night.skyLow} />
           <Stop offset="1" stopColor={colors.night.lake} />
         </LinearGradient>
         <LinearGradient id="hz-fade" x1="0" y1="0" x2="0" y2="1">
@@ -156,18 +237,24 @@ function Land({ width, height }: { width: number; height: number }) {
   );
 }
 
+/**
+ * Fills its parent and runs `componentSize.horizonOverlap` past its bottom; the land is pinned to the
+ * bottom edge (xMidYMax slice), so the ridges always sit just above whatever follows the parent.
+ */
 export function HorizonScene({ aurora }: { aurora: boolean }) {
-  const { width } = useWindowDimensions();
-  const height = componentSize.horizon;
   return (
-    <View style={[styles.wrap, { height }]} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
-      <Sky width={width} height={height} />
-      {aurora ? <AuroraGlow width={width} height={height} /> : null}
-      <Land width={width} height={height} />
+    <View
+      style={styles.wrap}
+      pointerEvents="none"
+      accessibilityElementsHidden
+      importantForAccessibility="no-hide-descendants">
+      <Sky />
+      {aurora ? <AuroraGlow /> : null}
+      <Land />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrap: { position: 'absolute', top: 0, left: 0, right: 0, overflow: 'hidden' },
+  wrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: -componentSize.horizonOverlap, overflow: 'hidden' },
 });
