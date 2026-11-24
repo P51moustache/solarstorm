@@ -28,7 +28,7 @@ export const milkyWaySource: SkyEventSource = {
         id: 'milky-way-core',
         kind: 'milkyWay',
         title: 'Milky Way core',
-        detail: `Visible ${clock(span.start)} – ${clock(span.end)} · ${where}, best ~${clock(span.peak.time)}`,
+        detail: `Visible ${clock(span.start)}–${clock(span.end)} · ${where}, best ~${clock(span.peak.time)}`,
       },
     ];
   },

@@ -40,6 +40,7 @@ export const lineHeight = {
   body: 22,
   relaxed: 24,
   title: 30,
+  display: 34,
 } as const;
 
 /** Letter spacing: negative tightens big numbers and titles, positive opens up small caps. */
@@ -64,9 +65,9 @@ export const textStyles = style({
   screenTitle: { fontSize: fontSize.screenTitle, fontFamily: fonts.bold, letterSpacing: tracking.title },
   sheetTitle: { fontSize: fontSize.title2, fontFamily: fonts.bold },
   /** A panel's own heading ("What's up tonight"). */
-  panelTitle: { fontSize: fontSize.title2, fontFamily: fonts.bold },
+  panelTitle: { fontSize: fontSize.title3, fontFamily: fonts.bold },
   /** The plain answer at the top of a screen ("Clear and dark from 22:10 to 03:40"). */
-  heroHeadline: { fontSize: fontSize.title1, fontFamily: fonts.bold, lineHeight: lineHeight.title, letterSpacing: tracking.title },
+  heroHeadline: { fontSize: fontSize.stat, fontFamily: fonts.bold, lineHeight: lineHeight.display, letterSpacing: tracking.title },
   /** A big score inside a dial. */
   scoreValue: { fontSize: fontSize.hero2, fontFamily: fonts.bold, letterSpacing: tracking.displaySmall },
   sectionTitle: { fontSize: fontSize.title4, fontFamily: fonts.bold },

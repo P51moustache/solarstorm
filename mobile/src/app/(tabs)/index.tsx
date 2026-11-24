@@ -86,7 +86,13 @@ export default function TonightScreen() {
         ) : (
           <>
             <Glass>
-              <HourStrip hours={tonight.hours} bounds={tonight.plan.bounds} moon={tonight.moon} clock={clock} />
+              <HourStrip
+                hours={tonight.hours}
+                bounds={tonight.plan.bounds}
+                moon={tonight.moon}
+                clock={clock}
+                now={tonight.now}
+              />
               {loading ? <ActivityIndicator color={colors.textMuted} style={styles.stripLoading} /> : null}
             </Glass>
             <WhatsUp events={tonight.events} onOpen={{ aurora: () => router.push('/aurora') }} />

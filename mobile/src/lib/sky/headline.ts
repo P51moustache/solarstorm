@@ -52,9 +52,14 @@ function cloudNote(plan: NightPlan): string {
   return plan.samples.some((s) => s.weather) ? PART_CLOUD_FORECAST : NO_CLOUD_FORECAST;
 }
 
-export function nightHeadline(plan: NightPlan, clock: Clock): NightHeadline {
+/**
+ * The headline as of `now`: a window that has already closed no longer counts, and "best around"
+ * looks only at what is still ahead (or the whole night, before it starts).
+ */
+export function nightHeadline(plan: NightPlan, clock: Clock, now?: Date): NightHeadline {
   const note = cloudNote(plan);
-  const { best } = plan;
+  const t = now ? now.getTime() : -Infinity;
+  const best = plan.best && plan.best.end.getTime() > t ? plan.best : null;
   if (best) {
     const span = `from ${clock(best.start)} to ${clock(best.end)}`;
     if (best.score >= EXCELLENT_SCORE) {
@@ -68,10 +73,9 @@ export function nightHeadline(plan: NightPlan, clock: Clock): NightHeadline {
     return { title: `Good sky ${span}`, detail: `${cost.trim()}${note}`.trim() };
   }
   const limit = mainLimit(plan);
-  const peak = plan.samples.reduce<NightPlan['samples'][number] | null>(
-    (b, s) => (b === null || s.score > b.score ? s : b),
-    null
-  );
+  const peak = plan.samples
+    .filter((s) => s.time.getTime() >= t)
+    .reduce<NightPlan['samples'][number] | null>((b, s) => (b === null || s.score > b.score ? s : b), null);
   const bestMoment = peak && peak.score > 0 ? `Best around ${clock(peak.time)}, scoring ${peak.score}.` : '';
   return {
     title: limit ? SPOILED_BY[limit] : 'No good window tonight',

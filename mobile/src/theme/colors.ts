@@ -107,6 +107,6 @@ export const colors = {
     window: palette.teal[300],
     windowFill: withAlpha(palette.teal[300], 0.1),
     /** Lit part of the Moon bar. */
-    moon: palette.mist[300],
+    moon: palette.teal[300],
   },
 } as const;

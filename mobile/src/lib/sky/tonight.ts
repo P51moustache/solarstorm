@@ -28,6 +28,8 @@ export interface Tonight {
   hours: HourColumn[];
   moon: MoonTonight;
   events: SkyEvent[];
+  /** The moment this was planned for. */
+  now: Date;
   /** Show the aurora glow in the horizon art. */
   auroraGlow: boolean;
 }
@@ -36,7 +38,8 @@ export function planTonight({ place, weather, now, aurora, clock }: TonightInput
   const plan = planNight(place, weather, now);
   return {
     plan,
-    headline: nightHeadline(plan, clock),
+    now,
+    headline: nightHeadline(plan, clock, now),
     hours: hourStrip(plan),
     moon: moonTonight(place, plan.bounds, now),
     events: skyEventsTonight({ place, plan, clock, aurora }),

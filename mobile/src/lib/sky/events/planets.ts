@@ -37,7 +37,7 @@ export const planetSource: SkyEventSource = {
         id: `planet-${name.toLowerCase()}`,
         kind: 'planet',
         title: name,
-        detail: `Up ${clock(span.start)} – ${clock(span.end)} · ${whereAndWhen(span, clock, compassPoint)} (mag ${magnitude(mag)})`,
+        detail: `${clock(span.start)}–${clock(span.end)} · ${whereAndWhen(span, clock, compassPoint)} · mag\u00A0${magnitude(mag)}`,
         mag,
       });
     }

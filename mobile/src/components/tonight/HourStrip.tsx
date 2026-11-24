@@ -1,5 +1,5 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 
 import type { Clock } from '@/lib/sky/clock';
@@ -10,10 +10,12 @@ import { colors, componentSize, iconSize, radii, space, textStyles } from '@/the
 
 /** Columns kept in view to the left of the best window when the strip opens. */
 const LEAD_COLUMNS = 1;
+/** Hour labels show the hour only ("22"), as on a clock face; the edges give full times. */
+const HOUR_DIGITS = 2;
 
 const ROWS = [
   { key: 'cloud', icon: 'cloud-outline', label: 'Cloud %' },
-  { key: 'darkness', icon: 'contrast-outline', label: 'Darkness %' },
+  { key: 'darkness', icon: 'contrast-outline', label: 'Dark %' },
 ] as const;
 
 export interface HourStripProps {
@@ -21,6 +23,8 @@ export interface HourStripProps {
   bounds: NightBounds;
   moon: MoonTonight;
   clock: Clock;
+  /** The strip opens on the best window if it is still ahead, else on this hour. */
+  now: Date;
 }
 
 function Edge({
@@ -51,6 +55,18 @@ function windowBox(hours: readonly HourColumn[], column: number) {
   return { left: first * column, width: (last - first + 1) * column, first };
 }
 
+/** The column the strip opens on: the best window while it is still ahead, else the current hour. */
+function openingColumn(hours: readonly HourColumn[], box: { first: number } | null, now: Date): number {
+  const current = Math.max(
+    0,
+    hours.findIndex((h) => h.time.getTime() + HOUR_MS > now.getTime()),
+  );
+  const boxEnd = box ? hours.findLastIndex((h) => h.inBest) : -1;
+  return box && boxEnd >= current ? Math.max(box.first, current) : current;
+}
+
+const HOUR_MS = 3_600_000;
+
 /** Stretches columns so a whole number of them fills the view: none is ever cut in half at the edge. */
 export function fittedColumn(viewWidth: number, minColumn = componentSize.hourColumn): number {
   if (viewWidth <= 0) return minColumn;
@@ -58,7 +74,8 @@ export function fittedColumn(viewWidth: number, minColumn = componentSize.hourCo
 }
 
 function moonLine(moon: MoonTonight, clock: Clock): string {
-  const lit = `${moon.phaseName} (${Math.round(moon.illumination * 100)}%)`;
+  // The bar shows how much is lit, so the text names the phase only.
+  const lit = moon.phaseName;
   const events = [moon.rise ? `Rises ${clock(moon.rise)}` : null, moon.set ? `Sets ${clock(moon.set)}` : null].filter(
     Boolean,
   );
@@ -67,10 +84,14 @@ function moonLine(moon: MoonTonight, clock: Clock): string {
 }
 
 /** Dusk to dawn, hour by hour: cloud and darkness, the best window boxed, and the Moon. */
-export function HourStrip({ hours, bounds, moon, clock }: HourStripProps) {
+export function HourStrip({ hours, bounds, moon, clock, now }: HourStripProps) {
   const [column, setColumn] = useState<number>(componentSize.hourColumn);
   const box = useMemo(() => windowBox(hours, column), [hours, column]);
-  const startX = box ? Math.max(0, (box.first - LEAD_COLUMNS) * column) : 0;
+  const startX = Math.max(0, (openingColumn(hours, box, now) - LEAD_COLUMNS) * column);
+  const scroll = useRef<ScrollView>(null);
+  useEffect(() => {
+    scroll.current?.scrollTo({ x: startX, animated: false });
+  }, [startX]);
   const onLayout = (e: LayoutChangeEvent) => setColumn(fittedColumn(e.nativeEvent.layout.width));
   const width = { width: column };
 
@@ -95,18 +116,18 @@ export function HourStrip({ hours, bounds, moon, clock }: HourStripProps) {
         </View>
 
         <ScrollView
-          key={column}
+          ref={scroll}
+          onContentSizeChange={() => scroll.current?.scrollTo({ x: startX, animated: false })}
           onLayout={onLayout}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentOffset={{ x: startX, y: 0 }}
           style={styles.scroll}>
           <View>
             {box ? <View style={[styles.window, { left: box.left, width: box.width }]} /> : null}
             <View style={styles.row}>
               {hours.map((h) => (
                 <Text key={h.time.getTime()} style={[styles.headCell, styles.hour, width]}>
-                  {clock(h.time)}
+                  {clock(h.time).slice(0, HOUR_DIGITS)}
                 </Text>
               ))}
             </View>
@@ -146,10 +167,10 @@ export function HourStrip({ hours, bounds, moon, clock }: HourStripProps) {
   );
 }
 
-const ROW_HEIGHT = space[10];
+const ROW_HEIGHT = space[8];
 
 const styles = StyleSheet.create({
-  edges: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: space[2] },
+  edges: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: space[1] },
   edgeRight: { alignItems: 'flex-end' },
   edgeLabel: { ...textStyles.caption, color: colors.textMuted },
   edgeTime: { ...textStyles.footnoteStrong, color: colors.text },
@@ -166,7 +187,7 @@ const styles = StyleSheet.create({
   label: { ...textStyles.footnote, color: colors.text, flexShrink: 1 },
   scroll: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center' },
-  hour: { ...textStyles.caption, color: colors.textMuted, textAlign: 'center', lineHeight: space[6] },
+  hour: { ...textStyles.footnote, color: colors.textMuted, textAlign: 'center', lineHeight: space[6] },
   cell: { ...textStyles.footnote, color: colors.text, height: ROW_HEIGHT, lineHeight: ROW_HEIGHT, textAlign: 'center' },
   cellBest: { ...textStyles.footnoteStrong },
   window: {

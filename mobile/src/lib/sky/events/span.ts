@@ -48,13 +48,13 @@ export function heightWord(altitude: number): 'Low' | 'Up' | 'High' {
 }
 
 /**
- * Where to look and when: "Highest in the S at 22:20", or "Climbing in the SE" when it is still rising
- * as the night ends, "Sinking in the SW" when it is already past its best as the night begins.
+ * Where to look and when: "best 22:20 in the S", or "rising in the SE" when it is still climbing
+ * as the night ends, "setting in the SW" when it is already past its best as the night begins.
  */
 export function whereAndWhen(span: UpSpan, clock: (d: Date) => string, compass: (az: number) => string): string {
   const dir = compass(span.peak.azimuth);
   const t = span.peak.time.getTime();
-  if (t === span.end.getTime() && t !== span.start.getTime()) return `Climbing in the ${dir}`;
-  if (t === span.start.getTime() && t !== span.end.getTime()) return `Sinking in the ${dir}`;
-  return `Highest in the ${dir} at ${clock(span.peak.time)}`;
+  if (t === span.end.getTime() && t !== span.start.getTime()) return `rising in the ${dir}`;
+  if (t === span.start.getTime() && t !== span.end.getTime()) return `setting in the ${dir}`;
+  return `best ${clock(span.peak.time)} in the ${dir}`;
 }

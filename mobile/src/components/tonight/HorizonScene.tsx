@@ -26,6 +26,9 @@ const VIEW_H = 520;
 const VIEW_BOX = `0 0 ${VIEW_W} ${VIEW_H}`;
 /** Where the lake meets the land, in view units. */
 const SHORE_Y = 382;
+/** The lake fades into the page from this far below the shore, over this height, before any card overlaps it. */
+const LAKE_FADE_FROM = 12;
+const LAKE_FADE_HEIGHT = 36;
 const STAR_COUNT = 70;
 /** Stars stay above the ridges. */
 const STAR_FIELD_H = 330;
@@ -232,7 +235,14 @@ function Land() {
       {TREES.map((t) => (
         <Path key={`${t[0]}-${t[1]}`} d={firPath(t)} fill={colors.night.trees} />
       ))}
-      <Rect x={0} y={SHORE_Y + 40} width={VIEW_W} height={VIEW_H - SHORE_Y - 40} fill="url(#hz-fade)" />
+      <Rect
+        x={0}
+        y={SHORE_Y + LAKE_FADE_FROM + LAKE_FADE_HEIGHT}
+        width={VIEW_W}
+        height={VIEW_H}
+        fill={colors.night.skyTop}
+      />
+      <Rect x={0} y={SHORE_Y + LAKE_FADE_FROM} width={VIEW_W} height={LAKE_FADE_HEIGHT} fill="url(#hz-fade)" />
     </Svg>
   );
 }

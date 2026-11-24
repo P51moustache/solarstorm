@@ -40,20 +40,20 @@ Data: `planTonight()` in `mobile/src/lib/sky/tonight.ts` (headline, hour strip, 
 - **Job**: the plain answer. **Data**: `headline.title` / `headline.detail`. Hardest: "Fog hides the sky tonight"
   plus a two-sentence detail → wraps, never clips.
 - **Part**: view with a left accent bar (`componentSize.accentBar`, `colors.night.window`), title
-  `textStyles.heroHeadline`, detail `textStyles.bodyLarge` / `textMuted`. Gap `space[1.5]`, bar inset `space[3]`.
+  `textStyles.heroHeadline` (28), detail `textStyles.bodyLarge` / `textMuted`. Gap `space[1.5]`, bar inset `space[3]`.
 
 ### Hour strip card
 - **Job**: hour by hour, dusk to dawn: cloud, darkness, the best window, the Moon.
 - **Data**: `tonight.hours` (one column per whole hour; 8 in June at 55°N, 16+ in a polar winter), `plan.bounds`,
   `tonight.moon`.
 - **Part**: `Glass` card with **new** `HourStrip`: fixed label column (`componentSize.stripLabel`) + horizontal
-  `ScrollView` of `componentSize.hourColumn` columns, so long nights scroll instead of squeezing. Best window =
-  rounded box `radii.md`, border `colors.night.window`, fill `colors.night.windowFill`. Dusk/Dawn in the header
+  `ScrollView` of `componentSize.hourColumn` columns (stretched so none is cut), so long nights scroll instead of squeezing. Best window =
+  rounded box `radii.md`, border `colors.night.window`, fill `colors.night.windowFill`. Sunset/Sunrise in the header
   (`textStyles.caption` label, `textStyles.footnoteStrong` time). Moon row: `moon` icon, `textStyles.footnote`,
   illumination bar (`componentSize.track`, `radii.pill`, fill `colors.night.moon`).
 - **Lines up with**: label column icons on one left edge; every row's values on the column centres.
 - **States**: no forecast → cloud cells show "–"; no best window → no box.
-- **Moves**: opens scrolled so the best window (or the first hour) is in view; no animation.
+- **Moves**: opens scrolled to the best window if still ahead, else the current hour; no animation.
 
 ### What's up tonight
 - **Job**: what to look at. **Data**: `tonight.events` (Milky Way core, planets brightest first, aurora). Hardest:
@@ -73,9 +73,12 @@ Data: `planTonight()` in `mobile/src/lib/sky/tonight.ts` (headline, hour strip, 
 | Screen side inset | ~20 pt | `layout.screenPadding` (16) | every screen's inset |
 | Card inset | ~22 pt | `Glass` default `space[4.5]` | every card's inset |
 | Card gap | ~14 pt | `layout.stackGap` (12) | every stack of cards |
-| Headline size | ~1.6× body | `fontSize.title1` (24) | nearest step that keeps 2 lines at 375 pt |
+| Headline size | ~1.8× body | `fontSize.stat` (28), `lineHeight.display` | clearly above panel titles (review) |
 | Score number | ~2.4× headline | `fontSize.hero2` (44) | fits "100" inside the ring |
-| Ring diameter | ~92 pt | 116 | holds "100" at hero2 with the label above |
+| Ring diameter | ~92 pt | `componentSize.scoreRing` 116 | holds "100" at hero2 with the label above |
+| Hour column | ~34 pt | `componentSize.hourColumn` 30, stretched to fit | 7 hours in view on every phone; hour-only labels |
+| Strip row | ~24 pt | `space[8]` (32) | 44 pt-ish touch rhythm without crowding |
+| Panel title | ~22 pt | `textStyles.panelTitle` (title3, 20) | below the headline |
 | Event title | bold, ~body+2 | `textStyles.cardTitle` | card titles elsewhere |
 
 ## Core additions
@@ -83,8 +86,8 @@ Data: `planTonight()` in `mobile/src/lib/sky/tonight.ts` (headline, hour strip, 
 |---|---|---|---|
 | palette | `dusk`, `slate`, `teal` ramps | horizon and window hues | no pink-violet horizon or teal in the palette |
 | color roles | `colors.night.*` | horizon art, score ring, best window, Moon bar | new kind of surface |
-| spacing | `componentSize` | fixed sizes of the ring, strip, tiles, horizon | the scale had no component sizes |
-| type | `heroHeadline`, `scoreValue`, `panelTitle`, `lineHeight.title` | the answer line, the score, a panel's heading | no 24 pt multi-line or 44 pt numeric style |
+| spacing | `componentSize`, `space[8]` | fixed sizes of the ring, strip, tiles, horizon; 32 pt rows | the scale had no component sizes |
+| type | `heroHeadline`, `scoreValue`, `panelTitle`, `lineHeight.title`/`display` | the answer line, the score, a panel's heading | no 24 pt multi-line or 44 pt numeric style |
 | motion | `duration.reveal`, `easing.reveal` + 2 registry rows | score ring fill | first one-shot reveal in the app |
 | component | `ScoreRing`, `ListRow` | 0-100 dial; tappable list row | none existed |
 
@@ -93,4 +96,14 @@ Data: `planTonight()` in `mobile/src/lib/sky/tonight.ts` (headline, hour strip, 
 - Darkness row reads 0-100 % (Sun darkness × moonlight) instead of mag/arcsec²: there is no sky-brightness
   model, and a made-up SQM number would mislead.
 - Meteor showers are not listed yet (needs the IMO table; separate item).
-- Times use 24-hour HH:MM as in the concept.
+- Times use 24-hour HH:MM in the place's own time zone (Open-Meteo offset; the device's if the forecast fails).
+- Hour strip labels show the hour only ("22"); Sunset/Sunrise sit above the strip, not at its ends, because the
+  strip scrolls. It opens on the best window if still ahead, else the current hour.
+- Active tab stays white (app-wide tab bar style), not the concept's teal.
+- Every planet shares one icon tile; per-planet art waits for real thumbnails.
+- On iPhone SE What's up starts just below the fold: shrinking the horizon art put the ridges over the headline.
+
+## Review (fresh agent, 24 Nov)
+Fixed: strip too sparse and opening on past hours, headline "best around" pointing at past times, lake seam
+under the hour card, card too loose, headline not standing out, What's up details wrapping on fragments, Moon
+bar invisible, chevron edges uneven. Kept: see above.

@@ -32,12 +32,21 @@ export function ListRow({ title, subtitle, leading, onPress, divider = true }: L
           </Text>
         ) : null}
       </View>
-      {onPress ? <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textFaint} /> : null}
+      {/* The chevron's room is kept on every row so text edges line up in mixed lists. */}
+      {onPress ? (
+        <Ionicons name="chevron-forward" size={iconSize.sm} color={colors.textFaint} />
+      ) : (
+        <View style={styles.chevronSpace} />
+      )}
     </>
   );
   const style = [styles.row, divider && styles.divider];
   return onPress ? (
-    <Tappable style={style} onPress={onPress} feedback="soft" accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}>
+    <Tappable
+      style={style}
+      onPress={onPress}
+      feedback="soft"
+      accessibilityLabel={subtitle ? `${title}. ${subtitle}` : title}>
       {body}
     </Tappable>
   ) : (
@@ -51,6 +60,7 @@ const styles = StyleSheet.create({
   row: { flexDirection: 'row', alignItems: 'center', gap: space[3], paddingVertical: space[3] },
   divider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle },
   text: { flex: 1, gap: space[0.5] },
+  chevronSpace: { width: iconSize.sm },
   title: { ...textStyles.cardTitle, color: colors.text },
   subtitle: { ...textStyles.footnote, color: colors.textMuted, lineHeight: lineHeight.footnote },
 });

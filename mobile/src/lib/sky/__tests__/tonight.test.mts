@@ -50,6 +50,15 @@ test('a clear moonless night reads "Clear and dark" with its window in clock tim
   assert.equal(t.headline.detail, 'Excellent conditions for stargazing and night photography.');
 });
 
+test('a window that has closed no longer heads the night', () => {
+  const t = tonight();
+  const after = new Date(t.plan.best!.end.getTime() + HOUR);
+  const h = nightHeadline(t.plan, utcClock, after);
+  assert.doesNotMatch(h.title, /^Clear and dark/);
+  const before = nightHeadline(t.plan, utcClock, new Date(NOON));
+  assert.match(before.title, /^Clear and dark/);
+});
+
 test('an overcast night is "Clouded out" and says when it is least bad', () => {
   const t = tonight(LONDON, NOON, () => 100);
   assert.equal(t.plan.best, null);
@@ -113,7 +122,7 @@ test('the Milky Way core shows on a dark southern winter night and not over a De
   assert.ok(!tonight().events.some((e) => e.kind === 'milkyWay'));
   const south = tonight(SANTIAGO, JULY_NOON_SANTIAGO).events.find((e) => e.kind === 'milkyWay');
   assert.ok(south);
-  assert.match(south.detail, /^Visible \d\d:\d\d – \d\d:\d\d · (Low|Up|High) in the [NESW]{1,2}, best ~\d\d:\d\d$/);
+  assert.match(south.detail, /^Visible \d\d:\d\d–\d\d:\d\d · (Low|Up|High) in the [NESW]{1,2}, best ~\d\d:\d\d$/);
 });
 
 test('the aurora glow shows only when the aurora is likely', () => {
@@ -128,7 +137,7 @@ test('the aurora glow shows only when the aurora is likely', () => {
 test('the aurora is listed whenever there is a read', () => {
   const quiet = tonight(LONDON, NOON, () => 0, { probability: 5, kp: 1.7 }).events.at(-1)!;
   assert.equal(quiet.title, 'Aurora: unlikely');
-  assert.equal(quiet.detail, '5% chance (Kp 1.7) · No significant activity expected');
+  assert.equal(quiet.detail, '5% chance · Kp\u00A01.7 · quiet');
   assert.ok(!tonight().events.some((e) => e.kind === 'aurora'));
 });
 

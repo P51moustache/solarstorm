@@ -20,9 +20,9 @@ export function isAuroraLikely(read: AuroraRead | null): boolean {
 }
 
 const DETAIL: Record<AuroraChance, string> = {
-  likely: 'Look toward the pole after dark',
-  possible: 'Worth a look toward the pole',
-  unlikely: 'No significant activity expected',
+  likely: 'look toward the pole',
+  possible: 'worth a look poleward',
+  unlikely: 'quiet',
 };
 
 export const auroraSource: SkyEventSource = {
@@ -35,7 +35,7 @@ export const auroraSource: SkyEventSource = {
         id: 'aurora',
         kind: 'aurora',
         title: `Aurora: ${chance}`,
-        detail: `${aurora.probability}% chance (Kp ${aurora.kp.toFixed(1)}) · ${DETAIL[chance]}`,
+        detail: `${aurora.probability}% chance · Kp\u00A0${aurora.kp.toFixed(1)} · ${DETAIL[chance]}`,
       },
     ];
   },

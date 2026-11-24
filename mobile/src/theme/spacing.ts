@@ -14,6 +14,7 @@ export const space = {
   4: 16,
   4.5: 18,
   6: 24,
+  8: 32,
   9: 36,
   10: 40,
 } as const;
@@ -72,10 +73,10 @@ export const componentSize = {
   /** Diameter of the sky score dial; holds "100" at `fontSize.hero2`. */
   scoreRing: 116,
   scoreRingStroke: 6,
-  /** Width of one hour in the hour strip: fits "00:00" at caption size with air either side. */
-  hourColumn: 46,
+  /** Narrowest hour in the hour strip: fits "00" at footnote size with air either side. */
+  hourColumn: 30,
   /** Label column of the hour strip ("Darkness %"). */
-  stripLabel: 104,
+  stripLabel: 84,
   /** Leading tile of a list row. */
   eventTile: 44,
   /** Left rule beside tonight's headline. */
