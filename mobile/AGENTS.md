@@ -13,3 +13,10 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
   then use it. Motion: add a preset to `src/theme/motion.ts` and a row to its interaction table.
 - **Guardrails:** `npm test` runs `npm run lint:theme` (raw style values must stay at 0); `npm run lint` blocks raw
   controls, `expo-haptics`, palette imports and literal durations/easing outside the core.
+
+# Night-sky engine
+
+- `src/lib/sky/` answers "when is the sky good tonight": `darkness` (Sun, Moon, twilight bounds; astronomy-engine),
+  `weather` (Open-Meteo cloud layers, hourly), `skyScore` (0-100 per moment, factors and `limitedBy`), `bestWindow`,
+  and `night` (`planNight`, `planNights`), which screens and alerts read. All pure except `getSkyWeather`; tests in
+  `src/lib/sky/__tests__/`. Tune scoring only in `ScoreWeights`, not at call sites.
