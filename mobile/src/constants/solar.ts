@@ -10,7 +10,8 @@ export const Palette = {
   border: '#222838',
   text: '#F3F5FA',
   textDim: '#9AA3B4',
-  textFaint: '#5C6678',
+  /** Captions, units, inactive tabs. At least 4.5:1 on bg, surface and surfaceAlt (WCAG AA); keep below textDim. */
+  textFaint: '#7D8799',
   accent: '#4C8DFF',
   good: '#2ECC71',
   warn: '#F1C40F',
