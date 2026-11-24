@@ -10,15 +10,16 @@ Data: `planTonight()` in `mobile/src/lib/sky/tonight.ts` (headline, hour strip, 
 ### Horizon art (behind the hero)
 - **Job**: set the mood: a night sky over mountains and a lake; shows an aurora glow only when the aurora is likely.
 - **Data**: `tonight.auroraGlow` (aurora read ≥ `AURORA_LIKELY_PERCENT`, 50%).
-- **Part**: **new** `HorizonScene` (`components/tonight/`): SVG sky gradient, stars, Milky Way haze, far and near
-  ridges with snow, tree lines, lake. Nothing existing draws a landscape; `AuroraBackground` stays the app-wide sky.
-- **Values**: every fill is a `colors.night.*` role; height `componentSize.horizon`.
-- **Moves**: aurora glow breathes with `motion.duration.breathe` / `motion.easing.breathe` (the backdrop's preset).
-- **States**: no aurora read → no glow.
+- **Part**: **new** `HorizonScene` (`components/tonight/`): two painted plates (GPT image, 1024×1536,
+  `assets/images/tonight/horizon*.jpg`): the calm sky, and the same lake with an aurora. Pinned to the bottom of
+  the hero so the peaks sit under the headline (`componentSize.horizonLand`); the lake runs under the first card
+  (`horizonOverlap`) and fades into `colors.night.skyTop`.
+- **Moves**: the aurora plate fades in once (`motion.duration.reveal`) when the aurora is likely.
+- **States**: no aurora read, or under 50% → calm plate only.
 
 ### Top bar
-- **Job**: brand. **Part**: row with `sparkles` icon + "SolarStorm", `textStyles.cardTitle`, centred.
-- The concept's settings gear is left out: the app has no settings screen yet.
+- **Job**: brand. **Part**: **new shared** `BrandMark` (glowing four-point star, `shadows.starGlow`, + name in
+  `textStyles.panelTitle`), centred; settings gear on the right opens Alerts (the app's only settings).
 
 ### Title block (left)
 - **Job**: say which night and where. **Data**: "Tonight", place label, date. Hardest case: a long place name
@@ -33,6 +34,7 @@ Data: `planTonight()` in `mobile/src/lib/sky/tonight.ts` (headline, hour strip, 
 - **Values**: size `componentSize.scoreRing`, stroke `componentSize.scoreRingStroke`, gradient
   `colors.night.scoreFrom` → `scoreTo`, track `colors.fill`, value `textStyles.scoreValue`, label
   `textStyles.caption` / `textMuted`.
+- Dark face `colors.night.ringFace`, teal halo `shadows.tealGlow`.
 - **Moves**: arc fills once when the score arrives, `motion.duration.reveal` / `motion.easing.reveal`.
 - **Lines up with**: top of the "Tonight" title.
 
@@ -40,16 +42,17 @@ Data: `planTonight()` in `mobile/src/lib/sky/tonight.ts` (headline, hour strip, 
 - **Job**: the plain answer. **Data**: `headline.title` / `headline.detail`. Hardest: "Fog hides the sky tonight"
   plus a two-sentence detail → wraps, never clips.
 - **Part**: view with a left accent bar (`componentSize.accentBar`, `colors.night.window`), title
-  `textStyles.heroHeadline` (28), detail `textStyles.bodyLarge` / `textMuted`. Gap `space[1.5]`, bar inset `space[3]`.
+  `textStyles.heroHeadline` (DM Serif Display, 28), detail `textStyles.bodyLarge` / `textMuted`. Gap `space[1.5]`, bar inset `space[3]`.
 
 ### Hour strip card
 - **Job**: hour by hour, dusk to dawn: cloud, darkness, the best window, the Moon.
 - **Data**: `tonight.hours` (one column per whole hour; 8 in June at 55°N, 16+ in a polar winter), `plan.bounds`,
   `tonight.moon`.
-- **Part**: `Glass` card with **new** `HourStrip`: fixed label column (`componentSize.stripLabel`) + horizontal
+- **Part**: `Glass tone="night"` (violet glass, brighter rim, `shadows.cardGlow` halo) with **new** `HourStrip`: fixed label column (`componentSize.stripLabel`) + horizontal
   `ScrollView` of `componentSize.hourColumn` columns (stretched so none is cut), so long nights scroll instead of squeezing. Best window =
-  rounded box `radii.md`, border `colors.night.window`, fill `colors.night.windowFill`. Sunset/Sunrise in the header
-  (`textStyles.caption` label, `textStyles.footnoteStrong` time). Moon row: `moon` icon, `textStyles.footnote`,
+  rounded box `radii.md`, border `colors.night.window`, fill `colors.night.windowFill`, `shadows.tealGlow`. Hour
+  ticks (`componentSize.hourTick`); a darkness line under the darkness numbers (`colors.night.darknessLine`). Sunset/Sunrise in the header
+  (`textStyles.caption` label, `textStyles.footnoteStrong` time). Moon row: `moon` icon, painted Moon (`componentSize.moonThumb`, full or gibbous), `textStyles.footnote`,
   illumination bar (`componentSize.track`, `radii.pill`, fill `colors.night.moon`).
 - **Lines up with**: label column icons on one left edge; every row's values on the column centres.
 - **States**: no forecast → cloud cells show "–"; no best window → no box.
@@ -58,9 +61,9 @@ Data: `planTonight()` in `mobile/src/lib/sky/tonight.ts` (headline, hour strip, 
 ### What's up tonight
 - **Job**: what to look at. **Data**: `tonight.events` (Milky Way core, planets brightest first, aurora). Hardest:
   six rows; none (summer high latitude, no read) → "Nothing bright is up tonight."
-- **Part**: `Glass` with title `textStyles.panelTitle`; rows are **new shared** `ListRow` (leading tile, title,
-  subtitle, optional chevron). Leading `EventTile`: `componentSize.eventTile`, `radii.md`, `colors.fill` with
-  the kind's icon.
+- **Part**: `Glass tone="night"` with title `textStyles.panelTitle`; rows are **new shared** `ListRow` (leading,
+  title, subtitle, optional chevron). Leading: painted thumbnail per event (`skyArt.ts`: Milky Way, each planet,
+  aurora), `componentSize.eventThumbWidth/Height`, `radii.md`.
 - **Moves**: aurora row press → Aurora & Sun (`press.opacity`). Other rows have no detail page yet, so no chevron.
 
 ### Tab bar
@@ -92,16 +95,21 @@ Data: `planTonight()` in `mobile/src/lib/sky/tonight.ts` (headline, hour strip, 
 | component | `ScoreRing`, `ListRow` | 0-100 dial; tappable list row | none existed |
 
 ## Left as is on purpose
-- Photo thumbnails in What's up are icon tiles: no image assets yet.
 - Darkness row reads 0-100 % (Sun darkness × moonlight) instead of mag/arcsec²: there is no sky-brightness
   model, and a made-up SQM number would mislead.
 - Meteor showers are not listed yet (needs the IMO table; separate item).
 - Times use 24-hour HH:MM in the place's own time zone (Open-Meteo offset; the device's if the forecast fails).
 - Hour strip labels show the hour only ("22"); Sunset/Sunrise sit above the strip, not at its ends, because the
   strip scrolls. It opens on the best window if still ahead, else the current hour.
-- Active tab stays white (app-wide tab bar style), not the concept's teal.
-- Every planet shares one icon tile; per-planet art waits for real thumbnails.
+- Active tab is teal app-wide (`colors.tabActive`), as in the concept.
+- The aurora plate is a second painting of the lake, not a layer over the first, so it fades in rather than
+  breathing (a breathing crossfade would ghost two skylines).
 - On iPhone SE What's up starts just below the fold: shrinking the horizon art put the ridges over the headline.
+
+## Rework (24 Nov, after "looks lazy and nothing like the concept")
+The SVG landscape, icon tiles and sans headline read as a sketch of the concept. Replaced with painted plates and
+thumbnails, the serif headline, night glass, glows, darkness line, brand star, gear and teal tab. Shown on the
+iPhone 17e preview.
 
 ## Review (fresh agent, 24 Nov)
 Fixed: strip too sparse and opening on past hours, headline "best around" pointing at past times, lake seam

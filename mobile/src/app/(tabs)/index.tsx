@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     gap: space[1.5],
   },
   headlineTitle: { ...textStyles.heroHeadline, color: colors.text },
-  headlineDetail: { ...textStyles.bodyLarge, color: colors.textMuted },
+  headlineDetail: { ...textStyles.bodyLarge, color: colors.text },
   cards: { paddingHorizontal: layout.screenPadding, gap: layout.stackGap },
   setupTitle: { ...textStyles.cardTitle, color: colors.text },
   setupText: {
