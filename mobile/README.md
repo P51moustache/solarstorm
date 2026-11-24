@@ -37,6 +37,7 @@ Plus first-run onboarding and a **Space Weather 101** primer.
 - **expo-notifications** + **expo-background-task** + **expo-task-manager** — on-device alerts
 - **expo-location**, **expo-blur**, **expo-linear-gradient**, **expo-haptics**
 - **@supabase/supabase-js** — auth (feature-flagged off for v1)
+- **posthog-react-native** — anonymous usage events and crash reports (`src/lib/analytics.ts`, off without a key)
 - **EAS Build / Submit** — CI builds and App Store delivery
 
 ## Architecture notes

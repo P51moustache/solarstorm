@@ -16,6 +16,8 @@ import { AuroraBackground } from '@/components/AuroraBackground';
 import { ExplainerProvider } from '@/components/explainer';
 import { Onboarding } from '@/components/Onboarding';
 import { getAlertPrefs } from '@/lib/alertPrefs';
+import { track, useScreenTracking } from '@/lib/analytics';
+import { AnalyticsEvent } from '@/lib/analyticsConfig';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { registerAlertTask } from '@/lib/backgroundAlerts';
 import { hasOnboarded, setOnboarded } from '@/lib/onboarding';
@@ -43,6 +45,7 @@ function Backdrop() {
 function RootNavigator() {
   const { user } = useAuth();
   const [onboarded, setDone] = useState<boolean | null>(null);
+  useScreenTracking();
 
   useEffect(() => {
     configurePurchases(user?.id ?? null);
@@ -62,6 +65,7 @@ function RootNavigator() {
       <Onboarding
         onDone={() => {
           setOnboarded();
+          track(AnalyticsEvent.onboardingCompleted);
           setDone(true);
         }}
       />
