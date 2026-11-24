@@ -1,258 +1,130 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { useCallback, useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  RefreshControl,
-  ScrollView,
-  Share,
-  StyleSheet,
-  Text,
-  View,
-} from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { router } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { LearnMore } from '@/components/explainer';
-import { Button, Glass, Metric, Pill, SectionLabel, Tappable } from '@/components/ui';
-import { kpScale, relativeTime } from '@/constants/solar';
-import { auroraProbability } from '@/lib/aurora';
-import { DeviceLocation, getDeviceLocation, hasLocationPermission } from '@/lib/location';
-import { useSky } from '@/lib/sky';
-import { Forecast, getForecast } from '@/lib/spaceWeather';
-import { getViewingConditions, ViewingConditions, viewingVerdict } from '@/lib/viewing';
-import { colors, fontSize, fonts, iconSize, layout, lineHeight, motion, space, textStyles, tracking } from '@/theme';
+import { HorizonScene } from '@/components/tonight/HorizonScene';
+import { HourStrip } from '@/components/tonight/HourStrip';
+import { PlaceSwitcher } from '@/components/tonight/PlaceSwitcher';
+import { WhatsUp } from '@/components/tonight/WhatsUp';
+import { Button, Glass, ScoreRing } from '@/components/ui';
+import { localClock } from '@/lib/sky/clock';
+import { useTonight } from '@/lib/useTonight';
+import { useTonightPlaces } from '@/lib/tonightPlace';
+import { colors, componentSize, iconSize, layout, motion, space, textStyles } from '@/theme';
 
-function probabilityColor(p: number): string {
-  if (p >= 70) return colors.severity.strong;
-  if (p >= 50) return colors.severity.moderate;
-  if (p >= 30) return colors.severity.minor;
-  if (p >= 15) return colors.severity.active;
-  return colors.textMuted;
-}
+const DATE_FORMAT: Intl.DateTimeFormatOptions = { weekday: 'short', month: 'short', day: 'numeric' };
 
-function verdictColor(tone: 'good' | 'mixed' | 'poor'): string {
-  return tone === 'good' ? colors.good : tone === 'mixed' ? colors.warn : colors.danger;
-}
-
-function ViewFactor({ icon, label, value, sub, color }: { icon: any; label: string; value: string; sub: string; color: string }) {
-  return (
-    <View style={styles.factor}>
-      <Ionicons name={icon} size={iconSize.lg} color={color} />
-      <Text style={styles.factorLabel}>{label}</Text>
-      <Text style={[styles.factorValue, { color }]}>{value}</Text>
-      <Text style={styles.factorSub} numberOfLines={1}>{sub}</Text>
-    </View>
-  );
-}
-
-export default function DashboardScreen() {
-  const { conditions, mood, loading, refresh } = useSky();
-  const [forecast, setForecast] = useState<Forecast | null>(null);
-  const [location, setLocation] = useState<DeviceLocation | null>(null);
-  const [viewing, setViewing] = useState<ViewingConditions | null>(null);
-  const [locating, setLocating] = useState(false);
-  const [locDenied, setLocDenied] = useState(false);
+/** Tonight: is the sky good where I am, and when? The app's main screen. */
+export default function TonightScreen() {
+  const insets = useSafeAreaInsets();
+  const places = useTonightPlaces();
+  const { tonight, loading, refresh } = useTonight(places.place);
   const [refreshing, setRefreshing] = useState(false);
-
-  const loadForecast = useCallback(async () => {
-    setForecast(await getForecast().catch(() => null));
-  }, []);
-
-  const fetchLocation = useCallback(async () => {
-    setLocating(true);
-    const loc = await getDeviceLocation();
-    setLocating(false);
-    if (loc) {
-      motion.haptics.select();
-      setLocation(loc);
-      setLocDenied(false);
-      getViewingConditions(loc.lat, loc.lng).then(setViewing);
-    } else setLocDenied(true);
-  }, []);
-
-  useEffect(() => {
-    loadForecast();
-    hasLocationPermission().then((granted) => {
-      if (granted) fetchLocation();
-    });
-  }, [loadForecast, fetchLocation]);
+  const [locDenied, setLocDenied] = useState(false);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await Promise.all([
-      refresh(),
-      loadForecast(),
-      location ? getViewingConditions(location.lat, location.lng).then(setViewing) : Promise.resolve(),
-    ]);
+    await Promise.all([refresh(), places.reload()]);
     setRefreshing(false);
-  }, [refresh, loadForecast, location]);
+  }, [refresh, places]);
 
-  const kp = conditions?.kp ?? null;
-  const scale = kpScale(kp);
-  const sw = conditions?.solarWind;
-  const prediction =
-    location && kp !== null
-      ? auroraProbability(location.lat, location.lng, kp, sw?.bz ?? null, sw?.speed ?? null)
-      : null;
-  const verdict = prediction && viewing ? viewingVerdict(prediction.probability, viewing) : null;
-
-  async function onShare() {
+  const onChoose = (id: string) => {
     motion.haptics.select();
-    const aurora = prediction && location ? ` Aurora ${prediction.probability}% at ${location.label}.` : '';
-    await Share.share({
-      message: `Space weather right now: ${mood.headline.toLowerCase()} — Kp ${kp?.toFixed(1) ?? '—'}.${aurora} via SolarStorm`,
-    }).catch(() => {});
-  }
+    places.choose(id);
+  };
+  const onLocate = async () => setLocDenied(!(await places.locateMe()));
+  const openPlaces = () => router.push('/locations');
+
+  const nightOf = tonight?.plan.bounds.sunset ?? new Date();
+  const noPlace = !places.loading && !places.place;
 
   return (
-    <SafeAreaView style={styles.safe} edges={['top']}>
-      <ScrollView
-        contentContainerStyle={styles.content}
-        showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} />}>
-        {/* Hero — overall space-weather state */}
-        <View style={styles.hero}>
-          <Text style={styles.eyebrow}>RIGHT NOW</Text>
-          <Text style={styles.headline}>{mood.headline}</Text>
-          <Text style={styles.heroSub}>{mood.sub}</Text>
+    <ScrollView
+      contentContainerStyle={[styles.content, { paddingTop: insets.top }]}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} />}>
+      <HorizonScene aurora={tonight?.auroraGlow ?? false} />
 
-          {loading && !conditions ? (
-            <ActivityIndicator color={colors.accent} style={{ marginTop: space[6] }} />
-          ) : (
-            <>
-              <View style={styles.kpRow}>
-                <Text style={[styles.kpValue, { color: scale.color }]}>{kp === null ? '—' : kp.toFixed(1)}</Text>
-                <View style={styles.kpMeta}>
-                  <Text style={styles.kpUnit}>Kp index</Text>
-                  <Pill text={scale.label} color={scale.color} />
-                </View>
-              </View>
-              <View style={styles.heroFoot}>
-                <LearnMore term="kp" label="What's Kp?" />
-                <Tappable onPress={onShare} style={styles.shareBtn} hitSlop={SHARE_HIT_SLOP}>
-                  <Ionicons name="share-outline" size={iconSize.sm} color={colors.accent} />
-                  <Text style={styles.shareText}>Share</Text>
-                </Tappable>
-              </View>
-            </>
-          )}
+      <View style={styles.brand}>
+        <Ionicons name="sparkles" size={iconSize.md} color={colors.aurora.violet} />
+        <Text style={styles.brandText}>SolarStorm</Text>
+      </View>
+
+      <View style={styles.hero}>
+        <View style={styles.heroText}>
+          <Text style={styles.title} accessibilityRole="header">
+            Tonight
+          </Text>
+          <PlaceSwitcher place={places.place} choices={places.choices} onChoose={onChoose} onAddPlace={openPlaces} />
+          <Text style={styles.date}>{nightOf.toLocaleDateString(undefined, DATE_FORMAT)}</Text>
         </View>
+        <ScoreRing score={tonight ? tonight.plan.score : null} label="Sky Score" />
+      </View>
 
-        {/* Solar wind */}
-        <Glass>
-          <View style={styles.cardHead}>
-            <SectionLabel>Solar wind</SectionLabel>
-            <LearnMore term="speed" label="explain" />
-          </View>
-          <View style={styles.metricRow}>
-            <Metric label="Speed" value={sw?.speed != null ? Math.round(sw.speed).toString() : '—'} unit="km/s" />
-            <Metric label="Density" value={sw?.density != null ? sw.density.toFixed(1) : '—'} unit="p/cm³" />
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.metricRow}>
-            <Metric label="Bz" value={sw?.bz != null ? sw.bz.toFixed(1) : '—'} unit="nT" color={sw?.bz != null && sw.bz < 0 ? colors.warn : undefined} />
-            <Metric label="Bt" value={sw?.bt != null ? sw.bt.toFixed(1) : '—'} unit="nT" />
-          </View>
-          <View style={styles.cardFoot}>
-            <LearnMore term="bz" label="Why does Bz matter?" />
-            <Text style={styles.dim}>{relativeTime(sw?.at ?? null)}</Text>
-          </View>
-        </Glass>
+      {tonight ? (
+        <View style={styles.headline}>
+          <Text style={styles.headlineTitle}>{tonight.headline.title}</Text>
+          {tonight.headline.detail ? <Text style={styles.headlineDetail}>{tonight.headline.detail}</Text> : null}
+        </View>
+      ) : null}
 
-        {/* Aurora tonight (only relevant to some — demoted to a card) */}
-        <Glass style={prediction ? { borderColor: probabilityColor(prediction.probability) } : undefined}>
-          <View style={styles.cardHead}>
-            <SectionLabel>Aurora tonight</SectionLabel>
-            {prediction ? <LearnMore term="aurora" label="how?" /> : null}
-          </View>
-          {prediction ? (
-            <>
-              <View style={styles.pctRow}>
-                <Text style={[styles.bigPct, { color: probabilityColor(prediction.probability) }]}>{prediction.probability}</Text>
-                <Text style={styles.pctMark}>% chance at {location?.label}</Text>
-              </View>
-              <Text style={styles.desc}>{prediction.description}</Text>
-              {verdict ? <Text style={[styles.verdict, { color: verdictColor(verdict.tone) }]}>{verdict.text}</Text> : null}
-              {viewing ? (
-                <View style={styles.viewRow}>
-                  <ViewFactor icon="cloud" label="Cloud" value={`${viewing.cloudCover}%`} sub={viewing.clarity} color={viewing.cloudCover <= 25 ? colors.good : viewing.cloudCover <= 65 ? colors.warn : colors.danger} />
-                  <ViewFactor icon="moon" label="Moon" value={`${Math.round(viewing.moonIllum * 100)}%`} sub={viewing.moonName} color={viewing.moonIllum > 0.6 ? colors.warn : colors.good} />
-                  <ViewFactor icon="moon-outline" label="Dark" value={viewing.sunset} sub={`to ${viewing.sunrise}`} color={colors.textMuted} />
-                </View>
-              ) : null}
-            </>
-          ) : (
-            <>
-              <Text style={styles.dim}>Aurora is mainly visible at high latitudes. Check your local odds and what it would take to see it.</Text>
-              <Button label="📍 Check my location" onPress={fetchLocation} loading={locating} style={styles.locBtn} />
-              {locDenied ? <Text style={styles.dim}>Enable location in Settings for your local forecast.</Text> : null}
-            </>
-          )}
-        </Glass>
-
-        {/* 3-day forecast */}
-        {forecast && forecast.days.length > 0 ? (
+      <View style={styles.cards}>
+        {noPlace ? (
           <Glass>
-            <SectionLabel>Next 3 nights</SectionLabel>
-            <View style={styles.forecastRow}>
-              {forecast.days.map((d) => {
-                const s = kpScale(d.maxKp);
-                return (
-                  <View key={d.label} style={styles.forecastDay}>
-                    <Text style={styles.forecastLabel}>{d.label}</Text>
-                    <Text style={[styles.forecastKp, { color: s.color }]}>{d.maxKp.toFixed(1)}</Text>
-                    <Text style={styles.forecastSub}>peak Kp</Text>
-                    <Text style={styles.forecastStorm}>{d.minorPct}% storm</Text>
-                  </View>
-                );
-              })}
-            </View>
+            <Text style={styles.setupTitle}>Where are you watching from?</Text>
+            <Text style={styles.setupText}>Tonight plans the sky for one place: your location or a place you saved.</Text>
+            <Button label="Use my location" onPress={onLocate} loading={places.locating} style={styles.setupButton} />
+            <Button label="Add a place" variant="secondary" onPress={openPlaces} style={styles.setupButton} />
+            {locDenied ? <Text style={styles.setupText}>Location is off. Turn it on in Settings, or add a place.</Text> : null}
           </Glass>
-        ) : null}
-
-        <Text style={styles.source}>Live data · NOAA Space Weather Prediction Center</Text>
-      </ScrollView>
-    </SafeAreaView>
+        ) : !tonight ? (
+          <ActivityIndicator color={colors.textMuted} style={styles.loading} />
+        ) : (
+          <>
+            <Glass>
+              <HourStrip hours={tonight.hours} bounds={tonight.plan.bounds} moon={tonight.moon} clock={localClock} />
+              {loading ? <ActivityIndicator color={colors.textMuted} style={styles.stripLoading} /> : null}
+            </Glass>
+            <WhatsUp events={tonight.events} onOpen={{ aurora: () => router.push('/aurora') }} />
+          </>
+        )}
+        <Text style={styles.source}>Clouds · Open-Meteo   Sky · astronomy-engine   Aurora · NOAA SWPC</Text>
+      </View>
+    </ScrollView>
   );
 }
 
-/** Extra tap area around the small Share link. */
-const SHARE_HIT_SLOP = space[2];
-
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: 'transparent' },
-  content: { padding: layout.screenPadding, gap: space[3.5], paddingTop: space[2], paddingBottom: layout.tabBarClearance },
-  hero: { paddingVertical: space[4.5], paddingHorizontal: space[0.5] },
-  eyebrow: { color: colors.textMuted, fontSize: fontSize.footnote, fontFamily: fonts.bold, letterSpacing: tracking.wide },
-  headline: { color: colors.text, fontSize: fontSize.hero1, fontFamily: fonts.bold, letterSpacing: tracking.tight, marginTop: space[1.5] },
-  heroSub: { color: colors.textMuted, fontSize: fontSize.callout, fontFamily: fonts.regular, marginTop: space[2], lineHeight: lineHeight.body },
-  kpRow: { flexDirection: 'row', alignItems: 'center', gap: space[4], marginTop: space[6] },
-  kpValue: { fontSize: fontSize.hero4, fontFamily: fonts.bold, letterSpacing: tracking.hero },
-  kpMeta: { gap: space[2] },
-  kpUnit: { ...textStyles.bodyStrong, color: colors.textFaint },
-  heroFoot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: space[4.5] },
-  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
-  shareText: { color: colors.accent, fontSize: fontSize.subhead, fontFamily: fonts.semibold },
-  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[1.5] },
-  cardFoot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: space[3.5] },
-  pctRow: { flexDirection: 'row', alignItems: 'baseline', gap: space[2], marginTop: space[1] },
-  bigPct: { fontSize: fontSize.hero3, fontFamily: fonts.bold, letterSpacing: tracking.display },
-  pctMark: { color: colors.textFaint, fontSize: fontSize.subhead, fontFamily: fonts.medium, flexShrink: 1 },
-  desc: { ...textStyles.bodyStrong, color: colors.text, marginTop: space[2], lineHeight: lineHeight.snug },
-  verdict: { fontSize: fontSize.subhead, fontFamily: fonts.medium, marginTop: space[2], lineHeight: lineHeight.snug },
-  dim: { ...textStyles.footnote, color: colors.textMuted, marginTop: space[1.5], lineHeight: lineHeight.footnote },
-  locBtn: { marginTop: space[3] },
-  metricRow: { flexDirection: 'row', gap: space[3], marginTop: space[1] },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: space[4] },
-  viewRow: { flexDirection: 'row', gap: space[2.5], marginTop: space[3.5] },
-  factor: { flex: 1, alignItems: 'center', gap: space[1] },
-  factorLabel: { ...textStyles.metricLabel, fontSize: fontSize.micro, color: colors.textFaint },
-  factorValue: { ...textStyles.sectionTitle },
-  factorSub: { ...textStyles.micro, color: colors.textMuted },
-  forecastRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space[3] },
-  forecastDay: { flex: 1, alignItems: 'center', gap: space[0.5] },
-  forecastLabel: { ...textStyles.footnoteStrong, color: colors.textMuted },
-  forecastKp: { ...textStyles.metric, marginTop: space[1] },
-  forecastSub: { ...textStyles.micro, color: colors.textFaint },
-  forecastStorm: { color: colors.textMuted, fontSize: fontSize.caption, fontFamily: fonts.medium, marginTop: space[1] },
+  content: { paddingBottom: layout.tabBarClearance },
+  brand: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: space[1.5], paddingVertical: space[2] },
+  brandText: { ...textStyles.cardTitle, color: colors.text },
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: space[3],
+    paddingHorizontal: layout.screenPadding,
+    marginTop: space[2],
+  },
+  heroText: { flex: 1, gap: space[1] },
+  title: { ...textStyles.screenTitle, color: colors.text },
+  date: { ...textStyles.footnote, color: colors.textMuted },
+  headline: {
+    marginTop: space[6],
+    marginHorizontal: layout.screenPadding,
+    paddingLeft: space[3],
+    borderLeftWidth: componentSize.accentBar,
+    borderLeftColor: colors.night.window,
+    gap: space[1.5],
+  },
+  headlineTitle: { ...textStyles.heroHeadline, color: colors.text },
+  headlineDetail: { ...textStyles.bodyLarge, color: colors.textMuted },
+  cards: { paddingHorizontal: layout.screenPadding, gap: layout.stackGap, marginTop: space[10] },
+  setupTitle: { ...textStyles.cardTitle, color: colors.text },
+  setupText: { ...textStyles.footnote, color: colors.textMuted, marginTop: space[1.5] },
+  setupButton: { marginTop: space[3] },
+  loading: { marginTop: space[6] },
+  stripLoading: { position: 'absolute', top: space[4.5], alignSelf: 'center' },
   source: { ...textStyles.caption, color: colors.textFaint, textAlign: 'center', marginTop: space[2] },
 });

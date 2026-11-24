@@ -66,3 +66,22 @@ export const iconSize = {
   xxxl: 28,
   feature: 56,
 } as const;
+
+/** Fixed sizes of particular parts, named for the part. */
+export const componentSize = {
+  /** Diameter of the sky score dial; holds "100" at `fontSize.hero2`. */
+  scoreRing: 116,
+  scoreRingStroke: 6,
+  /** Width of one hour in the hour strip: fits "00:00" at caption size with air either side. */
+  hourColumn: 46,
+  /** Label column of the hour strip ("Darkness %"). */
+  stripLabel: 92,
+  /** Leading tile of a list row. */
+  eventTile: 44,
+  /** Left rule beside tonight's headline. */
+  accentBar: 3,
+  /** Thin progress track (the Moon bar). */
+  track: 4,
+  /** Height of the horizon art behind Tonight's hero. */
+  horizon: 520,
+} as const;

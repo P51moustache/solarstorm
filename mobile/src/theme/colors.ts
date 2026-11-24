@@ -85,4 +85,28 @@ export const colors = {
     red: palette.red[500],
     coral: palette.red[300],
   },
+
+  /** Tonight: the horizon art, the sky score and the best window. */
+  night: {
+    skyTop: palette.navy[950],
+    skyMid: palette.dusk[900],
+    skyLow: palette.dusk[700],
+    horizonGlow: palette.dusk[300],
+    haze: palette.dusk[500],
+    milkyWay: palette.mist[50],
+    ridgeFar: palette.slate[400],
+    ridgeNear: palette.slate[700],
+    snow: palette.slate[100],
+    shore: palette.slate[900],
+    trees: palette.slate[950],
+    lake: palette.slate[800],
+    auroraGlow: palette.green[400],
+    scoreFrom: palette.teal[300],
+    scoreTo: palette.violet[400],
+    /** Outline and fill of the best window in the hour strip. */
+    window: palette.teal[300],
+    windowFill: withAlpha(palette.teal[300], 0.1),
+    /** Lit part of the Moon bar. */
+    moon: palette.mist[300],
+  },
 } as const;

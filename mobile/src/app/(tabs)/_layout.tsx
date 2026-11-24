@@ -27,24 +27,20 @@ export default function TabLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'Now',
-          tabBarIcon: ({ color, size }) => <Ionicons name="sparkles" size={size} color={color} />,
+          title: 'Tonight',
+          tabBarIcon: ({ color, size }) => <Ionicons name="telescope-outline" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="activity"
+        name="aurora"
         options={{
-          title: 'Activity',
-          tabBarIcon: ({ color, size }) => <Ionicons name="flash" size={size} color={color} />,
+          title: 'Aurora & Sun',
+          tabBarIcon: ({ color, size }) => <Ionicons name="sunny-outline" size={size} color={color} />,
         }}
       />
-      <Tabs.Screen
-        name="history"
-        options={{
-          title: 'Trends',
-          tabBarIcon: ({ color, size }) => <Ionicons name="pulse" size={size} color={color} />,
-        }}
-      />
+      {/* Activity and Trends open from Aurora & Sun. */}
+      <Tabs.Screen name="activity" options={{ title: 'Activity', href: null }} />
+      <Tabs.Screen name="history" options={{ title: 'Trends', href: null }} />
       <Tabs.Screen
         name="locations"
         options={{

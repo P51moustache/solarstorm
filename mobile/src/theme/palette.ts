@@ -28,6 +28,11 @@ export const palette = {
   red: { 300: '#FF6B5B', 500: '#E74C3C', 700: '#C03A2B' },
   violet: { 400: '#A86BFF', 500: '#7A5CFF' },
   pink: { 400: '#FF4D8D' },
+  /** Horizon glow after sunset, brightest first. */
+  dusk: { 300: '#E58BB8', 500: '#9A63B0', 700: '#4A3470', 900: '#221B45' },
+  /** Mountain and shoreline greys under a night sky, lightest first. */
+  slate: { 100: '#D9DFEE', 400: '#6E7494', 700: '#2C2F4C', 800: '#1E2038', 900: '#12142A', 950: '#0A0B1C' },
+  teal: { 300: '#5FE6CF' },
 } as const;
 
 /** Applies an alpha (0-1) to a #RRGGBB ramp value. */

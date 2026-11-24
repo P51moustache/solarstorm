@@ -5,7 +5,7 @@
  * (`npm test` runs the style guardrail).
  */
 export { colors } from './colors';
-export { controlPadding, iconSize, layout, radii, space } from './spacing';
+export { componentSize, controlPadding, iconSize, layout, radii, space } from './spacing';
 export { fontSize, fonts, lineHeight, textStyles, tracking } from './typography';
 export { shadows } from './shadows';
 export * as motion from './motion';

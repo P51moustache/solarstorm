@@ -8,3 +8,5 @@ export { Card, Glass, Metric, Pill, ScreenTitle } from './primitives';
 export { SectionLabel } from './SectionLabel';
 export { Tappable, type TappableProps } from './Tappable';
 export { Toggle, type ToggleProps } from './Toggle';
+export { ListRow, type ListRowProps } from './ListRow';
+export { ScoreRing, type ScoreRingProps } from './ScoreRing';

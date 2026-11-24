@@ -14,6 +14,9 @@ import { Easing } from 'react-native-reanimated';
  * | Your location is found              | instant state change         | haptics.select  |
  * | Tap Share                           | native share sheet           | haptics.select  |
  * | Aurora backdrop (ambient, no input) | ambient.drift + breathe      | none            |
+ * | Tonight's score arrives             | duration.reveal, easing.reveal (ring fills) | none |
+ * | Aurora likely (Tonight horizon)     | glow breathes (duration.breathe)            | none |
+ * | Pick a place on Tonight             | instant state change         | haptics.select  |
  */
 
 /** Durations in ms. */
@@ -23,6 +26,8 @@ export const duration = {
   /** One aurora ribbon's sideways drift; each further ribbon adds `driftStagger`. */
   drift: 22000,
   driftStagger: 9000,
+  /** A value arriving once (the score dial filling). */
+  reveal: 900,
 } as const;
 
 export const easing = {
@@ -30,6 +35,8 @@ export const easing = {
   ambient: Easing.linear,
   /** Gentle in-out for breathing glows. */
   breathe: Easing.inOut(Easing.ease),
+  /** Fast start, soft landing: something settling into place. */
+  reveal: Easing.out(Easing.cubic),
 } as const;
 
 /** Pressed-state feedback for tappable things. */
