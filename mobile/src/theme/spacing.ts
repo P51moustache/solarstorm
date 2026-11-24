@@ -75,8 +75,8 @@ export const componentSize = {
   scoreRingStroke: 6,
   /** Narrowest hour in the hour strip: fits "00" at footnote size with air either side. */
   hourColumn: 30,
-  /** Label column of the hour strip ("Darkness %"). */
-  stripLabel: 84,
+  /** Label column of the hour strip: icon and "Darkness". */
+  stripLabel: 96,
   /** Photo thumbnail leading a What's up row (3:2, like the art). */
   eventThumbWidth: 66,
   eventThumbHeight: 44,
@@ -91,7 +91,7 @@ export const componentSize = {
   /** Thin progress track (the Moon bar). */
   track: 4,
   /** Room under Tonight's headline where the ridges of the horizon art show. */
-  horizonLand: 132,
+  horizonLand: 176,
   /** How far the horizon art (its lake) runs on under the first card. */
   horizonOverlap: 96,
 } as const;

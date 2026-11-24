@@ -18,7 +18,7 @@ const HOUR_DIGITS = 2;
 
 const ROWS = [
   { key: 'cloud', icon: 'cloud-outline', label: 'Cloud %' },
-  { key: 'darkness', icon: 'contrast-outline', label: 'Darkness %' },
+  { key: 'darkness', icon: 'contrast-outline', label: 'Darkness' },
 ] as const;
 
 export interface HourStripProps {
@@ -81,7 +81,7 @@ function DarknessLine({ hours, column }: { hours: readonly HourColumn[]; column:
   const width = hours.length * column;
   const height = ROW_HEIGHT;
   const points = hours
-    .map((h, i) => `${(i + 0.5) * column},${height - (h.darkness / 100) * (height - LINE_INSET) - LINE_INSET / 2}`)
+    .map((h, i) => `${(i + 0.5) * column},${height - LINE_WIDTH - (h.darkness / 100) * LINE_RANGE}`)
     .join(' ');
   return (
     <Svg width={width} height={height} style={styles.darknessLine} pointerEvents="none">
@@ -188,9 +188,9 @@ export function HourStrip({ hours, bounds, moon, clock, now }: HourStripProps) {
 }
 
 const ROW_HEIGHT = space[8];
-/** Darkness line: stroke width, and room kept above and below it inside the row. */
+/** Darkness line along the foot of its row, under the numbers: stroke width and how far 0-100 % rises. */
 const LINE_WIDTH = 1.5;
-const LINE_INSET = space[2];
+const LINE_RANGE = space[1.5];
 
 const styles = StyleSheet.create({
   edges: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: space[1] },
