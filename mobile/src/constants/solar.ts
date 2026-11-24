@@ -1,28 +1,11 @@
 /**
- * SolarStorm dark palette + space-weather scale helpers.
- * Astronomy-friendly dark UI, NOAA G-scale color coding for the Kp index.
+ * Space-weather scale helpers and copy. Colors come from the theme's
+ * severity ramp and aurora hues (`@/theme`).
  */
+import { colors } from '@/theme/colors';
 
-export const Palette = {
-  bg: '#05060A',
-  surface: '#0E1119',
-  surfaceAlt: '#161A24',
-  border: '#222838',
-  text: '#F3F5FA',
-  textDim: '#9AA3B4',
-  textFaint: '#5C6678',
-  accent: '#4C8DFF',
-  good: '#2ECC71',
-  warn: '#F1C40F',
-  danger: '#FF6B5B',
-} as const;
-
-export const Fonts = {
-  regular: 'SpaceGrotesk_400Regular',
-  medium: 'SpaceGrotesk_500Medium',
-  semibold: 'SpaceGrotesk_600SemiBold',
-  bold: 'SpaceGrotesk_700Bold',
-} as const;
+const sev = colors.severity;
+const aur = colors.aurora;
 
 /**
  * Translates current conditions into a plain-language "mood" for the sky,
@@ -38,7 +21,7 @@ export function skyMood(
       headline: 'Reading the sky…',
       sub: 'Fetching live space-weather conditions.',
       intensity: 0.15,
-      colors: ['#1B2A4A', '#16324F'],
+      colors: [aur.blueDeep, aur.teal],
     };
   }
   const southward = bz != null && bz < -2;
@@ -51,7 +34,7 @@ export function skyMood(
       headline: 'The sky is on fire',
       sub: 'A major storm — aurora could be overhead and vivid.',
       intensity: 1,
-      colors: ['#00E08A', '#7A5CFF', '#FF4D8D'],
+      colors: [aur.greenBright, aur.violetDeep, aur.pink],
     };
   if (level >= 5)
     return {
@@ -59,7 +42,7 @@ export function skyMood(
       headline: 'The sky is awake',
       sub: 'A geomagnetic storm is underway. Worth looking up.',
       intensity: 0.8,
-      colors: ['#19D98A', '#5C8CFF', '#A86BFF'],
+      colors: [aur.green, aur.blue, aur.violet],
     };
   if (level >= 3.5)
     return {
@@ -67,7 +50,7 @@ export function skyMood(
       headline: 'The sky is stirring',
       sub: 'Activity is picking up. Keep an eye north.',
       intensity: 0.55,
-      colors: ['#27C77A', '#3E6FD0'],
+      colors: [aur.greenSoft, aur.blueSoft],
     };
   if (level >= 2)
     return {
@@ -75,14 +58,14 @@ export function skyMood(
       headline: 'The sky is restless',
       sub: 'Low activity — aurora possible at high latitudes.',
       intensity: 0.35,
-      colors: ['#2E9E66', '#274B86'],
+      colors: [aur.greenDim, aur.blueDim],
     };
   return {
     word: 'asleep',
     headline: 'The sky is asleep',
     sub: 'Calm and quiet. Aurora unlikely tonight.',
     intensity: 0.18,
-    colors: ['#1F8A5B', '#1B2A4A'],
+    colors: [aur.greenDeep, aur.blueDeep],
   };
 }
 
@@ -129,15 +112,15 @@ export interface KpScale {
 
 /** NOAA geomagnetic storm scale + color coding for a given Kp value. */
 export function kpScale(kp: number | null): KpScale {
-  if (kp === null) return { label: 'No data', color: Palette.textFaint };
-  if (kp >= 9) return { label: 'G5 — Extreme', color: '#C03A2B' };
-  if (kp >= 8) return { label: 'G4 — Severe', color: '#E74C3C' };
-  if (kp >= 7) return { label: 'G3 — Strong', color: '#FF6B5B' };
-  if (kp >= 6) return { label: 'G2 — Moderate', color: '#FF9F43' };
-  if (kp >= 5) return { label: 'G1 — Minor', color: '#F1C40F' };
-  if (kp >= 4) return { label: 'Active', color: '#7FD17F' };
-  if (kp >= 2) return { label: 'Unsettled', color: '#2ECC71' };
-  return { label: 'Quiet', color: '#27AE60' };
+  if (kp === null) return { label: 'No data', color: colors.textFaint };
+  if (kp >= 9) return { label: 'G5 — Extreme', color: sev.extreme };
+  if (kp >= 8) return { label: 'G4 — Severe', color: sev.severe };
+  if (kp >= 7) return { label: 'G3 — Strong', color: sev.strong };
+  if (kp >= 6) return { label: 'G2 — Moderate', color: sev.moderate };
+  if (kp >= 5) return { label: 'G1 — Minor', color: sev.minor };
+  if (kp >= 4) return { label: 'Active', color: sev.active };
+  if (kp >= 2) return { label: 'Unsettled', color: sev.calm };
+  return { label: 'Quiet', color: sev.quiet };
 }
 
 /**
@@ -149,35 +132,35 @@ export function auroraLikelihood(kp: number | null, bz: number | null): {
   label: string;
   color: string;
 } {
-  if (kp === null) return { label: 'Unknown', color: Palette.textFaint };
+  if (kp === null) return { label: 'Unknown', color: colors.textFaint };
   let score = kp;
   if (bz !== null && bz < -5) score += 1.5;
   else if (bz !== null && bz < 0) score += 0.5;
 
-  if (score >= 7) return { label: 'Very High', color: '#FF6B5B' };
-  if (score >= 5.5) return { label: 'High', color: '#FF9F43' };
-  if (score >= 4) return { label: 'Moderate', color: '#F1C40F' };
-  if (score >= 2.5) return { label: 'Low', color: '#7FD17F' };
-  return { label: 'Minimal', color: '#2ECC71' };
+  if (score >= 7) return { label: 'Very High', color: sev.strong };
+  if (score >= 5.5) return { label: 'High', color: sev.moderate };
+  if (score >= 4) return { label: 'Moderate', color: sev.minor };
+  if (score >= 2.5) return { label: 'Low', color: sev.active };
+  return { label: 'Minimal', color: sev.calm };
 }
 
 /** Color for a NOAA 0-5 scale (R/S/G). */
 export function noaaScaleColor(scale: number): string {
-  if (scale >= 5) return '#C03A2B';
-  if (scale >= 4) return '#E74C3C';
-  if (scale >= 3) return '#FF6B5B';
-  if (scale >= 2) return '#FF9F43';
-  if (scale >= 1) return '#F1C40F';
-  return '#2ECC71';
+  if (scale >= 5) return sev.extreme;
+  if (scale >= 4) return sev.severe;
+  if (scale >= 3) return sev.strong;
+  if (scale >= 2) return sev.moderate;
+  if (scale >= 1) return sev.minor;
+  return sev.calm;
 }
 
 /** Color for a solar flare class string like "C1.5", "M2.0", "X1". */
 export function flareColor(cls: string): string {
   const c = (cls || '').trim().toUpperCase()[0];
-  if (c === 'X') return '#E74C3C';
-  if (c === 'M') return '#FF9F43';
-  if (c === 'C') return '#F1C40F';
-  return '#2ECC71'; // A/B = quiet
+  if (c === 'X') return sev.severe;
+  if (c === 'M') return sev.moderate;
+  if (c === 'C') return sev.minor;
+  return sev.calm; // A/B = quiet
 }
 
 export function relativeTime(iso: string | null): string {

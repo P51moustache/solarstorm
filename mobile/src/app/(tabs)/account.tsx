@@ -4,24 +4,22 @@ import {
   ActivityIndicator,
   KeyboardAvoidingView,
   Platform,
-  Pressable,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, Pill, ScreenTitle } from '@/components/ui-kit';
+import { Button, Card, Field, Pill, ScreenTitle, Tappable } from '@/components/ui';
 import { MONETIZATION_ENABLED } from '@/constants/flags';
-import { Palette } from '@/constants/solar';
 import { useAuth } from '@/lib/auth';
+import { colors, fontSize, fonts, layout, radii, space, textStyles } from '@/theme';
 
 const TIER_LABEL: Record<string, { label: string; color: string }> = {
-  free: { label: 'Free', color: Palette.textDim },
-  plus: { label: 'Plus', color: Palette.accent },
-  pro: { label: 'Pro', color: Palette.warn },
+  free: { label: 'Free', color: colors.textMuted },
+  plus: { label: 'Plus', color: colors.accent },
+  pro: { label: 'Pro', color: colors.warn },
 };
 
 export default function AccountScreen() {
@@ -61,7 +59,7 @@ export default function AccountScreen() {
             </Card>
           ) : loading ? (
             <View style={styles.center}>
-              <ActivityIndicator color={Palette.accent} />
+              <ActivityIndicator color={colors.accent} />
             </View>
           ) : user ? (
             // ---- Signed in ----
@@ -82,25 +80,21 @@ export default function AccountScreen() {
 
               {MONETIZATION_ENABLED ? (
                 tier === 'free' ? (
-                  <Pressable
-                    style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
-                    onPress={() => router.push('/paywall')}>
-                    <Text style={styles.primaryBtnText}>Upgrade to Plus or Pro</Text>
-                  </Pressable>
+                  <Button
+                    label="Upgrade to Plus or Pro"
+                    style={styles.primaryBtn}
+                    onPress={() => router.push('/paywall')}
+                  />
                 ) : (
-                  <Pressable
-                    style={({ pressed }) => [styles.secondaryBtn, pressed && styles.pressed]}
-                    onPress={() => router.push('/paywall')}>
-                    <Text style={styles.secondaryBtnText}>Manage subscription</Text>
-                  </Pressable>
+                  <Button
+                    variant="outline"
+                    label="Manage subscription"
+                    onPress={() => router.push('/paywall')}
+                  />
                 )
               ) : null}
 
-              <Pressable
-                style={({ pressed }) => [styles.ghostBtn, pressed && styles.pressed]}
-                onPress={signOut}>
-                <Text style={styles.ghostBtnText}>Sign out</Text>
-              </Pressable>
+              <Button variant="danger" size="compact" label="Sign out" onPress={signOut} />
             </>
           ) : (
             // ---- Signed out: auth form ----
@@ -111,40 +105,35 @@ export default function AccountScreen() {
                   <Segment label="Create Account" active={mode === 'signup'} onPress={() => setMode('signup')} />
                 </View>
 
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email"
-                  placeholderTextColor={Palette.textFaint}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoComplete="email"
-                  value={email}
-                  onChangeText={setEmail}
-                />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Password"
-                  placeholderTextColor={Palette.textFaint}
-                  secureTextEntry
-                  value={password}
-                  onChangeText={setPassword}
-                />
+                <View style={styles.inputWrap}>
+                  <Field
+                    placeholder="Email"
+                    autoCapitalize="none"
+                    keyboardType="email-address"
+                    autoComplete="email"
+                    value={email}
+                    onChangeText={setEmail}
+                  />
+                </View>
+                <View style={styles.inputWrap}>
+                  <Field
+                    placeholder="Password"
+                    secureTextEntry
+                    value={password}
+                    onChangeText={setPassword}
+                  />
+                </View>
 
                 {error ? <Text style={styles.error}>{error}</Text> : null}
                 {notice ? <Text style={styles.notice}>{notice}</Text> : null}
 
-                <Pressable
-                  style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+                <Button
+                  label={mode === 'signin' ? 'Sign In' : 'Create Account'}
+                  style={styles.primaryBtn}
                   onPress={submit}
-                  disabled={busy || !email || !password}>
-                  {busy ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text style={styles.primaryBtnText}>
-                      {mode === 'signin' ? 'Sign In' : 'Create Account'}
-                    </Text>
-                  )}
-                </Pressable>
+                  disabled={!email || !password}
+                  loading={busy}
+                />
               </Card>
               <Text style={styles.dim}>
                 Your account syncs alert thresholds and saved locations across devices.
@@ -159,55 +148,28 @@ export default function AccountScreen() {
 
 function Segment({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
   return (
-    <Pressable onPress={onPress} style={[styles.segment, active && styles.segmentActive]}>
+    <Tappable onPress={onPress} feedback="none" style={[styles.segment, active && styles.segmentActive]}>
       <Text style={[styles.segmentText, active && styles.segmentTextActive]}>{label}</Text>
-    </Pressable>
+    </Tappable>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
   flex: { flex: 1 },
-  content: { padding: 16, gap: 14, paddingBottom: 120 },
-  center: { paddingVertical: 60, alignItems: 'center' },
-  label: { color: Palette.textDim, fontSize: 13, fontWeight: '600' },
-  email: { color: Palette.text, fontSize: 20, fontWeight: '700', marginTop: 2 },
-  tierRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 16 },
-  dim: { color: Palette.textDim, fontSize: 13 },
-  segmented: { flexDirection: 'row', backgroundColor: Palette.surfaceAlt, borderRadius: 12, padding: 4, marginBottom: 16 },
-  segment: { flex: 1, paddingVertical: 10, alignItems: 'center', borderRadius: 9 },
-  segmentActive: { backgroundColor: Palette.accent },
-  segmentText: { color: Palette.textDim, fontWeight: '700', fontSize: 14 },
-  segmentTextActive: { color: '#fff' },
-  input: {
-    backgroundColor: Palette.surfaceAlt,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    color: Palette.text,
-    fontSize: 16,
-    marginBottom: 12,
-  },
-  primaryBtn: {
-    backgroundColor: Palette.accent,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-    marginTop: 4,
-  },
-  primaryBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  secondaryBtn: {
-    backgroundColor: Palette.surface,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Palette.border,
-    borderRadius: 14,
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  secondaryBtnText: { color: Palette.text, fontSize: 16, fontWeight: '700' },
-  ghostBtn: { paddingVertical: 14, alignItems: 'center' },
-  ghostBtnText: { color: Palette.danger, fontSize: 15, fontWeight: '600' },
-  pressed: { opacity: 0.7 },
-  error: { color: Palette.danger, fontSize: 13, marginBottom: 10 },
-  notice: { color: Palette.good, fontSize: 13, marginBottom: 10 },
+  content: { padding: layout.screenPadding, gap: space[3.5], paddingBottom: layout.tabBarClearance },
+  center: { paddingVertical: layout.emptyStatePadding, alignItems: 'center' },
+  label: { fontSize: fontSize.footnote, fontFamily: fonts.semibold, color: colors.textMuted },
+  email: { fontSize: fontSize.title3, fontFamily: fonts.bold, color: colors.text, marginTop: space[0.5] },
+  tierRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: space[4] },
+  dim: { ...textStyles.footnote, color: colors.textMuted },
+  segmented: { flexDirection: 'row', backgroundColor: colors.surfaceRaised, borderRadius: radii.md, padding: space[1], marginBottom: space[4] },
+  segment: { flex: 1, paddingVertical: space[2.5], alignItems: 'center', borderRadius: radii.sm },
+  segmentActive: { backgroundColor: colors.accent },
+  segmentText: { fontSize: fontSize.subhead, fontFamily: fonts.bold, color: colors.textMuted },
+  segmentTextActive: { color: colors.onAccent },
+  inputWrap: { marginBottom: space[3] },
+  primaryBtn: { marginTop: space[1] },
+  error: { ...textStyles.footnote, color: colors.danger, marginBottom: space[2.5] },
+  notice: { ...textStyles.footnote, color: colors.good, marginBottom: space[2.5] },
 });

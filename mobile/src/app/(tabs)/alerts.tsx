@@ -1,14 +1,15 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useEffect, useState } from 'react';
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native';
+import { Alert, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, ScreenTitle } from '@/components/ui-kit';
-import { Fonts, kpScale, Palette } from '@/constants/solar';
+import { Button, Card, ScreenTitle, Tappable, Toggle } from '@/components/ui';
+import { kpScale } from '@/constants/solar';
 import { AlertPrefs, alertWouldFire, DEFAULT_PREFS, getAlertPrefs, saveAlertPrefs } from '@/lib/alertPrefs';
 import { registerAlertTask, unregisterAlertTask } from '@/lib/backgroundAlerts';
 import { present, requestNotificationPermission } from '@/lib/notifications';
 import { useSky } from '@/lib/sky';
+import { colors, fontSize, fonts, iconSize, layout, lineHeight, radii, space, textStyles } from '@/theme';
 
 function fmtHour(h: number): string {
   const am = h < 12;
@@ -65,16 +66,16 @@ export default function AlertsScreen() {
               <Text style={styles.label}>Notifications</Text>
               <Text style={styles.dim}>Background checks fire a local alert when something happens.</Text>
             </View>
-            <Switch value={on} onValueChange={toggleNotifications} trackColor={{ true: Palette.accent, false: Palette.surfaceAlt }} />
+            <Toggle value={on} onValueChange={toggleNotifications} accessibilityLabel="Notifications" />
           </View>
         </Card>
 
         {on ? (
           <>
             {/* Live storm status */}
-            <Card style={{ borderColor: firing ? Palette.warn : 'rgba(255,255,255,0.12)' }}>
+            <Card style={{ borderColor: firing ? colors.warn : colors.glassBorder }}>
               <View style={styles.statusRow}>
-                <Ionicons name={firing ? 'alert-circle' : 'shield-checkmark'} size={24} color={firing ? Palette.warn : Palette.good} />
+                <Ionicons name={firing ? 'alert-circle' : 'shield-checkmark'} size={iconSize.xxl} color={firing ? colors.warn : colors.good} />
                 <View style={styles.left}>
                   <Text style={styles.statusTitle}>{firing ? 'Storm conditions met' : 'All quiet'}</Text>
                   <Text style={styles.dim}>
@@ -93,7 +94,7 @@ export default function AlertsScreen() {
                   <Text style={styles.label}>Geomagnetic storm</Text>
                   <Text style={styles.dim}>When Kp crosses your threshold</Text>
                 </View>
-                <Switch value={prefs.storm} onValueChange={(v) => update({ storm: v })} trackColor={{ true: Palette.accent, false: Palette.surfaceAlt }} />
+                <Toggle value={prefs.storm} onValueChange={(v) => update({ storm: v })} accessibilityLabel="Geomagnetic storm" />
               </View>
               {prefs.storm ? (
                 <>
@@ -105,9 +106,9 @@ export default function AlertsScreen() {
                     </View>
                     <Stepper symbol="+" onPress={() => update({ kpThreshold: Math.min(9, prefs.kpThreshold + 1) })} />
                   </View>
-                  <View style={[styles.row, { marginTop: 16 }]}>
+                  <View style={[styles.row, { marginTop: space[4] }]}>
                     <Text style={styles.subLabel}>Require southward Bz</Text>
-                    <Switch value={prefs.requireBz} onValueChange={(v) => update({ requireBz: v })} trackColor={{ true: Palette.accent, false: Palette.surfaceAlt }} />
+                    <Toggle value={prefs.requireBz} onValueChange={(v) => update({ requireBz: v })} accessibilityLabel="Require southward Bz" />
                   </View>
                 </>
               ) : null}
@@ -120,7 +121,7 @@ export default function AlertsScreen() {
                   <Text style={styles.label}>Flares & radiation</Text>
                   <Text style={styles.dim}>M/X-class flares and S2+ radiation storms</Text>
                 </View>
-                <Switch value={prefs.flares} onValueChange={(v) => update({ flares: v })} trackColor={{ true: Palette.accent, false: Palette.surfaceAlt }} />
+                <Toggle value={prefs.flares} onValueChange={(v) => update({ flares: v })} accessibilityLabel="Flares & radiation" />
               </View>
             </Card>
 
@@ -131,10 +132,10 @@ export default function AlertsScreen() {
                   <Text style={styles.label}>Daily digest</Text>
                   <Text style={styles.dim}>A once-a-day summary of conditions</Text>
                 </View>
-                <Switch value={prefs.dailyDigest} onValueChange={(v) => update({ dailyDigest: v })} trackColor={{ true: Palette.accent, false: Palette.surfaceAlt }} />
+                <Toggle value={prefs.dailyDigest} onValueChange={(v) => update({ dailyDigest: v })} accessibilityLabel="Daily digest" />
               </View>
               {prefs.dailyDigest ? (
-                <View style={[styles.row, { marginTop: 16 }]}>
+                <View style={[styles.row, { marginTop: space[4] }]}>
                   <Text style={styles.subLabel}>Around</Text>
                   <View style={styles.timeStepper}>
                     <Stepper small symbol="−" onPress={() => update({ digestHour: (prefs.digestHour + 23) % 24 })} />
@@ -152,15 +153,17 @@ export default function AlertsScreen() {
                   <Text style={styles.label}>Weekly heads-up</Text>
                   <Text style={styles.dim}>When the 2-week outlook turns active</Text>
                 </View>
-                <Switch value={prefs.weekly} onValueChange={(v) => update({ weekly: v })} trackColor={{ true: Palette.accent, false: Palette.surfaceAlt }} />
+                <Toggle value={prefs.weekly} onValueChange={(v) => update({ weekly: v })} accessibilityLabel="Weekly heads-up" />
               </View>
             </Card>
 
-            <Pressable
-              style={({ pressed }) => [styles.testBtn, pressed && styles.pressed]}
-              onPress={() => present('SolarStorm', 'Notifications are working ✓')}>
-              <Text style={styles.testText}>Send a test notification</Text>
-            </Pressable>
+            <Button
+              variant="outline"
+              size="compact"
+              label="Send a test notification"
+              style={styles.testBtn}
+              onPress={() => present('SolarStorm', 'Notifications are working ✓')}
+            />
 
             <Text style={styles.note}>
               Background alerts run on a custom build (not Expo Go), and iOS delivers them
@@ -181,34 +184,32 @@ export default function AlertsScreen() {
 
 function Stepper({ symbol, onPress, small }: { symbol: string; onPress: () => void; small?: boolean }) {
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [small ? styles.stepBtnSm : styles.stepBtn, pressed && { opacity: 0.6 }]}>
+    <Tappable onPress={onPress} feedback="soft" style={small ? styles.stepBtnSm : styles.stepBtn}>
       <Text style={small ? styles.stepSymbolSm : styles.stepSymbol}>{symbol}</Text>
-    </Pressable>
+    </Tappable>
   );
 }
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
-  content: { padding: 16, gap: 12, paddingBottom: 130 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  statusTitle: { color: Palette.text, fontSize: 17, fontFamily: Fonts.bold },
-  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  left: { gap: 3, flexShrink: 1 },
-  label: { color: Palette.text, fontSize: 16, fontFamily: Fonts.bold },
-  subLabel: { color: Palette.text, fontSize: 15, fontFamily: Fonts.medium },
-  dim: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.regular },
-  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16 },
-  stepperValue: { alignItems: 'center', gap: 2 },
-  thresholdNum: { fontSize: 28, fontFamily: Fonts.bold },
-  thresholdScale: { fontSize: 13, fontFamily: Fonts.semibold },
-  timeStepper: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  timeText: { color: Palette.text, fontSize: 16, fontFamily: Fonts.bold, minWidth: 78, textAlign: 'center' },
-  stepBtn: { width: 56, height: 56, borderRadius: 28, backgroundColor: Palette.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  stepBtnSm: { width: 40, height: 40, borderRadius: 20, backgroundColor: Palette.surfaceAlt, alignItems: 'center', justifyContent: 'center' },
-  stepSymbol: { color: Palette.text, fontSize: 28, fontFamily: Fonts.bold },
-  stepSymbolSm: { color: Palette.text, fontSize: 22, fontFamily: Fonts.bold },
-  testBtn: { backgroundColor: Palette.surface, borderWidth: StyleSheet.hairlineWidth, borderColor: Palette.border, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 4 },
-  testText: { color: Palette.accent, fontSize: 15, fontFamily: Fonts.semibold },
-  pressed: { opacity: 0.7 },
-  note: { color: Palette.textFaint, fontSize: 12, fontFamily: Fonts.regular, textAlign: 'center', marginTop: 8, lineHeight: 18 },
+  content: { padding: layout.screenPadding, gap: layout.stackGap, paddingBottom: layout.tabBarClearance },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: space[3.5] },
+  statusTitle: { ...textStyles.cardTitle, color: colors.text },
+  row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: space[3] },
+  left: { gap: space[1], flexShrink: 1 },
+  label: { fontSize: fontSize.callout, fontFamily: fonts.bold, color: colors.text },
+  subLabel: { ...textStyles.bodyStrong, color: colors.text },
+  dim: { ...textStyles.footnote, color: colors.textMuted },
+  stepper: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: space[4] },
+  stepperValue: { alignItems: 'center', gap: space[0.5] },
+  thresholdNum: { fontSize: fontSize.stat, fontFamily: fonts.bold },
+  thresholdScale: { fontSize: fontSize.footnote, fontFamily: fonts.semibold },
+  timeStepper: { flexDirection: 'row', alignItems: 'center', gap: space[3.5] },
+  timeText: { fontSize: fontSize.callout, fontFamily: fonts.bold, color: colors.text, minWidth: 78, textAlign: 'center' },
+  stepBtn: { width: 56, height: 56, borderRadius: radii.pill, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  stepBtnSm: { width: 40, height: 40, borderRadius: radii.pill, backgroundColor: colors.surfaceRaised, alignItems: 'center', justifyContent: 'center' },
+  stepSymbol: { fontSize: fontSize.stat, fontFamily: fonts.bold, color: colors.text },
+  stepSymbolSm: { fontSize: fontSize.title2, fontFamily: fonts.bold, color: colors.text },
+  testBtn: { marginTop: space[1] },
+  note: { ...textStyles.caption, color: colors.textFaint, textAlign: 'center', marginTop: space[2], lineHeight: lineHeight.footnote },
 });

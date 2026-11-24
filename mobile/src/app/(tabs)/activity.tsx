@@ -1,13 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearnMore } from '@/components/explainer';
 import { SunCam } from '@/components/SunCam';
-import { Glass, ScreenTitle } from '@/components/ui-kit';
-import { flareColor, Fonts, kpScale, noaaScaleColor, Palette, relativeTime } from '@/constants/solar';
+import { Glass, ScreenTitle, SectionLabel, Tappable } from '@/components/ui';
+import { flareColor, kpScale, noaaScaleColor, relativeTime } from '@/constants/solar';
 import {
   Flare,
   getLatestFlare,
@@ -18,6 +18,7 @@ import {
   Scales,
   SpaceAlert,
 } from '@/lib/spaceWeather';
+import { colors, fontSize, fonts, iconSize, layout, lineHeight, radii, space, textStyles, tracking } from '@/theme';
 
 const SCALE_DEFS = [
   { key: 'R', name: 'Radio Blackout', pick: (s: Scales) => s.R },
@@ -66,7 +67,7 @@ function computeStatus(scales: Scales | null, outlook: OutlookDay[]): Status {
 }
 
 function toneColor(tone: 'good' | 'mixed' | 'poor'): string {
-  return tone === 'good' ? Palette.good : tone === 'mixed' ? Palette.warn : Palette.danger;
+  return tone === 'good' ? colors.good : tone === 'mixed' ? colors.warn : colors.danger;
 }
 
 export default function ActivityScreen() {
@@ -112,20 +113,20 @@ export default function ActivityScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Palette.textDim} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} />
         }>
         <ScreenTitle title="Activity" subtitle="Big events — now and the next two weeks" />
 
         {loading ? (
           <View style={styles.center}>
-            <ActivityIndicator color={Palette.accent} />
+            <ActivityIndicator color={colors.accent} />
           </View>
         ) : (
           <>
             {/* Headline status */}
             <Glass style={{ borderColor: toneColor(status.tone) }}>
               <View style={styles.statusRow}>
-                <Ionicons name={status.icon} size={28} color={toneColor(status.tone)} />
+                <Ionicons name={status.icon} size={iconSize.xxxl} color={toneColor(status.tone)} />
                 <View style={styles.flex}>
                   <Text style={[styles.statusTitle, { color: toneColor(status.tone) }]}>{status.title}</Text>
                   <Text style={styles.statusDetail}>{status.detail}</Text>
@@ -135,8 +136,8 @@ export default function ActivityScreen() {
 
             {/* Live Sun imagery */}
             <Glass>
-              <Text style={styles.cardLabel}>The Sun right now</Text>
-              <View style={{ marginTop: 12 }}>
+              <SectionLabel>The Sun right now</SectionLabel>
+              <View style={{ marginTop: space[3] }}>
                 <SunCam bust={bust} />
               </View>
             </Glass>
@@ -144,7 +145,7 @@ export default function ActivityScreen() {
             {/* 2-week outlook */}
             {outlook.length > 0 ? (
               <Glass>
-                <Text style={styles.cardLabel}>Next 2 weeks · predicted Kp</Text>
+                <SectionLabel>Next 2 weeks · predicted Kp</SectionLabel>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.outlookScroll}>
                   {outlook.map((d) => {
                     const c = kpScale(d.kp);
@@ -167,7 +168,7 @@ export default function ActivityScreen() {
             {/* NOAA R/S/G scales */}
             <Glass>
               <View style={styles.cardHead}>
-                <Text style={styles.cardLabel}>NOAA scales · now</Text>
+                <SectionLabel>NOAA scales · now</SectionLabel>
                 <LearnMore term="scales" label="what's this?" />
               </View>
               <View style={styles.scaleRow}>
@@ -193,7 +194,7 @@ export default function ActivityScreen() {
             {/* Solar flares */}
             <Glass>
               <View style={styles.cardHead}>
-                <Text style={styles.cardLabel}>Solar flares</Text>
+                <SectionLabel>Solar flares</SectionLabel>
                 <LearnMore term="flares" label="flare classes" />
               </View>
               <View style={styles.flareRow}>
@@ -226,16 +227,16 @@ export default function ActivityScreen() {
               ))
             )}
 
-            <Pressable onPress={() => router.push('/learn')}>
+            <Tappable onPress={() => router.push('/learn')} feedback="none">
               <Glass style={styles.learnCard}>
-                <Ionicons name="book-outline" size={22} color={Palette.accent} />
+                <Ionicons name="book-outline" size={iconSize.xl} color={colors.accent} />
                 <View style={styles.flex}>
                   <Text style={styles.learnTitle}>New to space weather?</Text>
                   <Text style={styles.dim}>Start with the basics — a 2-minute primer.</Text>
                 </View>
-                <Ionicons name="chevron-forward" size={20} color={Palette.textFaint} />
+                <Ionicons name="chevron-forward" size={iconSize.lg} color={colors.textFaint} />
               </Glass>
-            </Pressable>
+            </Tappable>
 
             <Text style={styles.note}>Source: NOAA SWPC · NASA SDO/SOHO · pull to refresh</Text>
           </>
@@ -245,35 +246,38 @@ export default function ActivityScreen() {
   );
 }
 
+/** Day-chip outline and the width of the Kp bar: hairline-plus lines that have no token. */
+const DAY_BORDER = 1;
+const KP_BAR_WIDTH = 6;
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
-  content: { padding: 16, gap: 12, paddingTop: 8, paddingBottom: 130 },
-  center: { paddingVertical: 60, alignItems: 'center' },
+  content: { padding: layout.screenPadding, gap: space[3], paddingTop: space[2], paddingBottom: layout.tabBarClearance },
+  center: { paddingVertical: layout.emptyStatePadding, alignItems: 'center' },
   flex: { flex: 1 },
-  statusRow: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  statusTitle: { fontSize: 18, fontFamily: Fonts.bold },
-  statusDetail: { color: Palette.textDim, fontSize: 14, fontFamily: Fonts.regular, marginTop: 2, lineHeight: 19 },
-  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  cardLabel: { color: Palette.textDim, fontSize: 12, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 1 },
-  sectionHeader: { color: Palette.text, fontSize: 18, fontFamily: Fonts.bold },
-  outlookScroll: { marginTop: 12, marginBottom: 8 },
-  day: { width: 46, alignItems: 'center', gap: 4, marginRight: 8, paddingVertical: 6, borderRadius: 10, borderColor: 'transparent', borderWidth: 1 },
-  dayLabel: { color: Palette.textDim, fontSize: 11, fontFamily: Fonts.medium },
-  dayKp: { fontSize: 18, fontFamily: Fonts.bold },
-  dayBarTrack: { width: 6, height: 40, backgroundColor: 'rgba(255,255,255,0.08)', borderRadius: 3, justifyContent: 'flex-end', overflow: 'hidden' },
-  dayBar: { width: 6, borderRadius: 3 },
-  scaleRow: { flexDirection: 'row', gap: 10 },
-  scaleBlock: { flex: 1, alignItems: 'center', gap: 3 },
-  scaleVal: { fontSize: 34, fontFamily: Fonts.bold, letterSpacing: -1 },
-  scaleName: { color: Palette.textDim, fontSize: 12, fontFamily: Fonts.medium },
-  scaleText: { fontSize: 12, fontFamily: Fonts.semibold },
-  flareRow: { flexDirection: 'row', alignItems: 'baseline', gap: 10 },
-  flareClass: { fontSize: 44, fontFamily: Fonts.bold, letterSpacing: -1.5 },
-  flareSub: { color: Palette.textFaint, fontSize: 14, fontFamily: Fonts.medium },
-  learnCard: { flexDirection: 'row', alignItems: 'center', gap: 14 },
-  learnTitle: { color: Palette.text, fontSize: 16, fontFamily: Fonts.bold },
-  alertCard: { paddingVertical: 14 },
-  alertTitle: { color: Palette.text, fontSize: 14, fontFamily: Fonts.medium, lineHeight: 20, marginBottom: 4 },
-  dim: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.regular },
-  note: { color: Palette.textFaint, fontSize: 12, fontFamily: Fonts.regular, textAlign: 'center', marginTop: 4 },
+  statusRow: { flexDirection: 'row', alignItems: 'center', gap: space[3.5] },
+  statusTitle: { ...textStyles.sectionTitle },
+  statusDetail: { ...textStyles.subtitle, color: colors.textMuted, marginTop: space[0.5], lineHeight: lineHeight.snug },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[2] },
+  sectionHeader: { ...textStyles.sectionTitle, color: colors.text },
+  outlookScroll: { marginTop: space[3], marginBottom: space[2] },
+  day: { width: 46, alignItems: 'center', gap: space[1], marginRight: space[2], paddingVertical: space[1.5], borderRadius: radii.sm, borderColor: 'transparent', borderWidth: DAY_BORDER },
+  dayLabel: { color: colors.textMuted, fontSize: fontSize.micro, fontFamily: fonts.medium },
+  dayKp: { ...textStyles.sectionTitle },
+  dayBarTrack: { width: KP_BAR_WIDTH, height: 40, backgroundColor: colors.fill, borderRadius: radii.pill, justifyContent: 'flex-end', overflow: 'hidden' },
+  dayBar: { width: KP_BAR_WIDTH, borderRadius: radii.pill },
+  scaleRow: { flexDirection: 'row', gap: space[2.5] },
+  scaleBlock: { flex: 1, alignItems: 'center', gap: space[1] },
+  scaleVal: { fontSize: fontSize.display, fontFamily: fonts.bold, letterSpacing: tracking.tight },
+  scaleName: { color: colors.textMuted, fontSize: fontSize.caption, fontFamily: fonts.medium },
+  scaleText: { fontSize: fontSize.caption, fontFamily: fonts.semibold },
+  flareRow: { flexDirection: 'row', alignItems: 'baseline', gap: space[2.5] },
+  flareClass: { fontSize: fontSize.hero2, fontFamily: fonts.bold, letterSpacing: tracking.displaySmall },
+  flareSub: { color: colors.textFaint, fontSize: fontSize.subhead, fontFamily: fonts.medium },
+  learnCard: { flexDirection: 'row', alignItems: 'center', gap: space[3.5] },
+  learnTitle: { color: colors.text, fontSize: fontSize.callout, fontFamily: fonts.bold },
+  alertCard: { paddingVertical: space[3.5] },
+  alertTitle: { color: colors.text, fontSize: fontSize.subhead, fontFamily: fonts.medium, lineHeight: lineHeight.snug, marginBottom: space[1] },
+  dim: { ...textStyles.footnote, color: colors.textMuted },
+  note: { ...textStyles.caption, color: colors.textFaint, textAlign: 'center', marginTop: space[1] },
 });

@@ -1,9 +1,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as Haptics from 'expo-haptics';
 import { createContext, useCallback, useContext, useState, type ReactNode } from 'react';
-import { Modal, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Modal, StyleSheet, Text, View } from 'react-native';
 
-import { Fonts, GLOSSARY, Palette } from '@/constants/solar';
+import { Button, Tappable } from '@/components/ui';
+import { GLOSSARY } from '@/constants/solar';
+import { colors, iconSize, motion, radii, space, textStyles } from '@/theme';
 
 type Term = keyof typeof GLOSSARY;
 
@@ -17,7 +18,7 @@ export function ExplainerProvider({ children }: { children: ReactNode }) {
   const [term, setTerm] = useState<Term | null>(null);
 
   const open = useCallback((t: Term) => {
-    Haptics.selectionAsync();
+    motion.haptics.select();
     setTerm(t);
   }, []);
 
@@ -27,16 +28,14 @@ export function ExplainerProvider({ children }: { children: ReactNode }) {
     <ExplainerContext.Provider value={{ open }}>
       {children}
       <Modal visible={!!entry} transparent animationType="fade" onRequestClose={() => setTerm(null)}>
-        <Pressable style={styles.backdrop} onPress={() => setTerm(null)}>
-          <Pressable style={styles.sheet} onPress={(e) => e.stopPropagation()}>
+        <Tappable style={styles.backdrop} onPress={() => setTerm(null)} feedback="none" accessibilityLabel="Close explainer">
+          <Tappable style={styles.sheet} onPress={(e) => e.stopPropagation()} feedback="none" accessibilityRole="none">
             <View style={styles.handle} />
             <Text style={styles.title}>{entry?.title}</Text>
             <Text style={styles.body}>{entry?.body}</Text>
-            <Pressable style={styles.btn} onPress={() => setTerm(null)}>
-              <Text style={styles.btnText}>Got it</Text>
-            </Pressable>
-          </Pressable>
-        </Pressable>
+            <Button label="Got it" onPress={() => setTerm(null)} style={styles.btn} />
+          </Tappable>
+        </Tappable>
       </Modal>
     </ExplainerContext.Provider>
   );
@@ -52,36 +51,29 @@ export function useExplainer() {
 export function LearnMore({ term, label }: { term: Term; label: string }) {
   const { open } = useExplainer();
   return (
-    <Pressable style={styles.learn} onPress={() => open(term)} hitSlop={8}>
+    <Tappable style={styles.learn} onPress={() => open(term)} hitSlop={8} feedback="none">
       <Text style={styles.learnLabel}>{label}</Text>
-      <Ionicons name="help-circle-outline" size={15} color={Palette.textDim} />
-    </Pressable>
+      <Ionicons name="help-circle-outline" size={iconSize.xs} color={colors.textMuted} />
+    </Tappable>
   );
 }
 
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.6)', justifyContent: 'flex-end' },
+  backdrop: { flex: 1, backgroundColor: colors.scrim, justifyContent: 'flex-end' },
   sheet: {
-    backgroundColor: '#11151F',
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
-    padding: 24,
-    paddingBottom: 40,
+    backgroundColor: colors.surfaceFloating,
+    borderTopLeftRadius: radii.sheet,
+    borderTopRightRadius: radii.sheet,
+    padding: space[6],
+    paddingBottom: space[10],
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.15)',
-    gap: 12,
+    borderColor: colors.borderStrong,
+    gap: space[3],
   },
-  handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: 2, backgroundColor: Palette.border, marginBottom: 6 },
-  title: { color: Palette.text, fontSize: 22, fontFamily: Fonts.bold },
-  body: { color: Palette.textDim, fontSize: 16, lineHeight: 24, fontFamily: Fonts.regular },
-  btn: {
-    marginTop: 8,
-    backgroundColor: Palette.accent,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
-  btnText: { color: '#fff', fontSize: 16, fontFamily: Fonts.bold },
-  learn: { flexDirection: 'row', alignItems: 'center', gap: 4, alignSelf: 'flex-start' },
-  learnLabel: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.medium },
+  handle: { alignSelf: 'center', width: 40, height: 4, borderRadius: radii.xs, backgroundColor: colors.border, marginBottom: space[1.5] },
+  title: { ...textStyles.sheetTitle, color: colors.text },
+  body: { ...textStyles.bodyLarge, color: colors.textMuted },
+  btn: { marginTop: space[2] },
+  learn: { flexDirection: 'row', alignItems: 'center', gap: space[1], alignSelf: 'flex-start' },
+  learnLabel: { ...textStyles.footnoteStrong, color: colors.textMuted },
 });

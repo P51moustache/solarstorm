@@ -4,18 +4,15 @@ import {
   ActivityIndicator,
   Alert,
   Keyboard,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card, Pill, ScreenTitle } from '@/components/ui-kit';
-import { Fonts, kpScale, Palette } from '@/constants/solar';
+import { Button, Card, Field, Pill, ScreenTitle, Tappable } from '@/components/ui';
 import { auroraProbability, kpNeededForVisibility } from '@/lib/aurora';
 import { DeviceLocation, getDeviceLocation, searchPlaces } from '@/lib/location';
 import {
@@ -25,13 +22,14 @@ import {
   SavedLocation,
 } from '@/lib/savedLocations';
 import { CurrentConditions, getCurrentConditions } from '@/lib/spaceWeather';
+import { colors, iconSize, layout, radii, shadows, space, textStyles, fontSize, fonts } from '@/theme';
 
 function probabilityColor(p: number): string {
-  if (p >= 70) return '#FF6B5B';
-  if (p >= 50) return '#FF9F43';
-  if (p >= 30) return '#F1C40F';
-  if (p >= 15) return '#7FD17F';
-  return Palette.textDim;
+  if (p >= 70) return colors.severity.strong;
+  if (p >= 50) return colors.severity.moderate;
+  if (p >= 30) return colors.severity.minor;
+  if (p >= 15) return colors.severity.active;
+  return colors.textMuted;
 }
 
 export default function LocationsScreen() {
@@ -112,46 +110,33 @@ export default function LocationsScreen() {
         contentContainerStyle={styles.content}
         keyboardShouldPersistTaps="handled"
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Palette.textDim} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} />
         }>
         <ScreenTitle title="Locations" subtitle="Aurora outlook for your spots" />
 
         {/* Add by current location */}
         <Card>
-          <Pressable
-            style={({ pressed }) => [styles.primaryBtn, pressed && styles.pressed]}
+          <Button
+            size="compact"
+            label="📍 Add my current location"
             onPress={addCurrent}
-            disabled={adding}>
-            {adding ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text style={styles.primaryBtnText}>📍 Add my current location</Text>
-            )}
-          </Pressable>
+            loading={adding}
+          />
         </Card>
 
         {/* Search with floating suggestion dropdown */}
         <View style={styles.searchSection}>
-          <View style={styles.searchWrap}>
-            <Ionicons name="search" size={18} color={Palette.textFaint} />
-            <TextInput
-              style={styles.input}
-              placeholder="Add a city or region…"
-              placeholderTextColor={Palette.textFaint}
-              value={query}
-              onChangeText={setQuery}
-              autoCorrect={false}
-              returnKeyType="search"
-              onSubmitEditing={() => suggestions[0] && selectSuggestion(suggestions[0])}
-            />
-            {searching ? (
-              <ActivityIndicator color={Palette.textFaint} />
-            ) : query.length > 0 ? (
-              <Pressable onPress={() => setQuery('')} hitSlop={8}>
-                <Ionicons name="close-circle" size={18} color={Palette.textFaint} />
-              </Pressable>
-            ) : null}
-          </View>
+          <Field
+            icon="search"
+            placeholder="Add a city or region…"
+            value={query}
+            onChangeText={setQuery}
+            autoCorrect={false}
+            returnKeyType="search"
+            onSubmitEditing={() => suggestions[0] && selectSuggestion(suggestions[0])}
+            busy={searching}
+            onClear={() => setQuery('')}
+          />
 
           {query.trim().length >= 2 ? (
             <View style={styles.dropdownFloat}>
@@ -159,17 +144,14 @@ export default function LocationsScreen() {
                 <Text style={styles.dropEmpty}>{searching ? 'Searching…' : 'No matches found'}</Text>
               ) : (
                 suggestions.map((s, i) => (
-                  <Pressable
+                  <Tappable
                     key={`${s.lat},${s.lng}`}
                     onPress={() => selectSuggestion(s)}
-                    style={({ pressed }) => [
-                      styles.suggestion,
-                      i > 0 && styles.suggestionBorder,
-                      pressed && styles.suggestionPressed,
-                    ]}>
-                    <Ionicons name="location-outline" size={16} color={Palette.textDim} />
+                    feedback="soft"
+                    style={[styles.suggestion, i > 0 && styles.suggestionBorder]}>
+                    <Ionicons name="location-outline" size={iconSize.sm} color={colors.textMuted} />
                     <Text style={styles.suggestionText} numberOfLines={1}>{s.label}</Text>
-                  </Pressable>
+                  </Tappable>
                 ))
               )}
             </View>
@@ -178,7 +160,7 @@ export default function LocationsScreen() {
 
         {loading ? (
           <View style={styles.center}>
-            <ActivityIndicator color={Palette.accent} />
+            <ActivityIndicator color={colors.accent} />
           </View>
         ) : locations.length === 0 ? (
           <Card>
@@ -209,9 +191,9 @@ export default function LocationsScreen() {
                       {needed === null ? 'Aurora rarely reaches here' : `Visible at Kp ${needed}+`}
                     </Text>
                   </View>
-                  <Pressable onPress={() => remove(loc.id)} hitSlop={10}>
-                    <Ionicons name="close-circle" size={22} color={Palette.textFaint} />
-                  </Pressable>
+                  <Tappable onPress={() => remove(loc.id)} hitSlop={space[2.5]} feedback="none">
+                    <Ionicons name="close-circle" size={iconSize.xl} color={colors.textFaint} />
+                  </Tappable>
                 </View>
                 {pred ? (
                   <View style={styles.chanceRow}>
@@ -239,59 +221,34 @@ export default function LocationsScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
-  content: { padding: 16, gap: 12, paddingBottom: 120 },
-  center: { paddingVertical: 50, alignItems: 'center' },
-  primaryBtn: {
-    backgroundColor: Palette.accent,
-    borderRadius: 12,
-    paddingVertical: 13,
-    alignItems: 'center',
-  },
-  primaryBtnText: { color: '#fff', fontSize: 15, fontFamily: Fonts.bold },
-  pressed: { opacity: 0.7 },
+  content: { padding: layout.screenPadding, gap: layout.stackGap, paddingBottom: layout.tabBarClearance },
+  center: { paddingVertical: layout.emptyStatePadding, alignItems: 'center' },
   searchSection: { position: 'relative', zIndex: 10 },
-  searchWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: Palette.surfaceAlt,
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Palette.border,
-  },
-  input: { flex: 1, color: Palette.text, fontSize: 15, fontFamily: Fonts.regular, padding: 0 },
   dropdownFloat: {
     position: 'absolute',
     top: '100%',
     left: 0,
     right: 0,
-    marginTop: 6,
+    marginTop: space[1.5],
     zIndex: 20,
-    backgroundColor: Palette.surfaceAlt,
-    borderRadius: 14,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.lg,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.14)',
-    paddingHorizontal: 14,
-    paddingVertical: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.45,
-    shadowRadius: 16,
-    shadowOffset: { width: 0, height: 8 },
-    elevation: 12,
+    borderColor: colors.borderStrong,
+    paddingHorizontal: space[3.5],
+    paddingVertical: space[1],
+    ...shadows.floating,
   },
-  dropEmpty: { color: Palette.textFaint, fontSize: 13, fontFamily: Fonts.regular, paddingVertical: 12 },
-  suggestion: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
-  suggestionBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: Palette.border },
-  suggestionPressed: { opacity: 0.6 },
-  suggestionText: { color: Palette.text, fontSize: 15, fontFamily: Fonts.medium, flexShrink: 1 },
+  dropEmpty: { ...textStyles.footnote, color: colors.textFaint, paddingVertical: space[3] },
+  suggestion: { flexDirection: 'row', alignItems: 'center', gap: space[2.5], paddingVertical: space[3] },
+  suggestionBorder: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.border },
+  suggestionText: { ...textStyles.bodyStrong, color: colors.text, flexShrink: 1 },
   locHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
-  locLeft: { gap: 3, flexShrink: 1 },
-  locName: { color: Palette.text, fontSize: 17, fontFamily: Fonts.bold },
-  dim: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.regular },
-  chanceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 14 },
-  chance: { fontSize: 32, fontFamily: Fonts.bold },
-  chanceLabel: { color: Palette.textDim, fontSize: 14, fontFamily: Fonts.regular, flex: 1 },
-  note: { color: Palette.textFaint, fontSize: 12, fontFamily: Fonts.regular, textAlign: 'center', marginTop: 8 },
+  locLeft: { gap: space[1], flexShrink: 1 },
+  locName: { ...textStyles.cardTitle, color: colors.text },
+  dim: { ...textStyles.footnote, color: colors.textMuted },
+  chanceRow: { flexDirection: 'row', alignItems: 'baseline', gap: space[2], marginTop: space[3.5] },
+  chance: { fontSize: fontSize.statLarge, fontFamily: fonts.bold },
+  chanceLabel: { ...textStyles.subtitle, color: colors.textMuted, flex: 1 },
+  note: { ...textStyles.caption, color: colors.textFaint, textAlign: 'center', marginTop: space[2] },
 });

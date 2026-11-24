@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { LayoutChangeEvent, PanResponder, StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Defs, Line, LinearGradient, Path, Rect, Stop } from 'react-native-svg';
 
-import { Fonts, Palette } from '@/constants/solar';
+import { colors, fontSize, fonts, radii, space, textStyles } from '@/theme';
 
 export interface Bar {
   value: number;
@@ -93,10 +93,10 @@ export function BarChart({
       {width > 0 && bars.length > 0 ? (
         <Svg width={width} height={height}>
           {threshold != null ? (
-            <Line x1={0} y1={y(threshold)} x2={width} y2={y(threshold)} stroke={Palette.danger} strokeWidth={1} strokeDasharray="3 4" opacity={0.6} />
+            <Line x1={0} y1={y(threshold)} x2={width} y2={y(threshold)} stroke={colors.danger} strokeWidth={1} strokeDasharray="3 4" opacity={0.6} />
           ) : null}
           {nowIndex != null && nowIndex > 0 && nowIndex < bars.length ? (
-            <Line x1={nowIndex * (bw + gap) - gap / 2} y1={0} x2={nowIndex * (bw + gap) - gap / 2} y2={height} stroke={Palette.textDim} strokeWidth={1} strokeDasharray="2 3" />
+            <Line x1={nowIndex * (bw + gap) - gap / 2} y1={0} x2={nowIndex * (bw + gap) - gap / 2} y2={height} stroke={colors.textMuted} strokeWidth={1} strokeDasharray="2 3" />
           ) : null}
           {bars.map((b, i) => {
             const top = y(b.value);
@@ -114,7 +114,7 @@ export function BarChart({
             );
           })}
           {active != null ? (
-            <Line x1={activeX} y1={0} x2={activeX} y2={height} stroke={Palette.text} strokeWidth={1} opacity={0.5} />
+            <Line x1={activeX} y1={0} x2={activeX} y2={height} stroke={colors.text} strokeWidth={1} opacity={0.5} />
           ) : null}
         </Svg>
       ) : null}
@@ -139,7 +139,7 @@ interface LineChartProps {
 /** Responsive line/area chart with horizontal-only touch-scrubbing. Nulls are skipped. */
 export function LineChart({
   values,
-  color = Palette.accent,
+  color = colors.accent,
   height = 96,
   domain,
   baseline,
@@ -198,14 +198,14 @@ export function LineChart({
           </LinearGradient>
         </Defs>
         {baseY != null ? (
-          <Line x1={0} y1={baseY} x2={width} y2={baseY} stroke={Palette.border} strokeWidth={1} strokeDasharray="3 4" />
+          <Line x1={0} y1={baseY} x2={width} y2={baseY} stroke={colors.border} strokeWidth={1} strokeDasharray="3 4" />
         ) : null}
         {fill ? <Path d={area} fill={`url(#g-${color.replace('#', '')})`} /> : null}
         <Path d={line} stroke={color} strokeWidth={2} fill="none" strokeLinejoin="round" strokeLinecap="round" />
         {activeIdx != null && values[activeIdx] != null ? (
           <>
-            <Line x1={x(activeIdx)} y1={0} x2={x(activeIdx)} y2={height} stroke={Palette.text} strokeWidth={1} opacity={0.5} />
-            <Circle cx={x(activeIdx)} cy={y(values[activeIdx] as number)} r={4} fill={color} stroke={Palette.bg} strokeWidth={2} />
+            <Line x1={x(activeIdx)} y1={0} x2={x(activeIdx)} y2={height} stroke={colors.text} strokeWidth={1} opacity={0.5} />
+            <Circle cx={x(activeIdx)} cy={y(values[activeIdx] as number)} r={4} fill={color} stroke={colors.background} strokeWidth={2} />
           </>
         ) : null}
       </Svg>
@@ -225,14 +225,14 @@ export function LineChart({
 const styles = StyleSheet.create({
   tooltipWrap: { position: 'absolute', top: 0, left: 0, right: 0, alignItems: 'center' },
   tooltip: {
-    backgroundColor: 'rgba(17,21,31,0.96)',
-    borderRadius: 10,
-    paddingVertical: 6,
-    paddingHorizontal: 12,
+    backgroundColor: colors.surfaceFloatingTranslucent,
+    borderRadius: radii.sm,
+    paddingVertical: space[1.5],
+    paddingHorizontal: space[3],
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.18)',
+    borderColor: colors.borderStrong,
     alignItems: 'center',
   },
-  tipValue: { color: Palette.text, fontSize: 14, fontFamily: Fonts.bold },
-  tipLabel: { color: Palette.textDim, fontSize: 11, fontFamily: Fonts.regular, marginTop: 1 },
+  tipValue: { color: colors.text, fontSize: fontSize.subhead, fontFamily: fonts.bold },
+  tipLabel: { ...textStyles.micro, color: colors.textMuted, marginTop: space[0.5] },
 });

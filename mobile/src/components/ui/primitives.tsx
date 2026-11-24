@@ -1,13 +1,18 @@
 import { BlurView } from 'expo-blur';
 import { ReactNode } from 'react';
-import { StyleSheet, Text, View, ViewStyle } from 'react-native';
+import { StyleSheet, Text, View, type StyleProp, type ViewStyle } from 'react-native';
 
-import { Fonts, Palette } from '@/constants/solar';
+import { colors, radii, space, textStyles } from '@/theme';
+
+/** Default blur strength of a glass card. */
+const GLASS_BLUR = 24;
 
 export function ScreenTitle({ title, subtitle }: { title: string; subtitle?: string }) {
   return (
     <View style={styles.titleWrap}>
-      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.title} accessibilityRole="header">
+        {title}
+      </Text>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
@@ -17,10 +22,10 @@ export function ScreenTitle({ title, subtitle }: { title: string; subtitle?: str
 export function Glass({
   children,
   style,
-  intensity = 24,
+  intensity = GLASS_BLUR,
 }: {
   children: ReactNode;
-  style?: ViewStyle;
+  style?: StyleProp<ViewStyle>;
   intensity?: number;
 }) {
   return (
@@ -30,7 +35,7 @@ export function Glass({
   );
 }
 
-/** Back-compat alias — existing screens use <Card>. */
+/** Screens use <Card>; it is the glass panel. */
 export const Card = Glass;
 
 export function Metric({
@@ -65,39 +70,33 @@ export function Pill({ text, color }: { text: string; color: string }) {
 }
 
 const styles = StyleSheet.create({
-  titleWrap: { gap: 4, marginBottom: 4 },
-  title: { color: Palette.text, fontSize: 30, fontFamily: Fonts.bold, letterSpacing: -0.5 },
-  subtitle: { color: Palette.textDim, fontSize: 14, fontFamily: Fonts.regular },
+  titleWrap: { gap: space[1], marginBottom: space[1] },
+  title: { ...textStyles.screenTitle, color: colors.text },
+  subtitle: { ...textStyles.subtitle, color: colors.textMuted },
   glass: {
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: radii.card,
+    padding: space[4.5],
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: 'rgba(255,255,255,0.12)',
-    backgroundColor: 'rgba(14,17,25,0.35)',
+    borderColor: colors.glassBorder,
+    backgroundColor: colors.glass,
     overflow: 'hidden',
   },
-  metric: { flex: 1, gap: 6 },
-  metricLabel: {
-    color: Palette.textDim,
-    fontSize: 12,
-    fontFamily: Fonts.semibold,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  metricValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: 4 },
-  metricValue: { color: Palette.text, fontSize: 26, fontFamily: Fonts.bold },
-  metricUnit: { color: Palette.textFaint, fontSize: 13, fontFamily: Fonts.medium },
+  metric: { flex: 1, gap: space[1.5] },
+  metricLabel: { ...textStyles.metricLabel, color: colors.textMuted },
+  metricValueRow: { flexDirection: 'row', alignItems: 'baseline', gap: space[1] },
+  metricValue: { ...textStyles.metric, color: colors.text },
+  metricUnit: { ...textStyles.footnoteStrong, color: colors.textFaint },
   pill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: space[1.5],
     borderWidth: 1,
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: radii.pill,
+    paddingHorizontal: space[3],
+    paddingVertical: space[1.5],
     alignSelf: 'flex-start',
-    backgroundColor: 'rgba(0,0,0,0.25)',
+    backgroundColor: colors.fillShade,
   },
-  pillDot: { width: 8, height: 8, borderRadius: 4 },
-  pillText: { fontSize: 13, fontFamily: Fonts.bold },
+  pillDot: { width: space[2], height: space[2], borderRadius: radii.pill },
+  pillText: textStyles.badge,
 });

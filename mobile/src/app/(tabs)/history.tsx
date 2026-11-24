@@ -2,7 +2,6 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -13,8 +12,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Bar, BarChart, LineChart } from '@/components/charts';
 import { LearnMore } from '@/components/explainer';
-import { Glass, ScreenTitle } from '@/components/ui-kit';
-import { Fonts, kpScale, Palette, relativeTime } from '@/constants/solar';
+import { Glass, ScreenTitle, SectionLabel, Tappable } from '@/components/ui';
+import { kpScale, relativeTime } from '@/constants/solar';
 import {
   Forecast,
   getForecast,
@@ -24,6 +23,7 @@ import {
   Range,
   SolarWindPoint,
 } from '@/lib/spaceWeather';
+import { colors, fontSize, fonts, iconSize, layout, radii, space, textStyles } from '@/theme';
 
 const RANGES: { key: Range; label: string; hours: number }[] = [
   { key: '1d', label: '24H', hours: 24 },
@@ -97,25 +97,26 @@ export default function TrendsScreen() {
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Palette.textDim} />
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} />
         }>
         <ScreenTitle title="Trends" subtitle="Where the storm has been — and where it's headed" />
 
         {/* Range selector */}
         <View style={styles.segmented}>
           {RANGES.map((r) => (
-            <Pressable
+            <Tappable
               key={r.key}
               onPress={() => setRange(r.key)}
+              feedback="none"
               style={[styles.segment, range === r.key && styles.segmentActive]}>
               <Text style={[styles.segmentText, range === r.key && styles.segmentTextActive]}>{r.label}</Text>
-            </Pressable>
+            </Tappable>
           ))}
         </View>
 
         {loading ? (
           <View style={styles.center}>
-            <ActivityIndicator color={Palette.accent} />
+            <ActivityIndicator color={colors.accent} />
           </View>
         ) : (
           <>
@@ -144,7 +145,7 @@ export default function TrendsScreen() {
             {/* Kp history → forecast */}
             <Glass>
               <View style={styles.cardHead}>
-                <Text style={styles.cardLabel}>Kp · history & forecast</Text>
+                <SectionLabel>Kp · history & forecast</SectionLabel>
                 <LearnMore term="kp" label="What's Kp?" />
               </View>
               <BarChart
@@ -157,9 +158,9 @@ export default function TrendsScreen() {
                 formatValue={(v) => `Kp ${v.toFixed(2)}`}
               />
               <View style={styles.legendRow}>
-                <Legend dotColor={Palette.text} text="observed" />
-                <Legend dotColor={Palette.textFaint} text="forecast" />
-                <Legend dashColor={Palette.danger} text="storm (Kp 5)" />
+                <Legend dotColor={colors.text} text="observed" />
+                <Legend dotColor={colors.textFaint} text="forecast" />
+                <Legend dashColor={colors.danger} text="storm (Kp 5)" />
                 <Text style={styles.scrubHint}>· touch & drag to inspect</Text>
               </View>
             </Glass>
@@ -167,7 +168,7 @@ export default function TrendsScreen() {
             {/* Solar wind speed */}
             <Glass>
               <View style={styles.cardHead}>
-                <Text style={styles.cardLabel}>Solar wind · 24h</Text>
+                <SectionLabel>Solar wind · 24h</SectionLabel>
                 <Text style={styles.headValue}>
                   {latestSpeed != null ? Math.round(latestSpeed) : '—'}
                   <Text style={styles.headUnit}> km/s</Text>
@@ -175,7 +176,7 @@ export default function TrendsScreen() {
               </View>
               <LineChart
                 values={wind.map((p) => p.speed)}
-                color={Palette.accent}
+                color={colors.accent}
                 height={84}
                 labels={windLabels}
                 formatValue={(v) => `${Math.round(v)} km/s`}
@@ -186,15 +187,15 @@ export default function TrendsScreen() {
             {/* Bz */}
             <Glass>
               <View style={styles.cardHead}>
-                <Text style={styles.cardLabel}>IMF Bz · 24h</Text>
-                <Text style={[styles.headValue, latestBz != null && latestBz < 0 ? { color: Palette.warn } : null]}>
+                <SectionLabel>IMF Bz · 24h</SectionLabel>
+                <Text style={[styles.headValue, latestBz != null && latestBz < 0 ? { color: colors.warn } : null]}>
                   {latestBz != null ? latestBz.toFixed(1) : '—'}
                   <Text style={styles.headUnit}> nT</Text>
                 </Text>
               </View>
               <LineChart
                 values={wind.map((p) => p.bz)}
-                color={latestBz != null && latestBz < 0 ? Palette.warn : Palette.good}
+                color={latestBz != null && latestBz < 0 ? colors.warn : colors.good}
                 baseline={0}
                 height={84}
                 labels={windLabels}
@@ -222,18 +223,18 @@ function fmtTime(iso: string): string {
 }
 
 function computeTrend(observed: KpReading[]): { label: string; icon: any; color: string } {
-  if (observed.length < 4) return { label: 'Steady', icon: 'remove', color: Palette.text };
+  if (observed.length < 4) return { label: 'Steady', icon: 'remove', color: colors.text };
   const recent = observed.slice(-3).reduce((s, r) => s + r.kp, 0) / 3;
   const prior = observed.slice(-6, -3).reduce((s, r) => s + r.kp, 0) / 3;
   const diff = recent - prior;
-  if (diff > 0.5) return { label: 'Rising', icon: 'trending-up', color: '#FF9F43' };
-  if (diff < -0.5) return { label: 'Easing', icon: 'trending-down', color: Palette.good };
-  return { label: 'Steady', icon: 'remove', color: Palette.text };
+  if (diff > 0.5) return { label: 'Rising', icon: 'trending-up', color: colors.severity.moderate };
+  if (diff < -0.5) return { label: 'Easing', icon: 'trending-down', color: colors.good };
+  return { label: 'Steady', icon: 'remove', color: colors.text };
 }
 
 function computeOutlook(forecast: Forecast | null): { value: string; caption: string; color: string } {
   if (!forecast || forecast.days.length === 0)
-    return { value: '—', caption: 'outlook', color: Palette.textDim };
+    return { value: '—', caption: 'outlook', color: colors.textMuted };
   let best = forecast.days[0];
   for (const d of forecast.days) if (d.maxKp > best.maxKp) best = d;
   const s = kpScale(best.maxKp);
@@ -245,7 +246,7 @@ function computeOutlook(forecast: Forecast | null): { value: string; caption: st
 function Insight({ icon, color, value, caption }: { icon: any; color: string; value: string; caption: string }) {
   return (
     <Glass style={styles.insight}>
-      <Ionicons name={icon} size={20} color={color} />
+      <Ionicons name={icon} size={iconSize.lg} color={color} />
       <Text style={[styles.insightValue, { color }]} numberOfLines={1}>{value}</Text>
       <Text style={styles.insightCaption} numberOfLines={1}>{caption}</Text>
     </Glass>
@@ -262,29 +263,33 @@ function Legend({ dotColor, dashColor, text }: { dotColor?: string; dashColor?: 
   );
 }
 
+/** Legend dash length: a mark that mirrors the dashed threshold line in the chart. */
+const LEGEND_DASH_WIDTH = space[3];
+const LEGEND_DASH_HEIGHT = space[0.5];
+const LEGEND_DOT_SIZE = 9;
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
-  content: { padding: 16, gap: 14, paddingTop: 8, paddingBottom: 130 },
-  center: { paddingVertical: 60, alignItems: 'center' },
-  segmented: { flexDirection: 'row', backgroundColor: 'rgba(255,255,255,0.06)', borderRadius: 12, padding: 4 },
-  segment: { flex: 1, paddingVertical: 9, alignItems: 'center', borderRadius: 9 },
-  segmentActive: { backgroundColor: Palette.accent },
-  segmentText: { color: Palette.textDim, fontFamily: Fonts.semibold, fontSize: 14 },
-  segmentTextActive: { color: '#fff' },
-  insights: { flexDirection: 'row', gap: 10 },
-  insight: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 14, paddingHorizontal: 6 },
-  insightValue: { fontSize: 17, fontFamily: Fonts.bold },
-  insightCaption: { color: Palette.textFaint, fontSize: 11, fontFamily: Fonts.regular },
-  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  cardLabel: { color: Palette.textDim, fontSize: 12, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 1 },
-  headValue: { color: Palette.text, fontSize: 19, fontFamily: Fonts.bold },
-  headUnit: { color: Palette.textFaint, fontSize: 13, fontFamily: Fonts.medium },
-  legendRow: { flexDirection: 'row', gap: 16, marginTop: 12, flexWrap: 'wrap' },
-  legend: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  legendDot: { width: 9, height: 9, borderRadius: 5 },
-  legendDash: { width: 12, height: 2 },
-  legendText: { color: Palette.textFaint, fontSize: 11, fontFamily: Fonts.regular },
-  scrubHint: { color: Palette.textFaint, fontSize: 11, fontFamily: Fonts.regular },
-  dim: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.regular, marginTop: 10 },
-  note: { color: Palette.textFaint, fontSize: 12, fontFamily: Fonts.regular, textAlign: 'center', marginTop: 4 },
+  content: { paddingHorizontal: layout.screenPadding, paddingTop: space[2], paddingBottom: layout.tabBarClearance, gap: space[3.5] },
+  center: { paddingVertical: layout.emptyStatePadding, alignItems: 'center' },
+  segmented: { flexDirection: 'row', backgroundColor: colors.fill, borderRadius: radii.md, padding: space[1] },
+  segment: { flex: 1, paddingVertical: space[2], alignItems: 'center', borderRadius: radii.sm },
+  segmentActive: { backgroundColor: colors.accent },
+  segmentText: { color: colors.textMuted, fontFamily: fonts.semibold, fontSize: fontSize.subhead },
+  segmentTextActive: { color: colors.onAccent },
+  insights: { flexDirection: 'row', gap: space[2.5] },
+  insight: { flex: 1, alignItems: 'center', gap: space[1], paddingVertical: space[3.5], paddingHorizontal: space[1.5] },
+  insightValue: { ...textStyles.cardTitle },
+  insightCaption: { ...textStyles.micro, color: colors.textFaint },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[2.5] },
+  headValue: { color: colors.text, fontSize: fontSize.title4, fontFamily: fonts.bold },
+  headUnit: { ...textStyles.footnoteStrong, color: colors.textFaint },
+  legendRow: { flexDirection: 'row', gap: space[4], marginTop: space[3], flexWrap: 'wrap' },
+  legend: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
+  legendDot: { width: LEGEND_DOT_SIZE, height: LEGEND_DOT_SIZE, borderRadius: radii.pill },
+  legendDash: { width: LEGEND_DASH_WIDTH, height: LEGEND_DASH_HEIGHT },
+  legendText: { ...textStyles.micro, color: colors.textFaint },
+  scrubHint: { ...textStyles.micro, color: colors.textFaint },
+  dim: { ...textStyles.footnote, color: colors.textMuted, marginTop: space[2.5] },
+  note: { ...textStyles.caption, color: colors.textFaint, textAlign: 'center', marginTop: space[1] },
 });

@@ -1,9 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as Haptics from 'expo-haptics';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Pressable,
   RefreshControl,
   ScrollView,
   Share,
@@ -14,30 +12,31 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { LearnMore } from '@/components/explainer';
-import { Glass, Metric, Pill } from '@/components/ui-kit';
-import { Fonts, kpScale, Palette, relativeTime } from '@/constants/solar';
+import { Button, Glass, Metric, Pill, SectionLabel, Tappable } from '@/components/ui';
+import { kpScale, relativeTime } from '@/constants/solar';
 import { auroraProbability } from '@/lib/aurora';
 import { DeviceLocation, getDeviceLocation, hasLocationPermission } from '@/lib/location';
 import { useSky } from '@/lib/sky';
 import { Forecast, getForecast } from '@/lib/spaceWeather';
 import { getViewingConditions, ViewingConditions, viewingVerdict } from '@/lib/viewing';
+import { colors, fontSize, fonts, iconSize, layout, lineHeight, motion, space, textStyles, tracking } from '@/theme';
 
 function probabilityColor(p: number): string {
-  if (p >= 70) return '#FF6B5B';
-  if (p >= 50) return '#FF9F43';
-  if (p >= 30) return '#F1C40F';
-  if (p >= 15) return '#7FD17F';
-  return Palette.textDim;
+  if (p >= 70) return colors.severity.strong;
+  if (p >= 50) return colors.severity.moderate;
+  if (p >= 30) return colors.severity.minor;
+  if (p >= 15) return colors.severity.active;
+  return colors.textMuted;
 }
 
 function verdictColor(tone: 'good' | 'mixed' | 'poor'): string {
-  return tone === 'good' ? Palette.good : tone === 'mixed' ? Palette.warn : Palette.danger;
+  return tone === 'good' ? colors.good : tone === 'mixed' ? colors.warn : colors.danger;
 }
 
 function ViewFactor({ icon, label, value, sub, color }: { icon: any; label: string; value: string; sub: string; color: string }) {
   return (
     <View style={styles.factor}>
-      <Ionicons name={icon} size={20} color={color} />
+      <Ionicons name={icon} size={iconSize.lg} color={color} />
       <Text style={styles.factorLabel}>{label}</Text>
       <Text style={[styles.factorValue, { color }]}>{value}</Text>
       <Text style={styles.factorSub} numberOfLines={1}>{sub}</Text>
@@ -63,7 +62,7 @@ export default function DashboardScreen() {
     const loc = await getDeviceLocation();
     setLocating(false);
     if (loc) {
-      Haptics.selectionAsync();
+      motion.haptics.select();
       setLocation(loc);
       setLocDenied(false);
       getViewingConditions(loc.lat, loc.lng).then(setViewing);
@@ -97,7 +96,7 @@ export default function DashboardScreen() {
   const verdict = prediction && viewing ? viewingVerdict(prediction.probability, viewing) : null;
 
   async function onShare() {
-    Haptics.selectionAsync();
+    motion.haptics.select();
     const aurora = prediction && location ? ` Aurora ${prediction.probability}% at ${location.label}.` : '';
     await Share.share({
       message: `Space weather right now: ${mood.headline.toLowerCase()} — Kp ${kp?.toFixed(1) ?? '—'}.${aurora} via SolarStorm`,
@@ -109,7 +108,7 @@ export default function DashboardScreen() {
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Palette.textDim} />}>
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} />}>
         {/* Hero — overall space-weather state */}
         <View style={styles.hero}>
           <Text style={styles.eyebrow}>RIGHT NOW</Text>
@@ -117,7 +116,7 @@ export default function DashboardScreen() {
           <Text style={styles.heroSub}>{mood.sub}</Text>
 
           {loading && !conditions ? (
-            <ActivityIndicator color={Palette.accent} style={{ marginTop: 22 }} />
+            <ActivityIndicator color={colors.accent} style={{ marginTop: space[6] }} />
           ) : (
             <>
               <View style={styles.kpRow}>
@@ -129,10 +128,10 @@ export default function DashboardScreen() {
               </View>
               <View style={styles.heroFoot}>
                 <LearnMore term="kp" label="What's Kp?" />
-                <Pressable onPress={onShare} style={({ pressed }) => [styles.shareBtn, pressed && styles.pressed]} hitSlop={8}>
-                  <Ionicons name="share-outline" size={16} color={Palette.accent} />
+                <Tappable onPress={onShare} style={styles.shareBtn} hitSlop={SHARE_HIT_SLOP}>
+                  <Ionicons name="share-outline" size={iconSize.sm} color={colors.accent} />
                   <Text style={styles.shareText}>Share</Text>
-                </Pressable>
+                </Tappable>
               </View>
             </>
           )}
@@ -141,7 +140,7 @@ export default function DashboardScreen() {
         {/* Solar wind */}
         <Glass>
           <View style={styles.cardHead}>
-            <Text style={styles.cardLabel}>Solar wind</Text>
+            <SectionLabel>Solar wind</SectionLabel>
             <LearnMore term="speed" label="explain" />
           </View>
           <View style={styles.metricRow}>
@@ -150,7 +149,7 @@ export default function DashboardScreen() {
           </View>
           <View style={styles.divider} />
           <View style={styles.metricRow}>
-            <Metric label="Bz" value={sw?.bz != null ? sw.bz.toFixed(1) : '—'} unit="nT" color={sw?.bz != null && sw.bz < 0 ? Palette.warn : undefined} />
+            <Metric label="Bz" value={sw?.bz != null ? sw.bz.toFixed(1) : '—'} unit="nT" color={sw?.bz != null && sw.bz < 0 ? colors.warn : undefined} />
             <Metric label="Bt" value={sw?.bt != null ? sw.bt.toFixed(1) : '—'} unit="nT" />
           </View>
           <View style={styles.cardFoot}>
@@ -162,7 +161,7 @@ export default function DashboardScreen() {
         {/* Aurora tonight (only relevant to some — demoted to a card) */}
         <Glass style={prediction ? { borderColor: probabilityColor(prediction.probability) } : undefined}>
           <View style={styles.cardHead}>
-            <Text style={styles.cardLabel}>Aurora tonight</Text>
+            <SectionLabel>Aurora tonight</SectionLabel>
             {prediction ? <LearnMore term="aurora" label="how?" /> : null}
           </View>
           {prediction ? (
@@ -175,18 +174,16 @@ export default function DashboardScreen() {
               {verdict ? <Text style={[styles.verdict, { color: verdictColor(verdict.tone) }]}>{verdict.text}</Text> : null}
               {viewing ? (
                 <View style={styles.viewRow}>
-                  <ViewFactor icon="cloud" label="Cloud" value={`${viewing.cloudCover}%`} sub={viewing.clarity} color={viewing.cloudCover <= 25 ? Palette.good : viewing.cloudCover <= 65 ? Palette.warn : Palette.danger} />
-                  <ViewFactor icon="moon" label="Moon" value={`${Math.round(viewing.moonIllum * 100)}%`} sub={viewing.moonName} color={viewing.moonIllum > 0.6 ? Palette.warn : Palette.good} />
-                  <ViewFactor icon="moon-outline" label="Dark" value={viewing.sunset} sub={`to ${viewing.sunrise}`} color={Palette.textDim} />
+                  <ViewFactor icon="cloud" label="Cloud" value={`${viewing.cloudCover}%`} sub={viewing.clarity} color={viewing.cloudCover <= 25 ? colors.good : viewing.cloudCover <= 65 ? colors.warn : colors.danger} />
+                  <ViewFactor icon="moon" label="Moon" value={`${Math.round(viewing.moonIllum * 100)}%`} sub={viewing.moonName} color={viewing.moonIllum > 0.6 ? colors.warn : colors.good} />
+                  <ViewFactor icon="moon-outline" label="Dark" value={viewing.sunset} sub={`to ${viewing.sunrise}`} color={colors.textMuted} />
                 </View>
               ) : null}
             </>
           ) : (
             <>
               <Text style={styles.dim}>Aurora is mainly visible at high latitudes. Check your local odds and what it would take to see it.</Text>
-              <Pressable style={({ pressed }) => [styles.locBtn, pressed && styles.pressed]} onPress={fetchLocation} disabled={locating}>
-                {locating ? <ActivityIndicator color="#fff" /> : <Text style={styles.locBtnText}>📍 Check my location</Text>}
-              </Pressable>
+              <Button label="📍 Check my location" onPress={fetchLocation} loading={locating} style={styles.locBtn} />
               {locDenied ? <Text style={styles.dim}>Enable location in Settings for your local forecast.</Text> : null}
             </>
           )}
@@ -195,7 +192,7 @@ export default function DashboardScreen() {
         {/* 3-day forecast */}
         {forecast && forecast.days.length > 0 ? (
           <Glass>
-            <Text style={styles.cardLabel}>Next 3 nights</Text>
+            <SectionLabel>Next 3 nights</SectionLabel>
             <View style={styles.forecastRow}>
               {forecast.days.map((d) => {
                 const s = kpScale(d.maxKp);
@@ -218,44 +215,44 @@ export default function DashboardScreen() {
   );
 }
 
+/** Extra tap area around the small Share link. */
+const SHARE_HIT_SLOP = space[2];
+
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: 'transparent' },
-  content: { padding: 16, gap: 14, paddingTop: 8, paddingBottom: 130 },
-  hero: { paddingVertical: 18, paddingHorizontal: 2 },
-  eyebrow: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.bold, letterSpacing: 3 },
-  headline: { color: Palette.text, fontSize: 40, fontFamily: Fonts.bold, letterSpacing: -1, marginTop: 6 },
-  heroSub: { color: Palette.textDim, fontSize: 16, fontFamily: Fonts.regular, marginTop: 8, lineHeight: 22 },
-  kpRow: { flexDirection: 'row', alignItems: 'center', gap: 16, marginTop: 24 },
-  kpValue: { fontSize: 72, fontFamily: Fonts.bold, letterSpacing: -3 },
-  kpMeta: { gap: 8 },
-  kpUnit: { color: Palette.textFaint, fontSize: 15, fontFamily: Fonts.medium },
-  heroFoot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 18 },
-  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  shareText: { color: Palette.accent, fontSize: 14, fontFamily: Fonts.semibold },
-  pressed: { opacity: 0.7 },
-  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 },
-  cardFoot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 14 },
-  cardLabel: { color: Palette.textDim, fontSize: 12, fontFamily: Fonts.bold, textTransform: 'uppercase', letterSpacing: 1 },
-  pctRow: { flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 4 },
-  bigPct: { fontSize: 52, fontFamily: Fonts.bold, letterSpacing: -2 },
-  pctMark: { color: Palette.textFaint, fontSize: 14, fontFamily: Fonts.medium, flexShrink: 1 },
-  desc: { color: Palette.text, fontSize: 15, fontFamily: Fonts.medium, marginTop: 8, lineHeight: 21 },
-  verdict: { fontSize: 14, fontFamily: Fonts.medium, marginTop: 8, lineHeight: 20 },
-  dim: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.regular, marginTop: 6, lineHeight: 19 },
-  locBtn: { backgroundColor: Palette.accent, borderRadius: 14, paddingVertical: 15, alignItems: 'center', marginTop: 12 },
-  locBtnText: { color: '#fff', fontSize: 16, fontFamily: Fonts.bold },
-  metricRow: { flexDirection: 'row', gap: 12, marginTop: 4 },
-  divider: { height: StyleSheet.hairlineWidth, backgroundColor: Palette.border, marginVertical: 16 },
-  viewRow: { flexDirection: 'row', gap: 10, marginTop: 14 },
-  factor: { flex: 1, alignItems: 'center', gap: 3 },
-  factorLabel: { color: Palette.textFaint, fontSize: 11, fontFamily: Fonts.semibold, textTransform: 'uppercase', letterSpacing: 0.5 },
-  factorValue: { fontSize: 18, fontFamily: Fonts.bold },
-  factorSub: { color: Palette.textDim, fontSize: 11, fontFamily: Fonts.regular },
-  forecastRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: 12 },
-  forecastDay: { flex: 1, alignItems: 'center', gap: 2 },
-  forecastLabel: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.medium },
-  forecastKp: { fontSize: 26, fontFamily: Fonts.bold, marginTop: 4 },
-  forecastSub: { color: Palette.textFaint, fontSize: 11, fontFamily: Fonts.regular },
-  forecastStorm: { color: Palette.textDim, fontSize: 12, fontFamily: Fonts.medium, marginTop: 4 },
-  source: { color: Palette.textFaint, fontSize: 12, fontFamily: Fonts.regular, textAlign: 'center', marginTop: 8 },
+  content: { padding: layout.screenPadding, gap: space[3.5], paddingTop: space[2], paddingBottom: layout.tabBarClearance },
+  hero: { paddingVertical: space[4.5], paddingHorizontal: space[0.5] },
+  eyebrow: { color: colors.textMuted, fontSize: fontSize.footnote, fontFamily: fonts.bold, letterSpacing: tracking.wide },
+  headline: { color: colors.text, fontSize: fontSize.hero1, fontFamily: fonts.bold, letterSpacing: tracking.tight, marginTop: space[1.5] },
+  heroSub: { color: colors.textMuted, fontSize: fontSize.callout, fontFamily: fonts.regular, marginTop: space[2], lineHeight: lineHeight.body },
+  kpRow: { flexDirection: 'row', alignItems: 'center', gap: space[4], marginTop: space[6] },
+  kpValue: { fontSize: fontSize.hero4, fontFamily: fonts.bold, letterSpacing: tracking.hero },
+  kpMeta: { gap: space[2] },
+  kpUnit: { ...textStyles.bodyStrong, color: colors.textFaint },
+  heroFoot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: space[4.5] },
+  shareBtn: { flexDirection: 'row', alignItems: 'center', gap: space[1] },
+  shareText: { color: colors.accent, fontSize: fontSize.subhead, fontFamily: fonts.semibold },
+  cardHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: space[1.5] },
+  cardFoot: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: space[3.5] },
+  pctRow: { flexDirection: 'row', alignItems: 'baseline', gap: space[2], marginTop: space[1] },
+  bigPct: { fontSize: fontSize.hero3, fontFamily: fonts.bold, letterSpacing: tracking.display },
+  pctMark: { color: colors.textFaint, fontSize: fontSize.subhead, fontFamily: fonts.medium, flexShrink: 1 },
+  desc: { ...textStyles.bodyStrong, color: colors.text, marginTop: space[2], lineHeight: lineHeight.snug },
+  verdict: { fontSize: fontSize.subhead, fontFamily: fonts.medium, marginTop: space[2], lineHeight: lineHeight.snug },
+  dim: { ...textStyles.footnote, color: colors.textMuted, marginTop: space[1.5], lineHeight: lineHeight.footnote },
+  locBtn: { marginTop: space[3] },
+  metricRow: { flexDirection: 'row', gap: space[3], marginTop: space[1] },
+  divider: { height: StyleSheet.hairlineWidth, backgroundColor: colors.border, marginVertical: space[4] },
+  viewRow: { flexDirection: 'row', gap: space[2.5], marginTop: space[3.5] },
+  factor: { flex: 1, alignItems: 'center', gap: space[1] },
+  factorLabel: { ...textStyles.metricLabel, fontSize: fontSize.micro, color: colors.textFaint },
+  factorValue: { ...textStyles.sectionTitle },
+  factorSub: { ...textStyles.micro, color: colors.textMuted },
+  forecastRow: { flexDirection: 'row', justifyContent: 'space-between', marginTop: space[3] },
+  forecastDay: { flex: 1, alignItems: 'center', gap: space[0.5] },
+  forecastLabel: { ...textStyles.footnoteStrong, color: colors.textMuted },
+  forecastKp: { ...textStyles.metric, marginTop: space[1] },
+  forecastSub: { ...textStyles.micro, color: colors.textFaint },
+  forecastStorm: { color: colors.textMuted, fontSize: fontSize.caption, fontFamily: fonts.medium, marginTop: space[1] },
+  source: { ...textStyles.caption, color: colors.textFaint, textAlign: 'center', marginTop: space[2] },
 });

@@ -4,7 +4,7 @@ import { Tabs } from 'expo-router';
 import { StyleSheet } from 'react-native';
 
 import { ACCOUNTS_ENABLED } from '@/constants/flags';
-import { Fonts, Palette } from '@/constants/solar';
+import { colors, fontSize, fonts } from '@/theme';
 
 export default function TabLayout() {
   return (
@@ -12,13 +12,13 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: 'transparent' },
-        tabBarActiveTintColor: Palette.text,
-        tabBarInactiveTintColor: Palette.textFaint,
-        tabBarLabelStyle: { fontFamily: Fonts.medium, fontSize: 11 },
+        tabBarActiveTintColor: colors.text,
+        tabBarInactiveTintColor: colors.textFaint,
+        tabBarLabelStyle: { fontFamily: fonts.medium, fontSize: fontSize.micro },
         tabBarStyle: {
           position: 'absolute',
           backgroundColor: 'transparent',
-          borderTopColor: 'rgba(255,255,255,0.08)',
+          borderTopColor: colors.borderSubtle,
         },
         tabBarBackground: () => (
           <BlurView tint="dark" intensity={40} style={StyleSheet.absoluteFill} />

@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { Image, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Image, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { Fonts, Palette } from '@/constants/solar';
+import { Tappable } from '@/components/ui';
+import { colors, fontSize, fonts, lineHeight, radii, space, textStyles } from '@/theme';
 
 interface Channel {
   id: string;
@@ -67,12 +68,13 @@ export function SunCam({ bust }: { bust: number }) {
         style={styles.chips}
         contentContainerStyle={styles.chipsContent}>
         {CHANNELS.map((c, i) => (
-          <Pressable
+          <Tappable
             key={c.id}
             onPress={() => setSel(i)}
+            feedback="none"
             style={[styles.chip, i === sel && styles.chipActive]}>
             <Text style={[styles.chipText, i === sel && styles.chipTextActive]}>{c.label}</Text>
-          </Pressable>
+          </Tappable>
         ))}
       </ScrollView>
       <Text style={styles.caption}>{ch.caption}</Text>
@@ -84,19 +86,19 @@ const styles = StyleSheet.create({
   image: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: 14,
-    backgroundColor: '#000',
+    borderRadius: radii.lg,
+    backgroundColor: colors.media,
   },
-  chips: { marginTop: 12 },
-  chipsContent: { gap: 8, paddingRight: 8 },
+  chips: { marginTop: space[3] },
+  chipsContent: { gap: space[2], paddingRight: space[2] },
   chip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.07)',
+    paddingHorizontal: space[3.5],
+    paddingVertical: space[2],
+    borderRadius: radii.pill,
+    backgroundColor: colors.fill,
   },
-  chipActive: { backgroundColor: Palette.accent },
-  chipText: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.semibold },
-  chipTextActive: { color: '#fff' },
-  caption: { color: Palette.textDim, fontSize: 13, fontFamily: Fonts.regular, marginTop: 12, lineHeight: 19 },
+  chipActive: { backgroundColor: colors.accent },
+  chipText: { color: colors.textMuted, fontSize: fontSize.footnote, fontFamily: fonts.semibold },
+  chipTextActive: { color: colors.onAccent },
+  caption: { ...textStyles.footnote, color: colors.textMuted, marginTop: space[3], lineHeight: lineHeight.footnote },
 });

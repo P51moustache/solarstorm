@@ -14,13 +14,13 @@ import { View } from 'react-native';
 import { AuroraBackground } from '@/components/AuroraBackground';
 import { ExplainerProvider } from '@/components/explainer';
 import { Onboarding } from '@/components/Onboarding';
-import { Palette } from '@/constants/solar';
 import { getAlertPrefs } from '@/lib/alertPrefs';
 import { AuthProvider, useAuth } from '@/lib/auth';
 import { registerAlertTask } from '@/lib/backgroundAlerts';
 import { hasOnboarded, setOnboarded } from '@/lib/onboarding';
 import { configurePurchases } from '@/lib/purchases';
 import { SkyProvider, useSky } from '@/lib/sky';
+import { colors } from '@/theme';
 
 const SolarStormTheme = {
   ...DarkTheme,
@@ -28,9 +28,9 @@ const SolarStormTheme = {
     ...DarkTheme.colors,
     background: 'transparent',
     card: 'transparent',
-    text: Palette.text,
-    border: Palette.border,
-    primary: Palette.accent,
+    text: colors.text,
+    border: colors.border,
+    primary: colors.accent,
   },
 };
 
@@ -84,14 +84,14 @@ export default function RootLayout() {
     SpaceGrotesk_700Bold,
   });
 
-  if (!loaded) return <View style={{ flex: 1, backgroundColor: Palette.bg }} />;
+  if (!loaded) return <View style={{ flex: 1, backgroundColor: colors.background }} />;
 
   return (
     <AuthProvider>
       <SkyProvider>
         <ExplainerProvider>
           <ThemeProvider value={SolarStormTheme}>
-            <View style={{ flex: 1, backgroundColor: Palette.bg }}>
+            <View style={{ flex: 1, backgroundColor: colors.background }}>
               <Backdrop />
               <StatusBar style="light" />
               <RootNavigator />

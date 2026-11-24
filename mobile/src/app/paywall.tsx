@@ -1,13 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-import { Card } from '@/components/ui-kit';
-import { Palette } from '@/constants/solar';
+import { Button, Card, Tappable } from '@/components/ui';
 import { useAuth } from '@/lib/auth';
 import { purchasePackage, purchasesAvailable, restorePurchases } from '@/lib/purchases';
+import { colors, iconSize, layout, lineHeight, radii, space, textStyles } from '@/theme';
 
 interface Tier {
   id: string; // RevenueCat package identifier (configured in the dashboard)
@@ -66,9 +66,9 @@ export default function PaywallScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <View style={styles.header}>
-        <Pressable onPress={() => router.back()} hitSlop={12}>
-          <Ionicons name="close" size={28} color={Palette.textDim} />
-        </Pressable>
+        <Tappable onPress={() => router.back()} hitSlop={space[3]} feedback="none">
+          <Ionicons name="close" size={iconSize.xxxl} color={colors.textMuted} />
+        </Tappable>
       </View>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>Unlock SolarStorm</Text>
@@ -77,35 +77,30 @@ export default function PaywallScreen() {
         </Text>
 
         {TIERS.map((tier) => (
-          <Card key={tier.id} style={tier.highlight ? { borderColor: Palette.accent } : undefined}>
+          <Card key={tier.id} style={tier.highlight ? { borderColor: colors.accent } : undefined}>
             <View style={styles.tierHead}>
               <Text style={styles.tierName}>{tier.name}</Text>
               <Text style={styles.tierPrice}>{tier.price}</Text>
             </View>
             {tier.features.map((f) => (
               <View key={f} style={styles.featureRow}>
-                <Ionicons name="checkmark-circle" size={18} color={Palette.good} />
+                <Ionicons name="checkmark-circle" size={iconSize.md} color={colors.good} />
                 <Text style={styles.feature}>{f}</Text>
               </View>
             ))}
-            <Pressable
-              style={({ pressed }) => [
-                styles.buyBtn,
-                tier.highlight && { backgroundColor: Palette.accent },
-                pressed && styles.pressed,
-              ]}
+            <Button
+              variant={tier.highlight ? 'primary' : 'secondary'}
+              style={styles.buyBtn}
+              label={busy === tier.id ? 'Processing…' : `Choose ${tier.name}`}
               onPress={() => buy(tier)}
-              disabled={busy !== null}>
-              <Text style={[styles.buyText, tier.highlight && { color: '#fff' }]}>
-                {busy === tier.id ? 'Processing…' : `Choose ${tier.name}`}
-              </Text>
-            </Pressable>
+              disabled={busy !== null}
+            />
           </Card>
         ))}
 
         {!purchasesAvailable && (
           <View style={styles.devNotice}>
-            <Ionicons name="information-circle" size={18} color={Palette.warn} />
+            <Ionicons name="information-circle" size={iconSize.md} color={colors.warn} />
             <Text style={styles.devNoticeText}>
               Purchasing runs through Apple In-App Purchase, which needs a custom dev build —
               it&apos;s disabled in Expo Go. The flow is fully wired and will activate once you
@@ -116,11 +111,13 @@ export default function PaywallScreen() {
 
         {message ? <Text style={styles.message}>{message}</Text> : null}
 
-        <Pressable onPress={restore} style={styles.restore} disabled={busy !== null}>
-          <Text style={styles.restoreText}>
-            {busy === 'restore' ? 'Restoring…' : 'Restore purchases'}
-          </Text>
-        </Pressable>
+        <Button
+          variant="link"
+          size="compact"
+          label={busy === 'restore' ? 'Restoring…' : 'Restore purchases'}
+          onPress={restore}
+          disabled={busy !== null}
+        />
 
         <Text style={styles.legal}>
           Subscriptions renew automatically until cancelled in your App Store settings.
@@ -131,37 +128,27 @@ export default function PaywallScreen() {
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: Palette.bg },
-  header: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: 16, paddingTop: 8 },
-  content: { padding: 16, gap: 14, paddingBottom: 60 },
-  title: { color: Palette.text, fontSize: 30, fontWeight: '800', letterSpacing: -0.5 },
-  subtitle: { color: Palette.textDim, fontSize: 15, marginBottom: 6 },
-  tierHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 12 },
-  tierName: { color: Palette.text, fontSize: 22, fontWeight: '800' },
-  tierPrice: { color: Palette.text, fontSize: 17, fontWeight: '700' },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 },
-  feature: { color: Palette.textDim, fontSize: 15, flexShrink: 1 },
-  buyBtn: {
-    marginTop: 8,
-    backgroundColor: Palette.surfaceAlt,
-    borderRadius: 14,
-    paddingVertical: 15,
-    alignItems: 'center',
-  },
-  buyText: { color: Palette.text, fontSize: 16, fontWeight: '700' },
-  pressed: { opacity: 0.7 },
+  safe: { flex: 1, backgroundColor: colors.background },
+  header: { flexDirection: 'row', justifyContent: 'flex-end', paddingHorizontal: layout.screenPadding, paddingTop: space[2] },
+  content: { padding: layout.screenPadding, gap: space[3.5], paddingBottom: layout.modalClearance },
+  title: { ...textStyles.screenTitle, color: colors.text },
+  subtitle: { ...textStyles.body, color: colors.textMuted, marginBottom: space[1.5] },
+  tierHead: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: space[3] },
+  tierName: { ...textStyles.sheetTitle, color: colors.text },
+  tierPrice: { ...textStyles.cardTitle, color: colors.text },
+  featureRow: { flexDirection: 'row', alignItems: 'center', gap: space[2], marginBottom: space[2] },
+  feature: { ...textStyles.body, color: colors.textMuted, flexShrink: 1 },
+  buyBtn: { marginTop: space[2] },
   devNotice: {
     flexDirection: 'row',
-    gap: 10,
-    backgroundColor: Palette.surface,
+    gap: space[2.5],
+    backgroundColor: colors.surface,
     borderWidth: StyleSheet.hairlineWidth,
-    borderColor: Palette.warn,
-    borderRadius: 12,
-    padding: 14,
+    borderColor: colors.warn,
+    borderRadius: radii.md,
+    padding: space[3.5],
   },
-  devNoticeText: { color: Palette.textDim, fontSize: 13, flexShrink: 1, lineHeight: 18 },
-  message: { color: Palette.danger, fontSize: 14, textAlign: 'center' },
-  restore: { paddingVertical: 14, alignItems: 'center' },
-  restoreText: { color: Palette.accent, fontSize: 15, fontWeight: '600' },
-  legal: { color: Palette.textFaint, fontSize: 11, textAlign: 'center', lineHeight: 16 },
+  devNoticeText: { ...textStyles.footnote, color: colors.textMuted, flexShrink: 1, lineHeight: lineHeight.footnote },
+  message: { ...textStyles.subtitle, color: colors.danger, textAlign: 'center' },
+  legal: { ...textStyles.micro, color: colors.textFaint, textAlign: 'center', lineHeight: lineHeight.caption },
 });

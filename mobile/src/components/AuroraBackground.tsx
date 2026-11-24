@@ -2,7 +2,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useMemo } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import Animated, {
-  Easing,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -10,7 +9,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Stop } from 'react-native-svg';
 
-import { Palette } from '@/constants/solar';
+import { colors as themeColors, motion } from '@/theme';
 
 // Deterministic pseudo-random so the starfield is stable across renders.
 function seeded(n: number): number {
@@ -60,9 +59,9 @@ function Ribbon({
   const breathe = useSharedValue(0);
 
   useEffect(() => {
-    drift.value = withRepeat(withTiming(1, { duration, easing: Easing.linear }), -1, false);
+    drift.value = withRepeat(withTiming(1, { duration, easing: motion.easing.ambient }), -1, false);
     breathe.value = withRepeat(
-      withTiming(1, { duration: 4200, easing: Easing.inOut(Easing.ease) }),
+      withTiming(1, { duration: motion.duration.breathe, easing: motion.easing.breathe }),
       -1,
       true
     );
@@ -103,7 +102,7 @@ export function AuroraBackground({ intensity, colors }: { intensity: number; col
     <View style={StyleSheet.absoluteFill} pointerEvents="none">
       {/* Deep sky gradient */}
       <LinearGradient
-        colors={['#0A1430', '#070A1A', Palette.bg]}
+        colors={[themeColors.aurora.nightTop, themeColors.aurora.nightMid, themeColors.background]}
         locations={[0, 0.5, 1]}
         style={StyleSheet.absoluteFill}
       />
@@ -116,7 +115,7 @@ export function AuroraBackground({ intensity, colors }: { intensity: number; col
             cx={s.x * width}
             cy={s.y * height * 0.95}
             r={s.r}
-            fill="#FFFFFF"
+            fill={themeColors.aurora.stars}
             opacity={s.o * (1 - intensity * 0.3)}
           />
         ))}
@@ -130,7 +129,7 @@ export function AuroraBackground({ intensity, colors }: { intensity: number; col
           yBase={height * (0.18 + i * 0.09)}
           amp={26 + i * 10}
           waves={2 + i}
-          duration={22000 + i * 9000}
+          duration={motion.duration.drift + i * motion.duration.driftStagger}
           opacity={Math.min(1, intensity * (1 - i * 0.18) + 0.05)}
           screenW={width}
         />
@@ -138,7 +137,7 @@ export function AuroraBackground({ intensity, colors }: { intensity: number; col
 
       {/* Subtle vignette to keep text legible at the bottom */}
       <LinearGradient
-        colors={['transparent', 'rgba(5,6,10,0.55)']}
+        colors={['transparent', themeColors.backdropVeil]}
         locations={[0.55, 1]}
         style={StyleSheet.absoluteFill}
       />
