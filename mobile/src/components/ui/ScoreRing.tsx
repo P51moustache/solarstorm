@@ -8,6 +8,8 @@ import { colors, componentSize, motion, shadows, textStyles } from '@/theme';
 const AnimatedCircle = Animated.createAnimatedComponent(Circle);
 
 const MAX_SCORE = 100;
+/** The unfilled track is the same gradient, faint. */
+const TRACK_OPACITY = 0.2;
 /** The arc starts at 12 o'clock. */
 const START_ANGLE = -90;
 
@@ -48,7 +50,8 @@ export function ScoreRing({ score, label }: ScoreRingProps) {
           cx={size / 2}
           cy={size / 2}
           r={r}
-          stroke={colors.fill}
+          stroke="url(#score-ring)"
+          strokeOpacity={TRACK_OPACITY}
           strokeWidth={stroke}
           fill={colors.night.ringFace}
         />

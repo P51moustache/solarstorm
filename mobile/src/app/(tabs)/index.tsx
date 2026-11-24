@@ -37,80 +37,91 @@ export default function TonightScreen() {
   const noPlace = !places.loading && !places.place;
 
   return (
-    <ScrollView
-      contentContainerStyle={styles.content}
-      showsVerticalScrollIndicator={false}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} />}>
-      <View style={[styles.sky, { paddingTop: insets.top }]}>
-        <HorizonScene aurora={tonight?.auroraGlow ?? false} />
+    <View style={styles.screen}>
+      <ScrollView
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.textMuted} />}>
+        <View style={[styles.sky, { paddingTop: insets.top }]}>
+          <HorizonScene aurora={tonight?.auroraGlow ?? false} />
 
-        <View style={styles.brand}>
-          <BrandMark />
-          <Tappable
-            style={styles.settings}
-            onPress={() => router.push('/alerts')}
-            accessibilityLabel="Alert settings"
-            hitSlop={space[3]}>
-            <Ionicons name="settings-outline" size={iconSize.xxl} color={colors.text} />
-          </Tappable>
-        </View>
-
-        <View style={styles.hero}>
-          <View style={styles.heroText}>
-            <Text style={styles.title} accessibilityRole="header">
-              Tonight
-            </Text>
-            <PlaceSwitcher place={places.place} choices={places.choices} onChoose={onChoose} onAddPlace={openPlaces} />
-            <Text style={styles.date}>{dateLabel}</Text>
+          <View style={styles.brand}>
+            <BrandMark />
+            <Tappable
+              style={styles.settings}
+              onPress={() => router.push('/alerts')}
+              accessibilityLabel="Alert settings"
+              hitSlop={space[3]}>
+              <Ionicons name="settings-outline" size={iconSize.xxl} color={colors.text} />
+            </Tappable>
           </View>
-          <ScoreRing score={tonight ? tonight.plan.score : null} label="Sky Score" />
-        </View>
 
-        {tonight ? (
-          <View style={styles.headline}>
-            <Text style={styles.headlineTitle}>{tonight.headline.title}</Text>
-            {tonight.headline.detail ? <Text style={styles.headlineDetail}>{tonight.headline.detail}</Text> : null}
-          </View>
-        ) : null}
-      </View>
-
-      <View style={styles.cards}>
-        {noPlace ? (
-          <Glass tone="night">
-            <Text style={styles.setupTitle}>Where are you watching from?</Text>
-            <Text style={styles.setupText}>
-              Tonight plans the sky for one place: your location or a place you saved.
-            </Text>
-            <Button label="Use my location" onPress={onLocate} loading={places.locating} style={styles.setupButton} />
-            <Button label="Add a place" variant="secondary" onPress={openPlaces} style={styles.setupButton} />
-            {locDenied ? (
-              <Text style={styles.setupText}>Location is off. Turn it on in Settings, or add a place.</Text>
-            ) : null}
-          </Glass>
-        ) : !tonight ? (
-          <ActivityIndicator color={colors.textMuted} style={styles.loading} />
-        ) : (
-          <>
-            <Glass tone="night">
-              <HourStrip
-                hours={tonight.hours}
-                bounds={tonight.plan.bounds}
-                moon={tonight.moon}
-                clock={clock}
-                now={tonight.now}
+          <View style={styles.hero}>
+            <View style={styles.heroText}>
+              <Text style={styles.title} accessibilityRole="header">
+                Tonight
+              </Text>
+              <PlaceSwitcher
+                place={places.place}
+                choices={places.choices}
+                onChoose={onChoose}
+                onAddPlace={openPlaces}
               />
-              {loading ? <ActivityIndicator color={colors.textMuted} style={styles.stripLoading} /> : null}
+              <Text style={styles.date}>{dateLabel}</Text>
+            </View>
+            <ScoreRing score={tonight ? tonight.plan.score : null} label="Sky Score" />
+          </View>
+
+          {tonight ? (
+            <View style={styles.headline}>
+              <Text style={styles.headlineTitle}>{tonight.headline.title}</Text>
+              {tonight.headline.detail ? <Text style={styles.headlineDetail}>{tonight.headline.detail}</Text> : null}
+            </View>
+          ) : null}
+        </View>
+
+        <View style={styles.cards}>
+          {noPlace ? (
+            <Glass tone="night">
+              <Text style={styles.setupTitle}>Where are you watching from?</Text>
+              <Text style={styles.setupText}>
+                Tonight plans the sky for one place: your location or a place you saved.
+              </Text>
+              <Button label="Use my location" onPress={onLocate} loading={places.locating} style={styles.setupButton} />
+              <Button label="Add a place" variant="secondary" onPress={openPlaces} style={styles.setupButton} />
+              {locDenied ? (
+                <Text style={styles.setupText}>Location is off. Turn it on in Settings, or add a place.</Text>
+              ) : null}
             </Glass>
-            <WhatsUp events={tonight.events} onOpen={{ aurora: () => router.push('/aurora') }} />
-          </>
-        )}
-        <Text style={styles.source}>Open-Meteo · astronomy-engine · NOAA SWPC</Text>
-      </View>
-    </ScrollView>
+          ) : !tonight ? (
+            <ActivityIndicator color={colors.textMuted} style={styles.loading} />
+          ) : (
+            <>
+              <Glass tone="night">
+                <HourStrip
+                  hours={tonight.hours}
+                  bounds={tonight.plan.bounds}
+                  moon={tonight.moon}
+                  clock={clock}
+                  now={tonight.now}
+                />
+                {loading ? <ActivityIndicator color={colors.textMuted} style={styles.stripLoading} /> : null}
+              </Glass>
+              <WhatsUp events={tonight.events} onOpen={{ aurora: () => router.push('/aurora') }} />
+            </>
+          )}
+          <Text style={styles.source}>Open-Meteo · astronomy-engine · NOAA SWPC</Text>
+        </View>
+      </ScrollView>
+      {/* Keeps the status bar readable over content scrolled under it. */}
+      <View style={[styles.statusVeil, { height: insets.top }]} pointerEvents="none" />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  screen: { flex: 1 },
+  statusVeil: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: colors.backdropVeil },
   content: { paddingBottom: layout.tabBarClearance },
   /** The hero over the horizon art; its bottom padding is where the ridges show. */
   sky: { paddingBottom: componentSize.horizonLand },

@@ -149,14 +149,14 @@ export function HourStrip({ hours, bounds, moon, clock, now }: HourStripProps) {
                 </View>
               ))}
             </View>
-            <View style={styles.row}>
+            <View style={[styles.row, styles.rowDivider]}>
               {hours.map((h) => (
                 <Text key={h.time.getTime()} style={[styles.cell, width, h.inBest && styles.cellBest]}>
                   {h.cloud === null ? '–' : h.cloud}
                 </Text>
               ))}
             </View>
-            <View style={styles.row}>
+            <View style={[styles.row, styles.rowDivider]}>
               <DarknessLine hours={hours} column={column} />
               {hours.map((h) => (
                 <Text key={h.time.getTime()} style={[styles.cell, width, h.inBest && styles.cellBest]}>
@@ -210,6 +210,7 @@ const styles = StyleSheet.create({
   label: { ...textStyles.footnote, color: colors.text, flexShrink: 1 },
   scroll: { flex: 1 },
   row: { flexDirection: 'row', alignItems: 'center' },
+  rowDivider: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: colors.borderSubtle },
   hourCell: { alignItems: 'center', justifyContent: 'flex-end', paddingBottom: space[0.5] },
   hour: { ...textStyles.footnote, color: colors.textMuted, textAlign: 'center' },
   tick: { width: StyleSheet.hairlineWidth, height: componentSize.hourTick, backgroundColor: colors.borderStrong },
