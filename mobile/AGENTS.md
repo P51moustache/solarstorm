@@ -33,7 +33,8 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 # Preview (where Zach looks at work)
 
 - SolarStorm is an iOS app: Zach previews work **on the iOS simulator, never in a browser**. Merge the branch into
-  `preview` (worktree `.claude/worktrees/preview`, never pushed), put that build on the project's simulator,
+  `preview` (worktree `.claude/worktrees/preview`, never pushed), put that build on the project simulator
+  (**iPhone 17e**, 1B698320-74A2-4456-ABB1-2A81AACEA1BB),
   and leave it running for him. The web build is for automated captures only.
 - JS-only changes need no native rebuild: bundle the preview branch's JS with Hermes into the installed 1.0.1
   simulator .app (see the design-core simulator check, docs/theme-audit.md).
