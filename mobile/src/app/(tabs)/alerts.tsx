@@ -5,6 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Button, Card, ScreenTitle, Tappable, Toggle } from '@/components/ui';
 import { kpScale } from '@/constants/solar';
+import { track } from '@/lib/analytics';
+import { AnalyticsEvent } from '@/lib/analyticsConfig';
 import { AlertPrefs, alertWouldFire, DEFAULT_PREFS, getAlertPrefs, saveAlertPrefs } from '@/lib/alertPrefs';
 import { registerAlertTask, unregisterAlertTask } from '@/lib/backgroundAlerts';
 import { present, requestNotificationPermission } from '@/lib/notifications';
@@ -41,9 +43,11 @@ export default function AlertsScreen() {
         return;
       }
       update({ notificationsEnabled: true });
+      track(AnalyticsEvent.alertsToggled, { enabled: true });
       await registerAlertTask();
     } else {
       update({ notificationsEnabled: false });
+      track(AnalyticsEvent.alertsToggled, { enabled: false });
       await unregisterAlertTask();
     }
   }

@@ -23,7 +23,7 @@
   <div class="wrap">
     <a class="back" href="index.html">&larr; SolarStorm</a>
     <h1>Privacy Policy</h1>
-    <p class="date">Last updated: June 3, 2026</p>
+    <p class="date">Last updated: November 23, 2026</p>
 
     <p>SolarStorm ("the app") shows live space-weather and aurora information. We built it to be
     private by default. This policy explains what the app does and does not do with your data.</p>
@@ -35,12 +35,19 @@
       look up local cloud cover and sunrise/sunset times. Your coordinates are sent to weather data
       providers (Open-Meteo) to retrieve that forecast. We do not store your location on our servers.</li>
       <li><strong>Saved places &amp; alert settings.</strong> These are stored locally on your device.</li>
+      <li><strong>Anonymous usage and crash reports.</strong> The app sends anonymous events to PostHog,
+      our analytics provider: which screens are opened, when the app is opened or closed, whether
+      onboarding was finished, alerts switched on or off and a place saved, plus crash and error
+      reports (error message, stack trace, app version, device model and iOS version). Events carry a
+      random ID created on your device, not your name, email, location, place names or anything you
+      type. We do not use your IP address to estimate where you are, and we do not record your screen.
+      We use this only to see how the app is used and to fix crashes.</li>
     </ul>
 
     <h2>What we do NOT do</h2>
     <ul>
       <li>We do <strong>not</strong> sell or share your personal data.</li>
-      <li>We do <strong>not</strong> use third-party advertising or analytics/tracking SDKs.</li>
+      <li>We do <strong>not</strong> use advertising SDKs, and our analytics is never used for advertising.</li>
       <li>We do <strong>not</strong> track you across other apps or websites.</li>
     </ul>
 
@@ -48,9 +55,13 @@
     <p>When you request a local forecast, your approximate coordinates are sent to a third-party
     weather data provider to retrieve cloud cover and sunrise/sunset times. These services receive
     only what's needed to return data and are governed by their own privacy policies.</p>
+    <p>Anonymous usage and crash reports are processed by PostHog
+    (<a href="https://posthog.com/privacy">posthog.com/privacy</a>) on our behalf.</p>
 
     <h2>Data retention &amp; deletion</h2>
-    <p>Locally stored data (saved places, alert preferences) is removed when you delete the app.</p>
+    <p>Locally stored data (saved places, alert preferences) is removed when you delete the app.
+    Deleting the app also removes its random analytics ID, so later reports cannot be linked to
+    earlier ones.</p>
 
     <h2>Children</h2>
     <p>SolarStorm is not directed at children under 13 and does not knowingly collect their data.</p>
