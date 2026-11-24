@@ -32,7 +32,8 @@ Read the exact versioned docs at https://docs.expo.dev/versions/v54.0.0/ before 
 
 # Preview (where Zach looks at work)
 
-- **http://localhost:8095**: Expo web dev server on branch `preview`, worktree `.claude/worktrees/preview/mobile`.
-  Show work by merging your branch into `preview` there (never push it, never commit original work on it).
-- Down? From that folder: `EXPO_PUBLIC_SUPABASE_URL=https://placeholder.supabase.co EXPO_PUBLIC_SUPABASE_ANON_KEY=placeholder CI=1 BROWSER=none nohup npx expo start --web --port 8095 > /tmp/solarstorm-preview.log 2>&1 &`
-- Native-only behaviour (haptics, blur, notifications) still needs the iOS simulator.
+- SolarStorm is an iOS app: Zach previews work **on the iOS simulator, never in a browser**. Merge the branch into
+  `preview` (worktree `.claude/worktrees/preview`, never pushed), put that build on the project's simulator,
+  and leave it running for him. The web build is for automated captures only.
+- JS-only changes need no native rebuild: bundle the preview branch's JS with Hermes into the installed 1.0.1
+  simulator .app (see the design-core simulator check, docs/theme-audit.md).
