@@ -34,13 +34,14 @@ matters and quietly otherwise.
 
 - New pure modules in `mobile/src/lib/sky/`: `darkness`, `skyScore`, `bestWindow`, `skyEvents` (one file per
   event kind, in a registry), each tested directly. `viewing.ts` and `aurora.ts` feed into them.
-- Screens are built only after Zach picks one of the three visual concepts, through the `concept-build` skill
-  and the design core (item design-core).
+- Screens follow the picked concept, **C: Living sky** (Zach, 24 Nov): `concepts/tonight-reference.png` is the
+  canonical reference. Build it with the `concept-build` skill on the design core (item design-core). One fix
+  versus the picture: the horizon art shows an aurora glow only when the aurora read says it is likely.
 
 ## Phases
 
 1. Engine: darkness, sky score and best window, with tests. No UI change.
-2. Concepts: three visual concepts of the Tonight screen; Zach picks one.
+2. Concepts: done. Zach picked C, Living sky.
 3. Tonight and Next good nights screens, built from the picked concept.
 4. Sky events (Milky Way, planets, meteors) and the afternoon "good tonight" alert.
 5. Store listing: name, subtitle, screenshots and keywords for stargazing.
